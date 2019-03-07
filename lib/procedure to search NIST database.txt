@@ -1,0 +1,8 @@
+Process to search nist:
+write SEARCH.MSD to C:/search/
+Write .MSP spectrum to search to this same directory
+wire path to above file (C:/search/ + filename) to SEARCH.MSD
+run (wine) nistms$.exe /par=2
+	need to be in NIST base directory
+in NIST base directory file SRCRESLT.TXT contains the search results
+

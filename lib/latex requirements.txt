@@ -1,0 +1,4 @@
+required latex packages on top of minimal installation
+
+type1cm
+ucs
