@@ -5,9 +5,12 @@
 from __future__ import print_function
 _version = 0.25
 #  
-#  Python Interface to NIST MS Search
+"""Python Interface to NIST MS Search"""
 #
-#  Copyright 2018 Dominic Davis-Foster <domdf@dominic-desktop>
+#  Copyright 2018 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#
+#	generate_ini contains the .ini file from NIST MS Search
+#		Copyright NIST
 #  
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -34,7 +37,6 @@ _version = 0.25
 
 import os
 import traceback
-import sys
 import platform
 import shutil
 import time
@@ -42,9 +44,9 @@ import io
 
 from subprocess import Popen, PIPE
 try:
-	from helper import parent_path
+	from paths import parent_path
 except ModuleNotFoundError:
-	from GSMatch.utils import parent_path
+	from utils.paths import parent_path
 
 """Generates the INI file for NIST MS Search and copies it in place of 
 the current config."""
@@ -1256,15 +1258,15 @@ def nist_db_connector(nist_dir, spectrum, search_len = 1):
 		
 		#sys.stdout.write("\033[F") #back to previous line
 		#sys.stdout.write("\r\033[K") #clear line	from https://www.quora.com/How-can-I-delete-the-last-printed-line-in-Python-language
-		print("\r\033[K"), #clear line	from https://www.quora.com/How-can-I-delete-the-last-printed-line-in-Python-language
+		print("\r\033[K", end=''), #clear line	from https://www.quora.com/How-can-I-delete-the-last-printed-line-in-Python-language
 		while not os.path.isfile(os.path.join(nist_dir,"SRCREADY.TXT")):
 			#print(attempts)
 			time.sleep(0.2)
 			#sys.stdout.write("\rWaiting for SRCREADY.TXT. Attempt {}".format(attempts))
-			print("\r\rWaiting for SRCREADY.TXT. Attempt {}".format(attempts),end='')
+			print("\rWaiting for SRCREADY.TXT. Attempt {}\r".format(attempts),end='')
 			attempts +=1
 			if attempts > 300:
-				print("\rclosing nist line 1255",end='')
+				print("\rclosing nist line {}\r".format(sys._getframe().f_lineno),end='')
 				close_nist()
 				search_results = ''
 				continue
@@ -1276,20 +1278,20 @@ def nist_db_connector(nist_dir, spectrum, search_len = 1):
 			#print(searches_done)
 			ready_file.close()
 			#sys.stdout.write("\rWaiting for searches to finish. Currently {}/{} done. Attempt {}".format(int(searches_done),int(search_len),int(attempts)))
-			print("\r\rWaiting for searches to finish. Currently {}/{} done. Attempt {}".format(int(searches_done),int(search_len),int(attempts))),
+			print("\r\rWaiting for searches to finish. Currently {}/{} done. Attempt {}\r".format(int(searches_done),int(search_len),int(attempts)), end=''),
 			time.sleep(0.5)
 			attempts +=1
 			if attempts > 300:
-				print("\rclosing nist line 1269",end='')
+				print("\rclosing nist line {}\r".format(sys._getframe().f_lineno),end='')
 				close_nist()
 				continue
 			
 		while not os.path.exists(os.path.join(nist_dir,"SRCRESLT.TXT")):
 			time.sleep(0.2)
-			print("\rWaiting for SRCRESLT.TXT, Attempt {}".format(attempts),end='')
+			print("\rWaiting for SRCRESLT.TXT, Attempt {}\r".format(attempts),end='')
 			attempts +=1
 			if attempts > 300:
-				print("\rclosing nist line 1278",end='')
+				print("\rclosing nist line {}\r".format(sys._getframe().f_lineno),end='')
 				close_nist()
 				continue
 		
@@ -1303,7 +1305,7 @@ def nist_db_connector(nist_dir, spectrum, search_len = 1):
 			pass
 			
 		if len(search_results) == 0:
-			print("\rclosing nist line 1291",end='')
+			print("\rclosing nist line {}\r".format(sys._getframe().f_lineno),end='')
 			close_nist()
 			time.sleep(0.5)
 		else:
@@ -1321,13 +1323,14 @@ def nist_db_connector(nist_dir, spectrum, search_len = 1):
 	return search_results 
 
 def nist_cleanup(nist_path):
+	import platform
+	
 	for filename in os.listdir(nist_path):
 		if os.path.splitext(filename)[-1].upper() == ".HLM":
 			os.unlink(os.path.join(nist_path,filename))
 		
 	locator_path = open(os.path.join(nist_path,"AUTOIMP.MSD"),"r").read()
 	
-	import platform	
 	if platform.system() == "Linux":
 		import getpass
 		locator_path = "/home/{}/.wine/drive_c/SEARCH/SEARCH.MSD".format(getpass.getuser())

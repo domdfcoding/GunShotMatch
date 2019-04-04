@@ -2,10 +2,19 @@
 # -*- coding: utf-8 -*-
 #
 #  outliers.py
-#  Outlier Detection
+"""Outlier Detection"""
 #  
 #  Copyright 2018 Dominic Davis-Foster <dominic@davis-foster.co.uk>
-#  
+#
+#  mad_outliers based on https://eurekastatistics.com/using-the-median-absolute-deviation-to-find-outliers/
+#		Copyright 2013 Peter Rosenmai
+#
+#  quartile_outliers based on http://www.itl.nist.gov/div898/handbook/prc/section1/prc16.htm
+#		Copyright 2012 NIST
+#
+#  spss_outliers based on http://www.unige.ch/ses/sococ/cl/spss/concepts/outliers.html
+#		Copyright 2018 Eugene Horber, U. of Geneva
+#
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2 of the License, or
@@ -25,8 +34,8 @@
 
 import numpy
 
-def mad_outliers(dataset, cutoff = 3): # Using the Median Absolute Deviation to Find Outliers
-	#Based on https://eurekastatistics.com/using-the-median-absolute-deviation-to-find-outliers/
+def mad_outliers(dataset, cutoff = 3):
+	"""Using the Median Absolute Deviation to Find Outliers"""
 
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
@@ -70,7 +79,7 @@ def mad_outliers(dataset, cutoff = 3): # Using the Median Absolute Deviation to 
 	return outliers, data_exc_outliers
 	
 def two_stdev(dataset):
-	# Outliers are greater than 2x stdev from mean
+	"""Outliers are greater than 2x stdev from mean"""
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
 
@@ -104,7 +113,7 @@ def two_stdev(dataset):
 	return outliers, data_exc_outliers
 
 def stdev_outlier(dataset, rng = int(2)):
-	# Outliers are greater than rng*stdev from mean
+	"""Outliers are greater than rng*stdev from mean"""
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
 
@@ -137,8 +146,7 @@ def stdev_outlier(dataset, rng = int(2)):
 	return outliers, data_exc_outliers
 
 def quartile_outliers(dataset): 
-	#outliers are more than 3x inter-quartile range from upper or lower quartile
-	#based on http://www.itl.nist.gov/div898/handbook/prc/section1/prc16.htm
+	"""outliers are more than 3x inter-quartile range from upper or lower quartile"""
 
 	for i in range(2):
 		dataset = [x for x in dataset if x is not None]
@@ -221,10 +229,9 @@ def percentile_none(dataset,percentage):
 	return numpy.percentile(dataset,percentage)
 
 def spss_outliers(dataset, mode="all"):
-	# Based on IBM SPSS method for detecting outliers
-	# Outliers more than 1.5*IQR from Q1 or Q3
-	# "Extreme values" more than 3*IQR from Q1 or Q3
-	# http://www.unige.ch/ses/sococ/cl/spss/concepts/outliers.html
+	"""Based on IBM SPSS method for detecting outliers
+	Outliers more than 1.5*IQR from Q1 or Q3
+	"Extreme values" more than 3*IQR from Q1 or Q3"""
 	
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
