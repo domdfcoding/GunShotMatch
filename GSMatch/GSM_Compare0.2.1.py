@@ -24,10 +24,10 @@ _version = '0.2'
 #  
 #  
 
-from utils import timing # Times the program
+from GSMatch.utils import timing # Times the program
 import sys, os
 
-from utils.helper import clear, check_dependencies
+from GSMatch.utils import clear, check_dependencies
 clear()		#clear the display
 
 missing_modules = check_dependencies(["progressbar", "openpyxl", "matplotlib"], prt=False)
@@ -78,11 +78,11 @@ if "-h" not in str(sys.argv):
 	from subprocess import Popen, PIPE, STDOUT	; time.sleep(0.1); bar.update(22)
 	from scipy import stats	; time.sleep(0.1); bar.update(23)
 
-	from utils.helper import entry, parent_path, RepresentsInt, rounders, mean_none
+	from GSMatch.utils import entry, parent_path, RepresentsInt, rounders, mean_none
 	time.sleep(0.1); bar.update(24)
-	from utils import append_to_xlsx, load_config, stat_format
+	from GSMatch.utils import append_to_xlsx, load_config, stat_format
 	time.sleep(0.1); bar.update(25)
-	from utils.pynist import *
+	from GSMatch.utils import *
 	time.sleep(0.1); bar.update(26)
 	
 	col_list = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL','AM','AN','AO','AP','AQ','AR','AS','AT','AU','AV','AW','AX','AY','AZ','BA','BB','BC','BD','BE','BF','BG','BH','BI','BJ','BK','BL','BM','BN','BO','BP','BQ','BR','BS','BT','BU','BV','BW','BX','BY','BZ','CA','CB','CC','CD','CE','CF','CG','CH','CI','CJ','CK','CL','CM','CN','CO','CP','CQ','CR','CS','CT','CU','CV','CW','CX','CY','CZ','DA','DB','DC','DE','DF'] #Only Supports 12 samples

@@ -51,12 +51,12 @@ legend_entries = [
 
 show_outliers = True
 show_raw_data = False
-leg_cols = 4 # Number of columns for legend
+leg_cols = 2 # Number of columns for legend
 
-from utils import timing # Times the program
+from GSMatch.utils import timing # Times the program
 import sys, os
 
-from utils.helper import clear, check_dependencies
+from GSMatch.utils import clear, check_dependencies
 clear()		#clear the display
 
 missing_modules = check_dependencies(["progressbar", "matplotlib"], prt=False)
@@ -78,9 +78,9 @@ if "-h" not in str(sys.argv):
 	import warnings	; time.sleep(0.1); bar.update(2)
 	import datetime	; time.sleep(0.1); bar.update(3)
 	
-	from utils.helper import entry, mean_none, std_none, copytree
+	from GSMatch.utils import entry, mean_none, std_none, copytree
 	time.sleep(0.1); bar.update(4)
-	from utils import load_config, within1min, outliers
+	from GSMatch.utils import load_config, within1min, outliers
 	
 	import matplotlib; matplotlib.use("TkAgg")
 	time.sleep(0.1); bar.update(5)

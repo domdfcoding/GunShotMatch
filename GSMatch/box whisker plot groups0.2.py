@@ -55,10 +55,10 @@ elif not use_mean and not use_median:
 	
 metric = "mean" if use_mean else "median"
 
-from utils import timing # Times the program
+from GSMatch.utils import timing # Times the program
 import sys, os
 
-from utils.helper import clear, check_dependencies
+from GSMatch.utils import clear, check_dependencies
 clear()		#clear the display
 
 missing_modules = check_dependencies(["progressbar", "openpyxl", "matplotlib"], prt=False)
@@ -96,9 +96,9 @@ if "-h" not in str(sys.argv):
 	from openpyxl.utils import get_column_letter
 	time.sleep(0.1); bar.update(17)
 
-	from utils.helper import entry, mean_none, std_none, copytree
+	from GSMatch.utils import entry, mean_none, std_none, copytree
 	time.sleep(0.1); bar.update(18)
-	from utils import load_config, within1min, outliers
+	from GSMatch.utils import load_config, within1min, outliers
 	
 	import matplotlib; matplotlib.use("Cairo")
 	time.sleep(0.1); bar.update(19)

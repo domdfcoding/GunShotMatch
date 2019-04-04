@@ -48,7 +48,6 @@ copyright = "2017-2019"
 verbose = True
 
 """Imports"""
-from utils import timing # Times the program
 import sys
 sys.path.append("..")
 
@@ -74,21 +73,19 @@ import platform
 import numpy
 import progressbar
 
-from inspect import currentframe, getframeinfo
-from subprocess import Popen, PIPE, STDOUT
 from decimal import Decimal, ROUND_HALF_UP
 from collections import Counter
-from openpyxl import  Workbook, worksheet, load_workbook	# https://openpyxl.readthedocs.io/en/default/
-from openpyxl.styles import Font, Fill, Alignment
-from openpyxl.chart import BarChart, RadarChart, Series, Reference, LineChart
+from openpyxl import load_workbook	# https://openpyxl.readthedocs.io/en/default/
+from openpyxl.styles import Font, Alignment
+from openpyxl.chart import BarChart, RadarChart, Reference, LineChart
 from openpyxl.utils import get_column_letter, column_index_from_string
 #from shutil import copyfile
-from utils.helper import entry,  parent_path, RepresentsInt, rounders
-from utils import append_to_xlsx, load_config, stat_format, within6sec 
-from utils.pynist import *
-from utils import DirectoryHash
-from utils.helper import clear
-from utils import GSMConfig
+from GSMatch.utils import RepresentsInt, rounders
+from GSMatch.utils import append_to_xlsx, stat_format, within6sec
+from GSMatch.utils import *
+from GSMatch.utils import DirectoryHash
+from GSMatch.utils import clear
+from GSMatch.utils import GSMConfig
 
 """From https://stackoverflow.com/questions/21129020/how-to-fix-unicodedecodeerror-ascii-codec-cant-decode-byte
 Big shout out to fisherman https://stackoverflow.com/users/2309581/fisherman"""
@@ -437,7 +434,7 @@ class GunShotMatch(GSMConfig):
 		
 		if interactive: clear()
 		
-		from utils import terminalsize as tp
+		from GSMatch.utils import terminalsize as tp
 		
 		if self.PL_len == 1:
 			print("Require two or more samples to combine. Check ./list.txt or --samples and try again.")
@@ -1428,12 +1425,8 @@ class GunShotMatch(GSMConfig):
 						else:
 							c1.y_axis.scaling.min = int(min(values))-1000
 							c1.y_axis.scaling.max = int(max(values))+1000
-						
-						
-						from openpyxl.chart.text import RichText
-						from openpyxl.drawing.text import Paragraph, ParagraphProperties, CharacterProperties, Font    
-						
-			#			#chart title
+					
+					#			#chart title
 			#			cp = CharacterProperties(latin=Font(typeface='Calibri'), sz=1400)
 			#			c1.title.txPr = RichText(p=[Paragraph(pPr=ParagraphProperties(defRPr=cp), endParaRPr=cp)])
 			#			c1.title.tx.rich.p[0].r.rPr = cp
@@ -1586,7 +1579,7 @@ class GunShotMatch(GSMConfig):
 		bar.finish()
 		
 	def generate_mass_spectra(self, rt_list, generate_images=True):	
-		import utils.MassSpectraPlot as msplot
+		from GSMatch import utils as msplot
 		if args.no_images:
 			print("Generating mass spectra files. Please wait.")
 		else:

@@ -23,7 +23,7 @@
 #  
 
 import os, time
-from  utils.helper import RepresentsInt
+from GSMatch.utils import RepresentsInt
 import progressbar
 
 ingest_path = "./Results/CSV_ingest"

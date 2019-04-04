@@ -44,7 +44,7 @@ from subprocess import Popen, PIPE
 try:
 	from helper import parent_path
 except ModuleNotFoundError:
-	from utils.helper import parent_path
+	from GSMatch.utils import parent_path
 
 """Generates the INI file for NIST MS Search and copies it in place of 
 the current config."""

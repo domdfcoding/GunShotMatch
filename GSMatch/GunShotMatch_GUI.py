@@ -42,9 +42,9 @@ import types
 import csv
 import subprocess
 
-from utils import pynist
-from utils import notification
-from utils.helper import rounders
+from GSMatch.utils import pynist
+from GSMatch.utils import notification
+from GSMatch.utils import rounders
 from ChromatogramDisplay import Display
 from pyms.GCMS.IO.JCAMP.Function import JCAMP_reader
 from pyms.GCMS.Function import build_intensity_matrix, build_intensity_matrix_i

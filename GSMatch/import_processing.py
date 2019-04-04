@@ -33,9 +33,9 @@ import sys
 import os
 import itertools
 import operator
-from utils.helper import rounders
+from GSMatch.utils import rounders
 import time
-from utils import pynist
+from GSMatch.utils import pynist
 import traceback
 import numpy
 	
@@ -302,7 +302,7 @@ def nist_ms_comparison(sample_name, mass_list, mass_spec):
 	return matches_dict
 
 if __name__ == '__main__':
-	from utils import timing
+	from GSMatch.utils import timing
 	import argparse
 
 	#Command line switches
