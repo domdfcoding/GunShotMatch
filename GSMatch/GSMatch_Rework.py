@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 #  GSMatch_Rework.py
@@ -34,9 +34,15 @@ The files must be in the subdirectory CSV and called
 		e.g. GECO_Case2_MS.CSV and GECO_Case2_GC.CSV
 """
 
+__author__ = "Dominic Davis-Foster"
+__copyright__ = "Copyright 2017-2019 Dominic Davis-Foster"
+
+__license__ = "GPL"
+__version__ = "1.0.0 Rework"
+__email__ = "dominic@davis-foster.co.uk"
+
 program_name ="GunShotMatch"
-__version__ = "1.0.0 rework"
-copyright = "2017-2019"
+copyright = __copyright__
 
 
 # Imports
@@ -1024,9 +1030,9 @@ if __name__ == '__main__':
 		
 		from lib.charts import peak_area, radar_chart
 		
-		radar_chart(chart_data, [lot_name], use_log = 10, legend=False,
+		radar_chart_wrapper(chart_data, [lot_name], use_log = 10, legend=False,
 					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "radar_log10_peak_area"))
-		radar_chart(chart_data, [lot_name], use_log = False, legend=False,
+		radar_chart_wrapper(chart_data, [lot_name], use_log = False, legend=False,
 					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "radar_peak_area"))
 		mean_peak_area_wrapper(chart_data, [lot_name],
 					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "mean_peak_area"))

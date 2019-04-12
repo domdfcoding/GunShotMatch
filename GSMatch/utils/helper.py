@@ -62,7 +62,11 @@ def check_dependencies(dependencies, prt=True):
 	else:
 		return missing_modules
 
+def list2string(the_list, sep=","):
+	return list2str(the_list, sep)
 
+def list2str(the_list, sep=","):
+	return sep.join([str(x) for x in the_list])
 
 
 

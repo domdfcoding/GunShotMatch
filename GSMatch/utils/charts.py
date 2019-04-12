@@ -41,10 +41,17 @@
 #  MA 02110-1301, USA.
 #  
 #
-# adapted
+# adapted from
 # https://matplotlib.org/tutorials/intermediate/legend_guide.html
 # https://matplotlib.org/devdocs/gallery/text_labels_and_annotations/custom_legends.html
 #
+
+__author__ = "Dominic Davis-Foster"
+__copyright__ = "Copyright 2019 Dominic Davis-Foster"
+
+__license__ = "GPL"
+__version__ = "0.1.0"
+__email__ = "dominic@davis-foster.co.uk"
 
 # Imports
 
@@ -64,6 +71,7 @@ bw_default_styles = ["D",  # diamond
 			  		 "<",  # left triangle
 			  		 ">",  # right triangle
 					 ]
+
 bw_default_colours_a = ["DarkRed",
 						"DeepSkyBlue",
 						"Green",
@@ -138,7 +146,7 @@ class box_whisker(chart):
 	
 	def setup_data(self, peak_areas, sample_list, outlier_mode="2stdev"):
 		from utils.mathematical import df_data_points, df_count, df_mean, df_stdev, df_median, df_outliers, remove_zero
-		
+		print(f"###{sample_list}###")
 		# determine order of compounds on graph
 		for compound in peak_areas.index.values:
 			# print([sample for sample in sample_list])
@@ -264,14 +272,17 @@ class box_whisker(chart):
 						
 						# plot raw data
 						if show_raw_data:
-							for area in self.peak_areas.loc[compound, f"{sample[0]} Mean Excluding Outliers"]:
+							for area in self.peak_areas.loc[compound, f"{sample[0]} Data Excluding Outliers"]:
 								self.ax.scatter(offset_x_pos, area, color="grey", marker="x", label='', alpha=0.3)
 					
 					else:
+						print(list(self.peak_areas))
 						mean = self.peak_areas.loc[compound, f"{sample[0]} Peak Area"]
 						stdev = self.peak_areas.loc[compound, f"{sample[0]} Standard Deviation"]
-						min_value = mean - min(self.peak_areas.loc[compound, f"{sample[0]} Peak Area"])
-						max_value = max(self.peak_areas.loc[compound, f"{sample[0]} Peak Area"]) - mean
+						data_points = self.peak_areas.loc[compound, f"{sample[0]} Data Points"]
+						print(data_points)
+						min_value = mean - min(data_points)
+						max_value = max(data_points) - mean
 						range_values = np.array([[min_value], [max_value]])
 						
 						# Mean
@@ -285,7 +296,7 @@ class box_whisker(chart):
 						
 						# plot raw data
 						if show_raw_data:
-							for area in self.peak_areas.loc[compound, f"{sample[0]} Peak Area"]:
+							for area in self.peak_areas.loc[compound, f"{sample[0]} Data Points"]:
 								self.ax.scatter(offset_x_pos, area, color="grey", marker="x", label='', alpha=0.3)
 			
 			x_pos += self.column_width
@@ -407,10 +418,9 @@ class box_whisker(chart):
 		plt.close()
 	
 
-
 class mean_peak_area(chart):
 	def setup_data(self, peak_areas, sample_list):
-		from utils.mathematical import df_percentage
+		from utils.mathematical import df_percentage, df_data_points
 		
 		
 		# From raw value to percentage
@@ -419,7 +429,6 @@ class mean_peak_area(chart):
 				args=((peak_areas["{} Peak Area".format(sample)].sum()), "{} Peak Area".format(sample)),axis=1)
 			peak_areas["{} Percentage Standard Deviation".format(sample)] = peak_areas.apply(
 				df_percentage,args=((peak_areas["{} Standard Deviation".format(sample)].sum()), "{} Standard Deviation".format(sample)),axis=1)
-			
 				
 		self.peak_areas = peak_areas
 		self.sample_list = sample_list
@@ -429,12 +438,10 @@ class mean_peak_area(chart):
 			figsize = (1 + (3 * len(self.sample_list)), 9)
 		self.fig, self.ax = plt.subplots(figsize=figsize)
 
-	def create_chart(self, barWidth=2, percentage=False, colours=default_colours, legend=True):
+	def create_chart(self, barWidth=2, percentage=False, colours=default_colours, err_bar="stdev"):
 		import numpy as np
 		import pandas as pd
 		from itertools import cycle
-		from matplotlib.patches import Patch
-		
 		# plot settings
 		err_bar_spacing = barWidth / (len(self.peak_areas) + 1)
 		print(err_bar_spacing)
@@ -448,7 +455,7 @@ class mean_peak_area(chart):
 										  (bar_position + (barWidth / 2)),
 										  err_bar_spacing
 										  ))[:len(self.peak_areas)]
-		
+
 		for sample_idx, sample in enumerate(self.sample_list):
 			colour_cycle = cycle(colours)
 			
@@ -459,14 +466,14 @@ class mean_peak_area(chart):
 				peak_area = row["{} {}Peak Area".format(sample, "Percentage " if percentage else '')]
 				standard_deviation = row["{} {}Standard Deviation".format(sample, "Percentage " if percentage else '')]
 				
-				plt.bar(bar_position, peak_area, bottom=bottom, color=next(colour_cycle),
+				self.ax.bar(bar_position, peak_area, bottom=bottom, color=next(colour_cycle),
 						width=barWidth, label=row["Compound Names"], zorder=3)
 				
-				plt.plot((row["{} Error Bar Offset".format(sample)], row["{} Error Bar Offset".format(sample)]),
+				if err_bar == "stdev":
+					self.ax.plot((row["{} Error Bar Offset".format(sample)], row["{} Error Bar Offset".format(sample)]),
 						 ((bottom + peak_area) - standard_deviation,
 						  (bottom + peak_area) + standard_deviation),
 						 "black", zorder=3)
-				
 				bottom += peak_area
 			
 			x_tick_positions.append(bar_position)
@@ -483,19 +490,22 @@ class mean_peak_area(chart):
 		
 		self.ax.set_ylabel("Peak Area{}".format(" (%)" if percentage else '', ))
 		
+		self.colours = colours
+	
+	def create_legend(self, legend=(0.5, -0.06)):
+		from itertools import cycle
+		from matplotlib.patches import Patch
+		
 		if legend:  # Add a legend
 			legend_elements = []
-			colour_cycle = cycle(colours)
+			colour_cycle = cycle(self.colours)
 			
 			for row_idx, row in self.peak_areas.iterrows():
 				legend_colour = next(colour_cycle)
 				legend_elements.append(
 					Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
 			
-			self.ax.legend(handles=legend_elements[::-1], loc=9, bbox_to_anchor=(0.5, -0.06), ncol=1)
-		
-
-		
+			self.ax.legend(handles=legend_elements[::-1], loc=9, bbox_to_anchor=legend, ncol=1)
 
 
 class peak_area(chart):
@@ -523,10 +533,9 @@ class peak_area(chart):
 	def setup_subplots(self, figsize=(12,6)):
 		self.fig, self.ax = plt.subplots(figsize=figsize)
 	
-	def create_chart(self, barWidth=2, percentage=False, colours=default_colours, legend=(0.5, -0.15)):
+	def create_chart(self, barWidth=2, percentage=False, colours=default_colours):
 		from operator import add
 		from itertools import cycle
-		from matplotlib.patches import Patch
 		
 		colour_cycle = cycle(colours)
 		x_vals = [x for x in range(len(self.prefixList))]
@@ -558,9 +567,15 @@ class peak_area(chart):
 		
 		self.ax.set_ylabel(r"{}{}".format(log_string("Peak Area", self.use_log)," (%)" if percentage else ''))
 		
+		self.colours = colours
+		
+	def create_legend(self, legend=(0.5, -0.15)):
+		from itertools import cycle
+		from matplotlib.patches import Patch
+		
 		if legend:  # Add a legend
 			legend_elements = []
-			colour_cycle = cycle(colours)
+			colour_cycle = cycle(self.colours)
 			
 			for row_idx, row in self.peak_areas.iterrows():
 				legend_colour = next(colour_cycle)
@@ -573,9 +588,7 @@ class peak_area(chart):
 
 		
 		# plt.legend(loc='upper left', bbox_to_anchor=(1,1), ncol=1)
-		
 
-	
 
 class radar_chart(chart):
 	def setup_data(self, peak_areas, sample_list):
@@ -607,7 +620,7 @@ class radar_chart(chart):
 		
 		# Draw one axe per variable + add labels labels yet
 		self.ax.set_xticks(angles[:-1])
-		#self.ax.set_xticklabels(compounds)
+		self.ax.set_xticklabels(compounds)
 		
 		# Axis Label Alignment
 		ticklabels = self.ax.get_xticklabels()
@@ -629,6 +642,7 @@ class radar_chart(chart):
 		datapoints = []
 		
 		# Plot each individual = each line of the data
+		print(self.sample_list)
 		for sample in self.sample_list:
 			if use_log:
 				values = [log(area, use_log) if area > 0.0 else 0 for area in
@@ -643,14 +657,17 @@ class radar_chart(chart):
 		
 		# plt.ylim(min([item for sublist in datapoints for item in sublist]),max([item for sublist in datapoints for item in sublist]))
 		
-		if legend:
+		#if legend:
 			# Add legend
-			self.fig.legend(loc='upper right', bbox_to_anchor=(0.15, 0.07))
+		#	self.fig.legend(loc='upper right', bbox_to_anchor=(0.15, 0.07))
 		
 		self.ax.set_title(r"{}".format(log_string("Peak Area", use_log)), y=1.06)
-
-
 	
+	def create_legend(self, legend=(0.15, 0.07)):
+		if legend:  # Add a legend
+			self.ax.legend(bbox_to_anchor=legend, ncol=1)
+
+
 
 
 def PlotSpectrum(spec, label=None, xlim=(50, 1200), mode="display", color="red", filetypes=default_filetypes):
@@ -705,7 +722,9 @@ def peak_area_wrapper(peak_areas, lot_name, prefixList, percentage=True,
 	chart = peak_area()
 	chart.setup_data(peak_areas, lot_name, prefixList, use_log)
 	chart.setup_subplots(figsize)
-	chart.create_chart(barWidth, percentage, colours, legend)
+	chart.create_chart(barWidth, percentage, colours)
+	if legend:
+		chart.create_legend(legend)
 	chart.fig.tight_layout()
 	if mode.lower() == "display":
 		chart.show_chart()
@@ -715,11 +734,13 @@ def peak_area_wrapper(peak_areas, lot_name, prefixList, percentage=True,
 
 def mean_peak_area_wrapper(peak_areas, sample_list, percentage=False,
 						   colours=default_colours, figsize=None, barWidth=2,
-						   legend=True, mode="display", filetypes=default_filetypes):
+						   legend=(0.5, -0.06), mode="display", filetypes=default_filetypes):
 	chart = mean_peak_area()
 	chart.setup_data(peak_areas, sample_list)
 	chart.setup_subplots(figsize)
-	chart.create_chart(barWidth, percentage, colours, legend)
+	chart.create_chart(barWidth, percentage, colours)
+	if legend:
+		chart.create_legend(legend)
 	chart.fig.tight_layout()
 	if mode.lower() == "display":
 		chart.show_chart()
@@ -728,13 +749,15 @@ def mean_peak_area_wrapper(peak_areas, sample_list, percentage=False,
 
 def radar_chart_wrapper(peak_areas, sample_list,
 				colours = default_colours, figsize=(10,10),
-				legend=True, mode = "display",
+				legend=(0.15, 0.07), mode = "display",
 				filetypes = default_filetypes, use_log = False):
 	
 	chart = radar_chart()
 	chart.setup_data(peak_areas, sample_list)
 	chart.setup_subplots(figsize)
 	chart.create_chart(use_log, legend, colours)
+	if legend:
+		chart.create_legend(legend)
 	chart.fig.tight_layout()
 	if mode == "display":
 		chart.show_chart()

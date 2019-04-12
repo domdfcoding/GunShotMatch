@@ -35,6 +35,14 @@ _version = 0.25
 #  Makes calls to the NIST MS Search API as described here:
 #		http://chemdata.nist.gov/mass-spc/ms-search/docs/Ver20Man_11.pdf
 
+
+__author__ = "Dominic Davis-Foster"
+__copyright__ = "Copyright 2018 Dominic Davis-Foster"
+
+__license__ = "GPL"
+__version__ = "0.1.0"
+__email__ = "dominic@davis-foster.co.uk"
+
 import os
 import traceback
 import platform

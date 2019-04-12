@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 MA 02110-1301, USA.
 
 Copyright for other files in this module:
+
 utils.charts:
 
 mean_peak_area, mean_peak_area_multiple and peak_area adapted from
@@ -141,6 +142,11 @@ utils.timing:
     Licensed under CC-BY-SA
     Adapted 2018 by Dominic Davis-Foster
 -----
+
+utils.wxBitmap
+    Functions Copyright 2005 Antoine Pitrou
+    From https://sourceforge.net/p/wxglade/mailman/message/6475744/
+-----
 """
 
 __all__ = ["charts",
@@ -158,5 +164,6 @@ __all__ = ["charts",
 		   "spreadsheet",
 		   "terminal",
 		   "timing",
-		   "uibar"
+		   "uibar",
+		   "wxTools",
 		   ]

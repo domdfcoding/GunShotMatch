@@ -26,6 +26,12 @@
 #
 #
 
+__author__ = "Dominic Davis-Foster"
+__copyright__ = "Copyright 2018 Dominic Davis-Foster"
+
+__license__ = "GPL"
+__version__ = "0.1.0"
+__email__ = "dominic@davis-foster.co.uk"
 
 def append_to_xlsx(csv_input_file, xlsx_output_file, sheet_title, seperator=",", overwrite=False, use_io=False,
 				   toFloats=False):

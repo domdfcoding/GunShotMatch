@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 #  terminal.py
-"""Useful functions for terminal"""
+"""Useful functions for terminal-based programs"""
 #
 #  Copyright 2014-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
@@ -27,6 +27,12 @@
 #
 #
 
+__author__ = "Dominic Davis-Foster"
+__copyright__ = "Copyright 2014-2019 Dominic Davis-Foster"
+
+__license__ = "GPL"
+__version__ = "0.1.0"
+__email__ = "dominic@davis-foster.co.uk"
 
 import os
 import shlex

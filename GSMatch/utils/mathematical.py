@@ -31,6 +31,12 @@
 #
 #
 
+__author__ = "Dominic Davis-Foster"
+__copyright__ = "Copyright 2014-2019 Dominic Davis-Foster"
+
+__license__ = "GPL"
+__version__ = "0.1.0"
+__email__ = "dominic@davis-foster.co.uk"
 
 def df_mean(row, col_string):
 	from numpy import nanmean
@@ -84,6 +90,7 @@ def df_count(row, col_string_list):
 	import numpy
 	count = 0
 	for col_string in col_string_list:
+		print(row[col_string])
 		if row[col_string] and not numpy.isnan(row[col_string]):
 			count += 1
 	return count

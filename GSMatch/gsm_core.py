@@ -21,6 +21,14 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #
+
+__author__ = "Dominic Davis-Foster"
+__copyright__ = "Copyright 2017-2019 Dominic Davis-Foster"
+
+__license__ = "GPL"
+__version__ = "1.0.0"
+__email__ = "dominic@davis-foster.co.uk"
+
 import wx
 import os
 from utils.paths import maybe_make, relpath
@@ -43,8 +51,11 @@ def infer_samples(csvpath):
 
 class GSMConfig(object):
 	def __init__(self, configfile):
+		self.load_config(configfile)
+	
+	def load_config(self, configfile):
 		self.configfile = configfile
-		print("\nUsing configuration file {}".format(configfile))
+		print("\nUsing configuration file {}".format(self.configfile))
 		self.get_config(self.configfile)
 	
 	def get_config(self, configfile=None, parent=None):
@@ -57,9 +68,9 @@ class GSMConfig(object):
 		
 		import platform
 		import sys
+		from utils.helper import str2tuple
 		
 		import configparser as ConfigParser
-		from itertools import chain, permutations
 		
 		"""Configuration -----"""
 		Config = ConfigParser.ConfigParser()
@@ -114,8 +125,9 @@ class GSMConfig(object):
 		min_range, max_range = tuple(Config.get("import", "target_range").split(","))
 		parent.target_range = (float(min_range), float(max_range))
 		parent.base_peak_filter = [int(x) for x in Config.get("import", "exclude_ions").split(",")]
-		parent.tophat_struct = "{}{}".format(Config.get("import", "tophat"), Config.get("import", "tophat_unit"))
-		from utils.helper import str2tuple
+		parent.tophat = Config.get("import", "tophat")
+		parent.tophat_unit = Config.get("import", "tophat_unit")
+		parent.tophat_struct = "{}{}".format(parent.tophat, parent.tophat_unit)
 		parent.mass_range = str2tuple(Config.get("import", "mass_range"))
 		
 		"""Peak Alignment Settings"""
@@ -130,6 +142,13 @@ class GSMConfig(object):
 		parent.do_counter = Config.getboolean("analysis", "do_counter")
 		parent.do_spectra = Config.getboolean("analysis", "do_spectra")
 		parent.do_charts = Config.getboolean("analysis", "do_charts")
+		
+		"""Comparison"""
+		parent.comparison_a = float(Config.get("comparison", "a"))
+		parent.comparison_rt_modulation = float(Config.get("comparison", "rt_modulation"))
+		parent.comparison_gap_penalty = float(Config.get("comparison", "gap_penalty"))
+		parent.comparison_min_peaks = int(Config.get("comparison", "min_peaks"))
+		
 	
 	def save_config(self, configfile=None, parent=None):
 		# Gets configuration from parent if set, if not from self
@@ -140,10 +159,8 @@ class GSMConfig(object):
 			configfile = self.configfile
 		
 		import platform
-		import sys
-		
 		import configparser as ConfigParser
-		from itertools import chain, permutations
+		from utils.helper import list2str, tuple2str
 		
 		"""Configuration -----"""
 		Config = ConfigParser.ConfigParser()
@@ -163,29 +180,36 @@ class GSMConfig(object):
 		Config.set("main", "MSPpath", relpath(parent.MSP_DIRECTORY))
 		Config.set("main", "exprdir", relpath(parent.EXPERIMENTS_DIRECTORY))
 		
-		Config.set("samples", "samples", relpath(parent.prefixList))
+		Config.set("samples", "samples", ",".join(parent.prefixList))
 		
-		"""TODO"""
-		#	parent.bb_points = int(Config.get("import","bb_points"))
-		#	parent.bb_scans = int(Config.get("import", "bb_scans"))
-		#	parent.noise_thresh = int(Config.get("import", "noise_thresh"))
-		#	min_range, max_range = tuple(Config.get("import", "target_range").split(","))
-		#	parent.target_range = (float(min_range),float(max_range))
-		#	parent.base_peak_filter = [int(x) for x in Config.get("import", "exclude_ions").split(",")]
-		#	parent.tophat_struct = "{}{}".format(Config.get("import", "tophat"),Config.get("import", "tophat_unit"))
+		Config.set("import", "bb_points", str(parent.bb_points))
+		Config.set("import", "bb_scans", str(parent.bb_scans))
+		Config.set("import", "noise_thresh", str(parent.noise_thresh))
+		Config.set("import", "target_range", "{},{}".format(*parent.target_range))
+		Config.set("import", "exclude_ions", list2str(parent.base_peak_filter))
+		Config.set("import", "tophat", str(parent.tophat))
+		Config.set("import", "tophat_unit", parent.tophat_unit)
+		Config.set("import", "mass_range", "{},{}".format(*parent.mass_range))
 		
-		#	parent.rt_modulation = float(Config.get("alignment", "rt_modulation"))
-		#	parent.gap_penalty = float(Config.get("alignment", "rt_gap_penalty"))
-		#	parent.min_peaks = int(Config.get("alignment", "min_peaks"))
-		#		parent.mass_range = Config.get("import", "mass_range")
-
+		Config.set("alignment", "rt_modulation", str(parent.rt_modulation))
+		Config.set("alignment", "gap_penalty", str(parent.gap_penalty))
+		Config.set("alignment", "min_peaks", str(parent.min_peaks))
 		
-		Config.set("analysis", "do_quantitative", parent.do_quantitative)
-		Config.set("analysis", "do_qualitative", parent.do_qualitative)
-		Config.set("analysis", "do_merge", parent.do_merge)
-		Config.set("analysis", "do_counter", parent.do_counter)
-		Config.set("analysis", "do_spectra", parent.do_spectra)
-		Config.set("analysis", "do_charts", parent.do_charts)
+		Config.set("analysis", "do_quantitative", str(parent.do_quantitative))
+		Config.set("analysis", "do_qualitative", str(parent.do_qualitative))
+		Config.set("analysis", "do_merge", str(parent.do_merge))
+		Config.set("analysis", "do_counter", str(parent.do_counter))
+		Config.set("analysis", "do_spectra", str(parent.do_spectra))
+		Config.set("analysis", "do_charts", str(parent.do_charts))
+		
+		Config.set("comparison", "a", str(parent.comparison_a))
+		Config.set("comparison", "rt_modulation", str(parent.comparison_rt_modulation))
+		Config.set("comparison", "gap_penalty", str(parent.comparison_gap_penalty))
+		Config.set("comparison", "min_peaks", str(parent.comparison_min_peaks))
+		
+		
+		with open(configfile, "w") as f:
+			Config.write(f)
 
 
 def read_peaks_json(jsonfile):
@@ -269,7 +293,7 @@ def get_peak_alignment(A, minutes=True):
 		
 		if countrt == len(A.expr_code):
 			rt_table.append(rts)
-	
+
 	rt_alignment = pandas.DataFrame(rt_table, columns=A.expr_code)
 	rt_alignment = rt_alignment.reindex(sorted(rt_alignment.columns), axis=1)
 	
@@ -334,6 +358,10 @@ def infer_samples(csvpath):
 	
 	inferred_samples.sort()
 	return (inferred_samples)
+
+def pretty_name_from_info(infofile):
+	import os
+	return os.path.splitext(os.path.split(infofile)[-1])[0]
 
 
 if __name__ == '__main__':

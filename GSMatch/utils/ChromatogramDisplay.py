@@ -34,18 +34,18 @@ from pyms.Display.Class import Display as StockDisplay
 
 class Display(StockDisplay):
 	"""
-	@summary: Class to display Ion Chromatograms and Total
+	:summary: Class to display Ion Chromatograms and Total
 			  Ion Chromatograms from GCMS.Class.IonChromatogram
 		
 			  Uses matplotlib module pyplot to do plotting
 
-	@author: Sean O'Callaghan
-	@author: Vladimir Likic
+	:author: Sean O'Callaghan
+	:author: Vladimir Likic
 	"""
 	
 	def __init__(self, figure, axes):
 		"""
-		@summary: Initialises an instance of Display class
+		:summary: Initialises an instance of Display class
 		"""
 		
 		# Container to store plots
@@ -67,15 +67,15 @@ class Display(StockDisplay):
 	def plot_ics(self, ics, labels = None):
 		
 		"""
-		@summary: Adds an Ion Chromatogram or a
+		:summary: Adds an Ion Chromatogram or a
 		list of Ion Chromatograms to plot list
 		
-		@param ics: List of Ion Chromatograms m/z channels
+		:param ics: List of Ion Chromatograms m/z channels
 			for plotting
-		@type ics: list of pyms.GCMS.Class.IonChromatogram
+		:type ics: list of pyms.GCMS.Class.IonChromatogram
 		
-		@param labels: Labels for plot legend
-		@type labels: list of StringType
+		:param labels: Labels for plot legend
+		:type labels: list of StringType
 			"""
 		
 		if not isinstance(ics, list):
@@ -121,16 +121,16 @@ class Display(StockDisplay):
 				else:
 					self.__col_count += 1
 		
-	def plot_tic(self, tic, label=None):
+	def plot_tic(self, tic, label=None, minutes=False):
 		
 		"""
-		@summary: Adds Total Ion Chromatogram to plot list
+		:summary: Adds Total Ion Chromatogram to plot list
 		
-		@param tic: Total Ion Chromatogram
-		@type tic: pyms.GCMS.Class.IonChromatogram
+		:param tic: Total Ion Chromatogram
+		:type tic: pyms.GCMS.Class.IonChromatogram
 		
-		@param label: label for plot legend
-		@type label: StringType
+		:param label: label for plot legend
+		:type label: StringType
 			"""
 			
 		if not isinstance(tic, IonChromatogram):
@@ -139,6 +139,8 @@ class Display(StockDisplay):
 			
 		intensity_list = tic.get_intensity_array()
 		time_list = tic.get_time_list()
+		if minutes:
+			time_list = [time/60 for time in time_list]
 		
 		self.__tic_ic_plots.append(self.__ax.plot(time_list, intensity_list,\
 		label=label))
@@ -146,14 +148,14 @@ class Display(StockDisplay):
 	def plot_peaks(self, peak_list, label = "Peaks"):
 		
 		"""
-		@summary: Plots the locations of peaks as found
+		:summary: Plots the locations of peaks as found
 			by PyMS.
 			
-		@param peak_list: List of peaks
-		@type peak_list: list of pyms.Peak.Class.Peak
+		:param peak_list: List of peaks
+		:type peak_list: list of pyms.Peak.Class.Peak
 		
-		@param label: label for plot legend
-		@type label: StringType
+		:param label: label for plot legend
+		:type label: StringType
 			"""
 			
 		if not isinstance(peak_list, list):
