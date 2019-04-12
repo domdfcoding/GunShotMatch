@@ -23,6 +23,13 @@
 #  
 #  
 
+__author__ = "Dominic Davis-Foster"
+__copyright__ = "Copyright 2018, 2019 Dominic Davis-Foster"
+
+__license__ = "GPL"
+__version__ = "0.5.0"
+__email__ = "dominic@davis-foster.co.uk"
+
 from utils.charts import bw_default_colours, bw_default_styles
 
 def bw_custom_legend(legend_entries, styles=bw_default_styles, colours=bw_default_colours,

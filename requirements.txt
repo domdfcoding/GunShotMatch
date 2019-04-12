@@ -1,0 +1,7 @@
+sklearn
+numpy>=1.16.2
+pandas>=0.24.1
+openpyxl>=2.5.14
+matplotlib>=3.0.3
+scipy>=1.2.1
+PyMassSpec>=2.1.0

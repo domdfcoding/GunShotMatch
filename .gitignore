@@ -1,0 +1,10 @@
+GSMatch/Results/
+LIB2NIST/
+MSSEARCH/
+WatersRaw
+**/__pycache__
+**/.idea
+*.pyc
+*.dll
+build/
+*.log
