@@ -17,7 +17,7 @@
 # 		Part of OrgMassSpecR
 # 		Copyright Nathan Dodder <nathand@sccwrp.org>
 #
-#	PrincipalCOmponentAnalysis based on
+#	PrincipalComponentAnalysis based on
 #		https://towardsdatascience.com/pca-using-python-scikit-learn-e653f8989e60
 #		Copyright 2017 Michael Galarnyk
 #
@@ -146,7 +146,7 @@ class box_whisker(chart):
 	
 	def setup_data(self, peak_areas, sample_list, outlier_mode="2stdev"):
 		from utils.mathematical import df_data_points, df_count, df_mean, df_stdev, df_median, df_outliers, remove_zero
-		print(f"###{sample_list}###")
+		#print(f"###{sample_list}###")
 		# determine order of compounds on graph
 		for compound in peak_areas.index.values:
 			# print([sample for sample in sample_list])
@@ -155,13 +155,8 @@ class box_whisker(chart):
 		
 		peak_areas['Compound Names'] = peak_areas.index
 		peak_areas = peak_areas.sort_values(['Count', 'Compound Names'])
-		# print(peak_areas)
 		
 		for sample in sample_list:
-			# print(sample[0])
-			# print(sample[1])
-			# print("\n")
-			
 			# Put all data points in one list
 			peak_areas[f"{sample[0]} Data Points"] = peak_areas.apply(df_data_points,
 																	  args=(sample[1],),
@@ -200,7 +195,7 @@ class box_whisker(chart):
 	
 	def setup_datapoints(self, column_width=4, styles=bw_default_styles, colours=bw_default_colours):
 		import numpy as np
-		print(f"######{column_width}#####")
+		#print(f"######{column_width}#####")
 		self.datapoint_spacing = column_width / (len(self.peak_areas) + 1)
 		
 		self.datapoint_offset = list(np.arange((0 - (column_width / 2)) + self.datapoint_spacing,
@@ -248,7 +243,6 @@ class box_whisker(chart):
 					offset_x_pos = x_pos + next(offset_cycle)
 					colour = next(colour_cycle)
 					marker = next(style_cycle)
-					
 					if show_outliers:
 						mean = self.peak_areas.loc[compound, f"{sample[0]} Mean Excluding Outliers"]
 						stdev = self.peak_areas.loc[compound, f"{sample[0]} Stdev Excluding Outliers"]
@@ -276,11 +270,11 @@ class box_whisker(chart):
 								self.ax.scatter(offset_x_pos, area, color="grey", marker="x", label='', alpha=0.3)
 					
 					else:
-						print(list(self.peak_areas))
+						#print(list(self.peak_areas))
 						mean = self.peak_areas.loc[compound, f"{sample[0]} Peak Area"]
 						stdev = self.peak_areas.loc[compound, f"{sample[0]} Standard Deviation"]
 						data_points = self.peak_areas.loc[compound, f"{sample[0]} Data Points"]
-						print(data_points)
+						#print(data_points)
 						min_value = mean - min(data_points)
 						max_value = max(data_points) - mean
 						range_values = np.array([[min_value], [max_value]])
@@ -331,23 +325,23 @@ class box_whisker(chart):
 				ticker.FixedFormatter(["Unfired\nPropellant", "Fired\nCartridge Case"] * (len(self.sample_list) // 2)))
 			
 			# Labels at Top for Groupings
-			print(x_vals)
+			#print(x_vals)
 			# top_vals = numpy.array([x-0.005 for x in x_vals[::2]])
 			top_vals = np.array(x_vals[::2])
-			print(top_vals)
+			#print(top_vals)
 			min_top_vals = np.array(x_vals[1::2])
-			print(min_top_vals)
+			#print(min_top_vals)
 			
 			# Thick Vertical Lines Between Groups
-			print(minor_x_vals)
-			print(minor_x_vals[::2])
+			#print(minor_x_vals)
+			#print(minor_x_vals[::2])
 			
 			for minor_x_val in minor_x_vals[::2]:
 				self.ax.axvline(x=minor_x_val, ymax=1.02, color="black", clip_on=False)
 			
-			print(groupings)
+			#print(groupings)
 			for group, minor_x_val in zip(groupings, minor_x_vals[1::2]):
-				print(group, minor_x_val)
+			#	print(group, minor_x_val)
 				# print(ax.transAxes.inverted().transform((0,1)))
 				# plt.text(minor_x_val, 1.01, group, horizontalalignment="center",transform=transforms.blended_transform_factory(ax.transData, ax.transAxes))
 				self.ax.text(minor_x_val, 1.01, group, horizontalalignment="center",
@@ -444,7 +438,7 @@ class mean_peak_area(chart):
 		from itertools import cycle
 		# plot settings
 		err_bar_spacing = barWidth / (len(self.peak_areas) + 1)
-		print(err_bar_spacing)
+		#print(err_bar_spacing)
 		
 		self.ax.grid(axis="y", linestyle='--', zorder=0)
 		
@@ -581,7 +575,7 @@ class peak_area(chart):
 				legend_colour = next(colour_cycle)
 				legend_elements.append(
 					Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
-			print(legend)
+			#print(legend)
 			self.ax.legend(handles=legend_elements[::-1], bbox_to_anchor=legend, ncol=1)
 			
 			
@@ -642,7 +636,7 @@ class radar_chart(chart):
 		datapoints = []
 		
 		# Plot each individual = each line of the data
-		print(self.sample_list)
+		#print(self.sample_list)
 		for sample in self.sample_list:
 			if use_log:
 				values = [log(area, use_log) if area > 0.0 else 0 for area in

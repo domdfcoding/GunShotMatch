@@ -51,7 +51,6 @@ def append_to_xlsx(csv_input_file, xlsx_output_file, sheet_title, seperator=",",
 		wb = load_workbook(xlsx_output_file)
 	ws = wb.create_sheet(sheet_title)
 	ws = wb[sheet_title]
-	# print(sheet_title)
 	
 	if use_io:
 		import io
@@ -62,7 +61,6 @@ def append_to_xlsx(csv_input_file, xlsx_output_file, sheet_title, seperator=",",
 	
 	import traceback
 	for row in reader:
-		# print(row)
 		try:
 			if toFloats:
 				row_buffer = []
@@ -101,8 +99,7 @@ def format_sheet(ws, number_format_list=None, width_list=None, alignment_list=No
 	
 	for column_cells in ws.columns:
 		length = max(len(as_text(cell.value)) for cell in column_cells)
-		#print(column_cells[0].column, length)
-		ws.column_dimensions[column_cells[0].column].width = length
+		ws.column_dimensions[get_column_letter(column_cells[0].column)].width = length
 	# ws.column_dimensions[column_cells[0].column].bestFit = True
 	
 	if width_list:
@@ -145,7 +142,6 @@ def make_column_property_list(inlist, outlist=None, offset_list=None, repeat=1, 
 	
 	if offset_list:
 		offset = repeat * length
-		# print(offset)
 		for index in offset_list:
 			outlist[get_column_letter(int(index) + (offset))] = offset_list[index]
 	

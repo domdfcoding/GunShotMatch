@@ -90,7 +90,7 @@ def df_count(row, col_string_list):
 	import numpy
 	count = 0
 	for col_string in col_string_list:
-		print(row[col_string])
+		#print(row[col_string])
 		if row[col_string] and not numpy.isnan(row[col_string]):
 			count += 1
 	return count

@@ -119,10 +119,12 @@ class Launcher(wx.Frame):
 		self.import_raw_button = wx.Button(self.launcher_parent_panel, wx.ID_ANY, "", style=wx.BU_AUTODRAW)
 		self.import_raw_button.Bind(wx.EVT_SET_FOCUS, self.refresh_launcher)
 		self.import_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
-		self.new_project_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/new_project.110.bmp", wx.BITMAP_TYPE_ANY), style=wx.BU_AUTODRAW | wx.BU_EXACTFIT)
+		self.new_project_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/new_project_110.png", wx.BITMAP_TYPE_ANY), style=wx.BU_AUTODRAW | wx.BU_EXACTFIT)
 		self.new_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
-		self.open_project_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/open_project.110.bmp", wx.BITMAP_TYPE_ANY))
+		self.open_project_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/open_project_110.png", wx.BITMAP_TYPE_ANY))
 		self.open_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
+		self.comparison_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/comparison_green_110.png", wx.BITMAP_TYPE_ANY))
+		self.comparison_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
 		self.launcher_right_panel = wx.Panel(self.Launcher, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 		self.messages_panel = wx.Panel(self.launcher_right_panel, wx.ID_ANY, style=wx.BORDER_RAISED)
 		self.messages = wx.richtext.RichTextCtrl(self.messages_panel, wx.ID_ANY, style=wx.richtext.RE_MULTILINE | wx.richtext.RE_READONLY)
@@ -258,7 +260,7 @@ class Launcher(wx.Frame):
 		self.help_open_browser_btn = wx.Button(self.help_toolbar_panel, wx.ID_ANY, "Open in browser")
 		self.help_parent_panel = wx.Panel(self.Help, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 		self.help_browser = wx.html2.WebView.New(self.help_parent_panel, wx.ID_ANY)
-		self.help_home ="http://www.google.co.uk"
+		self.help_home ="http://domdfcoding.github.com/GunShotMatch"
 		self.help_browser.LoadURL(self.help_home)
 
 		self.__set_properties()
@@ -270,6 +272,8 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.do_new_info, self.new_info_button)
 		self.Bind(wx.EVT_BUTTON, self.on_open_project, self.open_project_button)
 		self.Bind(wx.EVT_BUTTON, self.do_open_info, self.open_info_button)
+		self.Bind(wx.EVT_BUTTON, self.on_open_comparison, self.comparison_button)
+		self.Bind(wx.EVT_BUTTON, self.do_comparison_info, self.comparison_info_button)
 		self.Bind(wx.EVT_BUTTON, self.do_import, self.import_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_pretty_name_clear, self.pretty_name_clear)
 		self.Bind(wx.EVT_BUTTON, self.do_apply, self.import_apply_btn)
@@ -411,7 +415,7 @@ class Launcher(wx.Frame):
 			self.statusbar.SetStatusText(statusbar_fields[i], i)
 		self.import_raw_button.SetMinSize((128, 128))
 		self.import_raw_button.SetToolTip("Import .RAW Files")
-		self.import_raw_button.SetBitmap(wx.Bitmap("./lib/icons/import.110.bmp", wx.BITMAP_TYPE_ANY))
+		self.import_raw_button.SetBitmap(wx.Bitmap("./lib/icons/import_110.png", wx.BITMAP_TYPE_ANY))
 		self.import_info_button.SetToolTip("Show help for \"Import\"")
 		self.import_info_button.SetSize(self.import_info_button.GetBestSize())
 		self.new_project_button.SetMinSize((128, 128))
@@ -422,6 +426,10 @@ class Launcher(wx.Frame):
 		self.open_project_button.SetToolTip("Open Project")
 		self.open_info_button.SetToolTip("Show help for \"Open Project\"")
 		self.open_info_button.SetSize(self.open_info_button.GetBestSize())
+		self.comparison_button.SetMinSize((128, 128))
+		self.comparison_button.SetToolTip("Open Project")
+		self.comparison_info_button.SetToolTip("Show help for \"Comparison\"")
+		self.comparison_info_button.SetSize(self.comparison_info_button.GetBestSize())
 		self.launcher_parent_panel.SetBackgroundColour(wx.Colour(240, 240, 240))
 		self.Launcher.SetBackgroundColour(wx.Colour(240, 240, 240))
 		self.check_list_box_1.SetMinSize((256, 128))
@@ -636,7 +644,7 @@ class Launcher(wx.Frame):
 		launcher_right_sizer = wx.BoxSizer(wx.VERTICAL)
 		messages_sizer = wx.BoxSizer(wx.VERTICAL)
 		launcher_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		launcher_grid = wx.GridSizer(3, 3, 40, 20)
+		launcher_grid = wx.GridSizer(4, 3, 20, 20)
 		launcher_grid.Add(self.import_raw_button, 0, wx.ALIGN_CENTER, 64)
 		import_description_label = wx.StaticText(self.launcher_parent_panel, wx.ID_ANY, "Import PerkinElmer/Waters .RAW files and convert to JCAMP-DX format.", style=wx.ALIGN_LEFT)
 		import_description_label.Wrap(256)
@@ -648,10 +656,15 @@ class Launcher(wx.Frame):
 		launcher_grid.Add(new_project_description_label, 0, wx.ALIGN_CENTER_VERTICAL, 64)
 		launcher_grid.Add(self.new_info_button, 0, wx.ALIGN_CENTER, 1)
 		launcher_grid.Add(self.open_project_button, 0, wx.ALIGN_CENTER, 64)
-		open_project_description_label = wx.StaticText(self.launcher_parent_panel, wx.ID_ANY, "Open an existing project for viewing, library searching, or further processing", style=wx.ALIGN_LEFT)
+		open_project_description_label = wx.StaticText(self.launcher_parent_panel, wx.ID_ANY, "Open an existing project for viewing", style=wx.ALIGN_LEFT)
 		open_project_description_label.Wrap(256)
 		launcher_grid.Add(open_project_description_label, 0, wx.ALIGN_CENTER_VERTICAL, 64)
 		launcher_grid.Add(self.open_info_button, 0, wx.ALIGN_CENTER, 0)
+		launcher_grid.Add(self.comparison_button, 0, wx.ALIGN_CENTER, 64)
+		comparison_description_label = wx.StaticText(self.launcher_parent_panel, wx.ID_ANY, "Compare two projects", style=wx.ALIGN_LEFT)
+		comparison_description_label.Wrap(256)
+		launcher_grid.Add(comparison_description_label, 0, wx.ALIGN_CENTER_VERTICAL, 64)
+		launcher_grid.Add(self.comparison_info_button, 0, wx.ALIGN_CENTER, 1)
 		launcher_sizer.Add(launcher_grid, 0, wx.ALIGN_CENTER | wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
 		self.launcher_parent_panel.SetSizer(launcher_sizer)
 		launcher_parent_sizer.Add(self.launcher_parent_panel, 3, wx.ALIGN_CENTER | wx.ALL | wx.EXPAND, 10)
@@ -1279,6 +1292,9 @@ class Launcher(wx.Frame):
 			self.setup_project_browser(selected_project)
 			self.notebook_1.SetSelection(3)
 	
+	def on_open_comparison(self, event):  # wxGlade: Launcher.<event_handler>
+		self.notebook_1.SetSelection(4)
+	
 	def do_import_info(self, event):  # wxGlade: Launcher.<event_handler>
 		coming_soon()
 		event.Skip()
@@ -1288,6 +1304,10 @@ class Launcher(wx.Frame):
 		event.Skip()
 	
 	def do_open_info(self, event):  # wxGlade: Launcher.<event_handler>
+		coming_soon()
+		event.Skip()
+	
+	def do_comparison_info(self, event):  # wxGlade: Launcher.<event_handler>
 		coming_soon()
 		event.Skip()
 	
@@ -2165,6 +2185,7 @@ class Launcher(wx.Frame):
 		self.comparison_log_text_control.AppendText(evt.log_text)
 	
 	
+
 # end of class Launcher
 
 

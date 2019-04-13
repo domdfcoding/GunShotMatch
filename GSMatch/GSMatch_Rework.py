@@ -185,7 +185,7 @@ def quantitative_processing(jcamp_file, log_stdout = True):
 		base_peak_index = [index for index, intensity in enumerate(apex_mass_spec) if intensity == base_peak_intensity][
 			0]
 		base_peak_mass = apex_mass_list[base_peak_index]
-		# print(base_peak_mass)
+
 		if base_peak_mass in base_peak_filter:
 			continue  # skip the peak if the base peak is at e.g. m/z 73, i.e. septum bleed
 		
@@ -318,31 +318,22 @@ def nist_ms_comparison(sample_name, mass_list, mass_spec, n_hits=5):
 		
 		# Process output
 		for i in range(n_hits + 1):
-			# print(raw_output)
-			raw_output = raw_output.replace("Hit {}  : ".format(i), "Hit{};".format(i)).replace("Hit {} : ".format(i),
-																								"Hit{};".format(
-																									i)).replace(
-				"Hit {}: ".format(i), "Hit{};".format(i))
+
+			raw_output = raw_output.replace("Hit {}  : ".format(i),	"Hit{};".format(i))\
+								   .replace("Hit {} : ".format(i), "Hit{};".format(i))\
+								   .replace("Hit {}: ".format(i), "Hit{};".format(i))
+			
 		raw_output = raw_output.replace("<<", '"').replace(">>", '"').split("\n")
-		# print(raw_output)
-		
-		# for row in raw_output:
-		#	print(row)
-		
+
 		matches_dict = {}
 		
 		for i in range(1, n_hits + 1):
 			row = list(csv.reader([raw_output[i]], delimiter=";", quotechar='"'))[0]
-			# print(row)
+
 			matches_dict[row[0]] = {"Name": row[1], "MF": (row[3].replace("MF:", '').replace(" ", '')),
 									"RMF": (row[4].replace("RMF:", '').replace(" ", '')),
 									"CAS": (row[6].replace("CAS:", '').replace(" ", '')),
 									"Lib": (row[8].replace("Lib:", '').replace(" ", ''))}
-	# print(matches_dict[row[0]])
-	
-	# for match in matches_dict:
-	#	print(match)
-	#	print(matches_dict[match])
 	
 	except:
 		traceback.print_exc()  # print the error
@@ -646,12 +637,10 @@ def formatXLSX(inputFile):	# Formatting for Combined Output
 		
 	for offset in range(PL_len):
 		merge_string = get_column_letter(1+(9*offset)) + '1:' + get_column_letter(9+(9*offset))  + '1'
-		#print(merge_string)
 		ws.merge_cells(merge_string)
 	
 	format_header(ws, make_column_property_list({"1":"center","2":"center","5":"center","6":"center","8":"center","9":"center"},repeat=PL_len, length=9),1,2)
 
-	
 	"""Matches"""
 	ws = wb["Matches"]
 	header_number_format_list = make_column_property_list({'5':'0.000','6':'0.00'}, {"A":"0.000", "B":"0.00"}, {"17":"0.000", "18":'0.000000', "19":'0.00%', "21":"0.00", "22":"0.00", "23":'0.00%'},repeat=PL_len, length=3)
@@ -669,8 +658,7 @@ def formatXLSX(inputFile):	# Formatting for Combined Output
 	
 	for offset in range(PL_len):
 		merge_string = get_column_letter(4+(3*offset)) + '1:' + get_column_letter(6+(3*offset))  + '1'
-		#print(merge_string)
-		ws.merge_cells(merge_string)	
+		ws.merge_cells(merge_string)
 	
 	offset = PL_len*3
 	for index in [5,9,13,17,21]:
@@ -713,7 +701,7 @@ def formatXLSX(inputFile):	# Formatting for Combined Output
 	br()
 	
 	ws.column_dimensions["B"].width = 50.0
-	for row in ws.iter_rows("B2:B{}".format(len(contents)+1)):
+	for row in ws.iter_rows(min_row=2, max_row=len(contents)+1, min_col=2, max_col=2):
 		for cell in row:
 			if cell.value:
 				if cell.value.startswith("=HYPERLINK"):
@@ -730,7 +718,7 @@ def formatXLSX(inputFile):	# Formatting for Combined Output
 	
 def format_matches(ws, header_number_format_list=None, header_alignment_list=None, hits_number_format_list=None, hits_alignment_list=None, width_list=None, ):
 	
-	for row in ws.iter_rows("A1:{}{}".format(get_column_letter(ws.max_column),ws.max_row)):
+	for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
 		for cell in row:
 			cell.alignment = Alignment(vertical="center", wrap_text=False)
 	
@@ -739,12 +727,10 @@ def format_matches(ws, header_number_format_list=None, header_alignment_list=Non
 
 	for column_cells in ws.columns:
 		length = max(len(as_text(cell.value)) for cell in column_cells)
-		#print(column_cells[0].column, length)
-		ws.column_dimensions[column_cells[0].column].width = length
+		ws.column_dimensions[get_column_letter(column_cells[0].column)].width = length
 		#ws.column_dimensions[column_cells[0].column].bestFit = True
-
-
-	for row in ws.iter_rows('A4:{}{}'.format(get_column_letter(ws.max_column),ws.max_row)):
+	
+	for row in ws.iter_rows(min_row=4, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
 		for cell in row:
 			if cell.row in headers:
 				if header_number_format_list and (cell.column in header_number_format_list):
@@ -881,7 +867,7 @@ def arguments():
 if __name__ == '__main__':
 	from utils import timing
 	clear()  # clear the display
-	startup_string = f"\n\n{program_name} Version {__version__} running on {platform.system()}.\nCopyright {copyright} Dominic Davis-Foster."
+	startup_string = f"\n\n{program_name} Version {__version__} running on {platform.system()}.\n{copyright} Dominic Davis-Foster."
 	print(startup_string)
 	
 	# Load Configuration
@@ -1028,7 +1014,7 @@ if __name__ == '__main__':
 
 		chart_data.to_csv(os.path.join(CSV_DIRECTORY,"{}_CHART_DATA.csv".format(lot_name)), sep=";")
 		
-		from lib.charts import peak_area, radar_chart
+		#from utils.charts import peak_area_wrapper, radar_chart_wrapper
 		
 		radar_chart_wrapper(chart_data, [lot_name], use_log = 10, legend=False,
 					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "radar_log10_peak_area"))

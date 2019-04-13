@@ -50,7 +50,7 @@ class ChartViewer(wx.Frame):
 	def __init__(self, parent, chart_type, initial_samples=[], *args, **kwds):
 		import pandas
 		self.chart_type = chart_type.lower()
-		print(type(args))
+		#print(type(args))
 		args = (parent,) + args
 		self.parent = parent
 		#self.chart_data = chart_data
@@ -625,8 +625,9 @@ class ChartViewer(wx.Frame):
 						self.samples_header: ["peak_area"],
 						self.samples_panel: ["peak_area"],
 						samples_line: ["peak_area"],
-						self.log_header: ["mean_peak_area"],
-						self.log_panel: ["mean_peak_area"],
+						self.log_header: ["mean_peak_area", "box_whisker"],
+						self.log_panel: ["mean_peak_area", "box_whisker"],
+						log_line: ["mean_peak_area", "box_whisker"],
 						}
 		
 		for item, charts in enable_options.items():
@@ -862,7 +863,7 @@ class ChartViewer(wx.Frame):
 		if self.projects == []:
 			return
 		
-		print(self.chart_type)
+		#print(self.chart_type)
 		
 		show_outliers = self.show_outliers_checkbox.GetValue()
 		show_raw_data = self.show_raw_data_checkbox.GetValue()
@@ -872,11 +873,11 @@ class ChartViewer(wx.Frame):
 		column_width = self.width_value.GetValue()
 		groupings = None
 		
-		print(show_outliers)
-		print(show_raw_data)
-		print(err_bar)
-		print(leg_cols)
-		print(column_width)
+		#print(show_outliers)
+		#print(show_raw_data)
+		#print(err_bar)
+		#print(leg_cols)
+		#print(column_width)
 		
 		if self.chart_type == "box_whisker":
 			self.chart.setup_datapoints(column_width, self.styles, self.colours)
@@ -929,7 +930,7 @@ class ChartViewer(wx.Frame):
 	"""Save, load and reset"""
 	
 	def do_reset(self, *args):  # wxGlade: ChartViewer.<event_handler>
-		# TODO: "colours":
+		self.colours = default_colours
 		self.percentage_checkbox.SetValue(False)
 		# TODO Width value was set somewhere else
 		# self.width_value.SetValue(float(row[1]))
@@ -939,7 +940,7 @@ class ChartViewer(wx.Frame):
 		self.show_outliers_checkbox.SetValue(True)
 		self.outlier_mode_choice.SetSelection(0)
 		self.error_bar_choice.SetSelection(0)
-		# TODO: "styles":
+		self.styles = bw_default_styles
 		self.legend_checkbox.SetValue(False)
 		self.leg_cols_value.SetValue(1)
 		self.leg_x_pos_value.SetValue(0.5)
@@ -965,7 +966,7 @@ class ChartViewer(wx.Frame):
 		self.chart_figure.canvas.draw_idle()
 	
 	def do_save(self, *args):  # wxGlade: ChartViewer.<event_handler>
-		print("hello")
+		
 		filetypes = []
 		if self.png_checkbox.GetValue():
 			filetypes.append("png")
@@ -978,7 +979,7 @@ class ChartViewer(wx.Frame):
 			wx.MessageBox("Please choose one or more filetypes", "Error", wx.ICON_ERROR | wx.OK)
 			return
 		
-		pathname = file_dialog(self, "*", "Save Chart", "", defaultDir=self.parent.Config.get("main", "resultspath"))
+		pathname = file_dialog(self, "*", "Save Chart", "", defaultDir=self.parent.Config.RESULTS_DIRECTORY)
 		
 		if pathname == None:
 			return
@@ -1045,7 +1046,7 @@ class ChartViewer(wx.Frame):
 	def load_settings(self, file):
 		for row in file.readlines():
 			row = row.rstrip("\r\n").split(";")
-			# TODO: projects
+
 			if row[0] == "colours":
 				self.colours = row[1].split(",")
 			elif row[0] == "percentage":
@@ -1113,7 +1114,7 @@ class ChartViewer(wx.Frame):
 	def do_load(self, event):  # wxGlade: ChartViewer.<event_handler>
 		pathname = file_dialog(self, "settings", "Load Settings", "Settings",
 							   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-							   defaultDir=self.parent.Config.get("main", "resultspath")
+							   defaultDir=self.parent.Config.RESULTS_DIRECTORY
 							  )
 		if pathname == None:
 			return
@@ -1268,7 +1269,7 @@ class ChartViewer(wx.Frame):
 	def on_sample_add(self, event):  # wxGlade: ChartViewer.<event_handler>
 		selected_projects = file_dialog_multiple(self, "info", "Choose a Project to Open", "info files",
 									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE,
-									   defaultDir=self.parent.Config.get("main", "resultspath"))
+									   defaultDir=self.parent.Config.RESULTS_DIRECTORY)
 		
 		for project in selected_projects:
 			self.add_sample(project)
@@ -1347,7 +1348,7 @@ class ChartViewer(wx.Frame):
 
 	def do_save_settings(self, event):  # wxGlade: ChartViewer.<event_handler>
 		pathname = file_dialog(self, "settings", "Save Settings", "Settings",
-							   defaultDir=self.parent.Config.get("main", "resultspath"))
+							   defaultDir=self.parent.Config.RESULTS_DIRECTORY)
 		if pathname == None:
 			return
 		

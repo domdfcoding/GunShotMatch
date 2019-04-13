@@ -37,7 +37,6 @@ copyright = __copyright__
 import os
 import sys
 import time
-sys.path.append("..")
 
 from utils.terminal import clear, br
 from utils.charts import default_colours, default_filetypes, bw_default_colours, bw_default_styles
@@ -573,6 +572,9 @@ def multiple_project_charts(projectList, show_outliers=True, show_raw_data=False
 	"""All Samples Comparison (Charts Only)"""
 	# TODO File names for charts
 	
+	print("This function needs reworking")
+	return
+	
 	import pandas
 	from utils.mathematical import df_count
 	from utils.charts import radar_chart, box_whisker
@@ -614,7 +616,7 @@ def arguments():
 	import argparse
 	parser = argparse.ArgumentParser()
 	
-	parser.add_argument("-p", "--projects", help="List of projects to compare.", nargs='2', required=True)
+	parser.add_argument("-p", "--projects", help="List of projects to compare.", nargs=2, required=True)
 	#parser.add_argument("-g", "--groups", help="List of groups for comparison chart.", nargs='+')
 	parser.add_argument("--info", help="Show program info.", action='store_true')
 	

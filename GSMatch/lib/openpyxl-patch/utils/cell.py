@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-# Copyright (c) 2010-2018 openpyxl
+# Copyright (c) 2010-2019 openpyxl
 
 """
 Collection of utilities used within the package and also available for client code
@@ -10,7 +10,7 @@ from openpyxl.compat import basestring
 from .exceptions import CellCoordinatesException
 
 # constants
-COORD_RE = re.compile(r'^[$]?([A-Z]+)[$]?(\d+)$')
+COORD_RE = re.compile(r'^[$]?([A-Za-z]{1,3})[$]?(\d+)$')
 COL_RANGE = """[A-Z]{1,3}:[A-Z]{1,3}:"""
 ROW_RANGE = r"""\d+:\d+:"""
 RANGE_EXPR = r"""
@@ -108,10 +108,10 @@ def get_column_letter(idx,):
     """Convert a column index into a column letter
     (3 -> 'C')
     """
-    
-    if type(idx)==str:
+
+    if type(idx) == str:
         return idx
-    elif type(idx)==int: 
+    elif type(idx) == int:
         try:
             return _STRING_COL_CACHE[idx]
         except KeyError:
@@ -202,8 +202,9 @@ def coordinate_to_tuple(coordinate):
     """
     Convert an Excel style coordinate to (row, colum) tuple
     """
-    col, row = coordinate_from_string(coordinate)
-    return row, _COL_STRING_CACHE[col]
+    match = COORD_RE.split(coordinate)
+    col, row = match[1:3]
+    return int(row), _COL_STRING_CACHE[col]
 
 
 def range_to_tuple(range_string):
@@ -224,11 +225,8 @@ def quote_sheetname(sheetname):
     """
     Add quotes around sheetnames if they contain spaces.
     """
-    pattern = re.compile(r"^(\d|\.)|([-%'(){};\s\"])")
     if "'" in sheetname:
         sheetname = sheetname.replace("'", "''")
 
-    if pattern.search(sheetname):
-        sheetname = u"'{0}'".format(sheetname)
-
+    sheetname = u"'{0}'".format(sheetname)
     return sheetname

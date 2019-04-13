@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-# Copyright (c) 2010-2018 openpyxl
+# Copyright (c) 2010-2019 openpyxl
 
 from operator import itemgetter
 
@@ -32,9 +32,9 @@ def write_rows(xf, worksheet):
 
     all_rows = get_rows_to_write(worksheet)
     if type(worksheet.max_column) == str:
-		max_column = column_index_from_string(worksheet.max_column)
+        max_column = column_index_from_string(worksheet.max_column)
     elif type(worksheet.max_column) == int:
-		max_column = worksheet.max_column
+        max_column = worksheet.max_column
 
     with xf.element("sheetData"):
         for row_idx, row in sorted(all_rows):
@@ -43,7 +43,8 @@ def write_rows(xf, worksheet):
 
 
 def write_row(xf, worksheet, row, row_idx, max_column):
-    attrs = {'r': '%d' % int(row_idx), 'spans': '1:%d' % int(max_column)}
+
+    attrs = {'r': '%d' % row_idx, 'spans': '1:%d' % max_column}
     dims = worksheet.row_dimensions
     if row_idx in dims:
         row_dimension = dims[row_idx]

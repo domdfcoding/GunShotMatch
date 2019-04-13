@@ -40,6 +40,8 @@ def mad_outliers(dataset, cutoff = 3):
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
 
+	if list(set(dataset)) in [None, 0.0, '', 0]:
+		return [], dataset
 	
 	for i in range(2):
 		dataset = [x for x in dataset if x is not None]
@@ -83,6 +85,8 @@ def two_stdev(dataset):
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
 
+	if list(set(dataset)) in [None, 0.0, '', 0]:
+		return [], dataset
 	
 	for i in range(2):
 		dataset = [x for x in dataset if x is not None]
@@ -117,6 +121,8 @@ def stdev_outlier(dataset, rng = int(2)):
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
 
+	if list(set(dataset)) in [None, 0.0, '', 0]:
+		return [], dataset
 	
 	for i in range(2):
 		dataset = [x for x in dataset if x is not None]
@@ -147,16 +153,23 @@ def stdev_outlier(dataset, rng = int(2)):
 
 def quartile_outliers(dataset): 
 	"""outliers are more than 3x inter-quartile range from upper or lower quartile"""
-
-	for i in range(2):
-		dataset = [x for x in dataset if x is not None]
-		for val in dataset:
-			if val in ['', 0.0,0]:
-				dataset.remove(val)
-	if len(dataset) == 0:
-		return float('nan')
-	elif dataset == [None]:
-		return float('nan')
+	if list(set(dataset)) in [None, 0.0, '', 0]:
+		return [], dataset
+	if list(set(dataset)) == [0.0]:
+		return [], dataset
+	if list(set(dataset)) == [None]:
+		return [], dataset
+	
+	#for i in range(2):
+	#	dataset = [x for x in dataset if x is not None]
+	#	for val in dataset:
+	#		if val in ['', 0.0,0]:
+	#			dataset.remove(val)
+	
+	#if len(dataset) == 0:
+	#	return float('nan'), float('nan')
+	#elif dataset == [None]:
+	#	return float('nan'), float('nan')
 	
 	q1 = numpy.percentile(dataset,25)
 	q3 = numpy.percentile(dataset,75)
@@ -179,7 +192,9 @@ def quartile_outliers(dataset):
 	return outliers, data_exc_outliers
 
 def median_none(values_to_median):
-
+	if list(set(values_to_median)) in [None, 0.0, '', 0]:
+		return 0
+	
 	for i in range(2):
 		values_to_median = [x for x in values_to_median if x is not None]
 		for val in values_to_median:
@@ -195,6 +210,9 @@ def median_none(values_to_median):
 def iqr_none(dataset):
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
+	
+	if list(set(dataset)) in [None, 0.0, '', 0]:
+		return float("nan")
 	
 	for i in range(2):
 		dataset = [x for x in dataset if x is not None]
@@ -216,6 +234,9 @@ def percentile_none(dataset,percentage):
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
 	
+	if list(set(dataset)) in [None, 0.0, '', 0]:
+		return float("nan")
+	
 	for i in range(2):
 		dataset = [x for x in dataset if x is not None]
 #		for val in dataset:
@@ -236,6 +257,8 @@ def spss_outliers(dataset, mode="all"):
 	if len(dataset) < 2:
 		raise ValueError("Dataset too small")
 
+	if list(set(dataset)) in [None, 0.0, '', 0]:
+		return float("nan")
 	
 	for i in range(2):
 		dataset = [x for x in dataset if x is not None]

@@ -43,6 +43,10 @@ or:
 
     $ python3 -m pip --user install sklearn, numpy, pandas, openpyxl, matplotlib, scipy, PyMassSpec
 
+
+wxPython
+--------------
+
 Additionally, GunShotMatch requires wxPython. Use the following commands to install it:
 
 Windows and macOS
