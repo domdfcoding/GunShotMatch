@@ -99,6 +99,8 @@ def format_sheet(ws, number_format_list=None, width_list=None, alignment_list=No
 	
 	for column_cells in ws.columns:
 		length = max(len(as_text(cell.value)) for cell in column_cells)
+		if length < 1.0:
+			length = 1.0
 		ws.column_dimensions[get_column_letter(column_cells[0].column)].width = length
 	# ws.column_dimensions[column_cells[0].column].bestFit = True
 	

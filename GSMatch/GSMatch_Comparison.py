@@ -153,7 +153,7 @@ class GSMCompare(object):
 		import json
 		import numpy
 		import operator
-		from pprint import pformat
+		from pprint import pprint, pformat
 		
 		from utils.spreadsheet import append_to_xlsx
 		from utils.mathematical import df_mean, rounders
@@ -320,7 +320,7 @@ class GSMCompare(object):
 					# Write output data
 					name = left_peak['hits'][left_hit_number]['Name']
 					CAS = left_peak['hits'][left_hit_number]['CAS']
-					
+				
 					left_rt_mean = left_peak['average_rt']
 					left_rt_stdev = numpy.nanstd(left_peak['rt_data'])
 					left_rt_n = len(left_peak['rt_data'])
@@ -335,46 +335,153 @@ class GSMCompare(object):
 					
 					right_area_mean = right_peak['average_peak_area']
 					right_area_stdev = numpy.nanstd(right_peak['area_data'])
-					right_area_n = len(left_peak['rt_data'])
-					
-		
-					outputCSV.write(f"{name};{CAS};;;")	# Name;CAS Number;;;
-					
-					outputCSV.write(f"{left_rt_mean};{left_rt_stdev};{left_rt_stdev / left_rt_mean};;") # Mean RT left;STDEV RT left;%RSD RT left;;
-					outputCSV.write(f"{left_area_mean};{left_area_stdev};{left_area_stdev / left_area_mean};;") # Mean Area left;STDEV Area left;%RSD Area left;;
-					
-					outputCSV.write(f"{right_rt_mean};{right_rt_stdev};{right_rt_stdev / right_rt_mean};;") # Mean RT right;STDEV RT right;%RSD RT right;;
-					outputCSV.write(f"{right_area_mean};{right_area_stdev};{right_area_stdev / right_area_mean};;") # Mean Area right;STDEV Area right;%RSD Area right;;
-					
-					"""Retention Time t-statistics"""
-					# Independent 2 Samples t-test
-					rt_t_stat, rt_p_val, rt_result = t_test(left_rt_mean, left_rt_n, left_rt_stdev,right_rt_mean, right_rt_n, right_rt_stdev, a_value)
-					outputCSV.write(f"{rt_t_stat}; {rt_p_val}; {rt_result};;")
-					
-					"""Peak Area t-statistics"""
-					# Independent 2 Samples t-test
-					area_t_stat, area_p_val, area_result = t_test(left_area_mean, left_area_n, left_area_stdev,right_area_mean, right_area_n, right_area_stdev, a_value)
-					outputCSV.write(f"{area_t_stat};{area_p_val};{area_result};;")
-					
-					# Welch's t-test
-					area_t_stat, area_p_val, area_result = t_test(left_area_mean, left_area_n, left_area_stdev,right_area_mean, right_area_n, right_area_stdev, a_value, True)
-					outputCSV.write(f"{area_t_stat};{area_p_val};{area_result};;")
-					
-					"""MS Comparison"""
-					#print(left_peak["ms_list"])
-					#print(right_peak["ms_list"])
-					mf_mean, mf_stdev = ms_comparisons(left_peak["ms_list"], right_peak["ms_list"])
-					outputCSV.write(f"{mf_mean};{mf_stdev};{mf_stdev/mf_mean};;")
-		
-					outputCSV.write("\n")
+					right_area_n = len(right_peak['rt_data'])
 				
-			print('The following peaks were aligned by retention times but none of the "hits" matched:')
-			for peak_pair in aligned_non_matching_peaks:
-				br()
-				print(f"Retention time: {peak_pair[0]['average_rt']}")
-				print(f"Left Peak: {pformat(peak_pair[0])}")
-				print(f"Right Peak: {pformat(peak_pair[1])}")
+					mf_mean, mf_stdev = ms_comparisons(left_peak["ms_list"], right_peak["ms_list"])
+					
+					write_peak(outputCSV, name, CAS, left_rt_mean, left_rt_stdev, left_rt_n, left_area_mean,
+						   	   left_area_stdev, left_area_n, right_rt_mean, right_rt_stdev, right_rt_n, right_area_mean,
+						       right_area_stdev, right_area_n, mf_mean, mf_stdev, a_value)
+					
+
+				#	outputCSV.write(f"{name};{CAS};;;")	# Name;CAS Number;;;
+					
+				#	outputCSV.write(f"{left_rt_mean};{left_rt_stdev};{left_rt_stdev / left_rt_mean};;") # Mean RT left;STDEV RT left;%RSD RT left;;
+				#	outputCSV.write(f"{left_area_mean};{left_area_stdev};{left_area_stdev / left_area_mean};;") # Mean Area left;STDEV Area left;%RSD Area left;;
+					
+				#	outputCSV.write(f"{right_rt_mean};{right_rt_stdev};{right_rt_stdev / right_rt_mean};;") # Mean RT right;STDEV RT right;%RSD RT right;;
+				#	outputCSV.write(f"{right_area_mean};{right_area_stdev};{right_area_stdev / right_area_mean};;") # Mean Area right;STDEV Area right;%RSD Area right;;
+					
+				#	"""Retention Time t-statistics"""
+				#	# Independent 2 Samples t-test
+				#	rt_t_stat, rt_p_val, rt_result = t_test(left_rt_mean, left_rt_n, left_rt_stdev,right_rt_mean, right_rt_n, right_rt_stdev, a_value)
+				#	outputCSV.write(f"{rt_t_stat}; {rt_p_val}; {rt_result};;")
+					
+				#	"""Peak Area t-statistics"""
+				#	# Independent 2 Samples t-test
+				#	area_t_stat, area_p_val, area_result = t_test(left_area_mean, left_area_n, left_area_stdev,right_area_mean, right_area_n, right_area_stdev, a_value)
+				#	outputCSV.write(f"{area_t_stat};{area_p_val};{area_result};;")
+					
+				#	# Welch's t-test
+				#	area_t_stat, area_p_val, area_result = t_test(left_area_mean, left_area_n, left_area_stdev,right_area_mean, right_area_n, right_area_stdev, a_value, True)
+				#	outputCSV.write(f"{area_t_stat};{area_p_val};{area_result};;")
+					
+				#	"""MS Comparison"""
+				#	#print(left_peak["ms_list"])
+				#	#print(right_peak["ms_list"])
+				#	mf_mean, mf_stdev = ms_comparisons(left_peak["ms_list"], right_peak["ms_list"])
+				#	outputCSV.write(f"{mf_mean};{mf_stdev};{mf_stdev/mf_mean};;")
 		
+				#	outputCSV.write("\n")
+				
+			#print('The following peaks were aligned by retention time but none of the "hits" matched:')
+			for peak_pair in aligned_non_matching_peaks:
+			#	br()
+			#	print(f"Retention time: {peak_pair[0]['average_rt']}")
+			#	print(f"Left Peak: {pformat(peak_pair[0])}")
+				left_peak = peak_pair[0]
+			#	print(f"Right Peak: {pformat(peak_pair[1])}")
+				right_peak = peak_pair[1]
+				
+				# Write output data (left only)
+				name = left_peak['hits'][0]['Name']
+				CAS = left_peak['hits'][0]['CAS']
+				
+				left_rt_mean = left_peak['average_rt']
+				left_rt_stdev = numpy.nanstd(left_peak['rt_data'])
+				
+				left_area_mean = left_peak['average_peak_area']
+				left_area_stdev = numpy.nanstd(left_peak['area_data'])
+				
+				outputCSV.write(f"{name};{CAS};;;")  # Name;CAS Number;;;
+				
+				outputCSV.write(
+					f"{left_rt_mean};{left_rt_stdev};{left_rt_stdev / left_rt_mean};;")  # Mean RT left;STDEV RT left;%RSD RT left;;
+				outputCSV.write(
+					f"{left_area_mean};{left_area_stdev};{left_area_stdev / left_area_mean};;")  # Mean Area left;STDEV Area left;%RSD Area left;;
+				
+				outputCSV.write(";;;;;;;;;;;;;;;;;;;;;;;;")
+				outputCSV.write("\n")
+				
+				# Write output data (right only)
+				name = right_peak['hits'][0]['Name']
+				CAS = right_peak['hits'][0]['CAS']
+
+				right_rt_mean = right_peak['average_rt']
+				right_rt_stdev = numpy.nanstd(right_peak['rt_data'])
+				
+				right_area_mean = right_peak['average_peak_area']
+				right_area_stdev = numpy.nanstd(right_peak['area_data'])
+				
+				outputCSV.write(f"{name};{CAS};;;;;;;;;;;")  # Name;CAS Number
+				
+				outputCSV.write(
+					f"{right_rt_mean};{right_rt_stdev};{right_rt_stdev / right_rt_mean};;")  # Mean RT right;STDEV RT right;%RSD RT right;;
+				outputCSV.write(
+					f"{right_area_mean};{right_area_stdev};{right_area_stdev / right_area_mean};;")  # Mean Area right;STDEV Area right;%RSD Area right;;
+				
+				outputCSV.write(";;;;;;;;;;;;;;;;")
+				outputCSV.write("\n")
+				
+			
+			#print("Peaks in the left sample only:")
+			for peak in left_peak_data:
+				if peak not in left_aligned_peaks:
+					
+					# Write output data
+					name = peak['hits'][0]['Name']
+					CAS = peak['hits'][0]['CAS']
+					
+					left_rt_mean = peak['average_rt']
+					left_rt_stdev = numpy.nanstd(peak['rt_data'])
+					
+					left_area_mean = peak['average_peak_area']
+					left_area_stdev = numpy.nanstd(peak['area_data'])
+					
+					write_peak(outputCSV, name, CAS, left_rt_mean=left_rt_mean, left_rt_stdev=left_rt_stdev,
+							   left_area_mean=left_area_mean, left_area_stdev=left_area_stdev, a_value=a_value)
+					
+				#	outputCSV.write(f"{name};{CAS};;;")  # Name;CAS Number;;;
+					
+				#	outputCSV.write(
+				#		f"{left_rt_mean};{left_rt_stdev};{left_rt_stdev / left_rt_mean};;")  # Mean RT left;STDEV RT left;%RSD RT left;;
+				#	outputCSV.write(
+				#		f"{left_area_mean};{left_area_stdev};{left_area_stdev / left_area_mean};;")  # Mean Area left;STDEV Area left;%RSD Area left;;
+					
+				#	outputCSV.write(";;;;;;;;;;;;;;;;;;;;;;;;")
+				#	outputCSV.write("\n")
+					
+			
+			#print("Peaks in the right sample only:")
+			for peak in right_peak_data:
+				if peak not in right_aligned_peaks:
+					
+					# Write output data
+					name = peak['hits'][0]['Name']
+					CAS = peak['hits'][0]['CAS']
+					
+					right_rt_mean = peak['average_rt']
+					right_rt_stdev = numpy.nanstd(peak['rt_data'])
+					
+					right_area_mean = peak['average_peak_area']
+					right_area_stdev = numpy.nanstd(peak['area_data'])
+					
+					write_peak(outputCSV, name, CAS, right_rt_mean=right_rt_mean, right_rt_stdev=right_rt_stdev,
+							   right_area_mean=right_area_mean,right_area_stdev=right_area_stdev,a_value=a_value)
+					
+				#	outputCSV.write(f"{name};{CAS};;;;;;;;;;;")  # Name;CAS Number
+				
+				#	outputCSV.write(f"{right_rt_mean};{right_rt_stdev};{right_rt_stdev / right_rt_mean};;")
+						# Mean RT right;STDEV RT right;%RSD RT right;;
+				#	outputCSV.write(f"{right_area_mean};{right_area_stdev};{right_area_stdev / right_area_mean};;")
+						# Mean Area right;STDEV Area right;%RSD Area right;;
+					
+				#	outputCSV.write(";;;;;;;;;;;;;;;;")
+				#	outputCSV.write("\n")
+			
+			
+			
+			
 		else:
 			print("No peaks were found in common")
 			
@@ -386,7 +493,7 @@ class GSMCompare(object):
 	
 		append_to_xlsx(output_filename + ".CSV", output_filename + ".xlsx", "Comparison", overwrite=True, seperator=";", toFloats=True)
 		
-		comparisonFormat(output_filename + ".xlsx", a_value)
+		comparisonFormat(output_filename + ".xlsx")
 
 	def make_archive(self):
 		"""Make Single Tarball Containing All Files"""
@@ -432,7 +539,57 @@ class GSMCompare(object):
 		print(f"\nSaved as: {os.path.join(self.Config.RESULTS_DIRECTORY, self.comparison_name + '_COMPARISON.xlsx')}")
 	
 
-def comparisonFormat(inputFile, a_value=0.05):  # Formatting for Final Output
+def write_peak(outputCSV, name, CAS, left_rt_mean='', left_rt_stdev='', left_rt_n='', left_area_mean='',
+			   left_area_stdev='', left_area_n='', right_rt_mean='', right_rt_stdev='', right_rt_n='',
+			   right_area_mean='', right_area_stdev='', right_area_n='', mf_mean='', mf_stdev='', a_value=0.05):
+
+	outputCSV.write(f"{name};{CAS};;;")	# Name;CAS Number;;;
+	
+	left_rt_rsd = (left_rt_stdev / left_rt_mean) if not any([left_rt_stdev=='',left_rt_mean=='']) else ''
+	left_area_rsd = (left_area_stdev / left_area_mean) if not any([left_area_stdev=='',left_area_mean=='']) else ''
+	right_rt_rsd = (right_rt_stdev / right_rt_mean) if not any([right_rt_stdev=='',right_rt_mean=='']) else ''
+	right_area_rsd = (right_area_stdev / right_area_mean) if not any([right_area_stdev=='',right_area_mean=='']) else ''
+	
+	outputCSV.write(f"{left_rt_mean};{left_rt_stdev};{left_rt_rsd};;") # Mean RT left;STDEV RT left;%RSD RT left;;
+	outputCSV.write(f"{left_area_mean};{left_area_stdev};{left_area_rsd};;") # Mean Area left;STDEV Area left;%RSD Area left;;
+	
+	outputCSV.write(f"{right_rt_mean};{right_rt_stdev};{right_rt_rsd};;") # Mean RT right;STDEV RT right;%RSD RT right;;
+	outputCSV.write(f"{right_area_mean};{right_area_stdev};{right_area_rsd};;") # Mean Area right;STDEV Area right;%RSD Area right;;
+	
+	"""Retention Time t-statistics"""
+	# Independent 2 Samples t-test
+	if not any([left_rt_mean=='', left_rt_n=='', left_rt_stdev=='',right_rt_mean=='', right_rt_n=='', right_rt_stdev=='']):
+		rt_t_stat, rt_p_val, rt_result = t_test(left_rt_mean, left_rt_n, left_rt_stdev,right_rt_mean, right_rt_n, right_rt_stdev, a_value)
+	else:
+		rt_t_stat, rt_p_val, rt_result = '', '', ''
+	outputCSV.write(f"{rt_t_stat}; {rt_p_val}; {rt_result};;")
+	
+	"""Peak Area t-statistics"""
+	# Independent 2 Samples t-test
+	if not any([left_area_mean=='', left_area_n=='', left_area_stdev=='',right_area_mean=='', right_area_n=='', right_area_stdev=='']):
+		area_t_stat, area_p_val, area_result = t_test(left_area_mean, left_area_n, left_area_stdev,right_area_mean, right_area_n, right_area_stdev, a_value)
+	else:
+		area_t_stat, area_p_val, area_result = '', '', ''
+	outputCSV.write(f"{area_t_stat}; {area_p_val}; {area_result};;")
+	
+	# Welch's t-test
+	if not any([left_area_mean=='', left_area_n=='', left_area_stdev=='',right_area_mean=='', right_area_n=='', right_area_stdev=='']):
+		area_t_stat, area_p_val, area_result = t_test(left_area_mean, left_area_n, left_area_stdev,right_area_mean, right_area_n, right_area_stdev, a_value, True)
+	else:
+		area_t_stat, area_p_val, area_result = '', '', ''
+	outputCSV.write(f"{area_t_stat}; {area_p_val}; {area_result};;")
+	
+	"""MS Comparison"""
+	mf_rsd = (mf_stdev / mf_mean) if not any([mf_stdev == '', mf_mean == '']) else ''
+	outputCSV.write(f"{mf_mean};{mf_stdev};{mf_rsd};;")
+
+	outputCSV.write("\n")
+	
+	return
+
+
+
+def comparisonFormat(inputFile):  # Formatting for Final Output
 	from openpyxl import load_workbook
 	from openpyxl.utils import get_column_letter
 	from utils.spreadsheet import format_header, format_sheet, make_column_property_list
@@ -456,9 +613,9 @@ def comparisonFormat(inputFile, a_value=0.05):  # Formatting for Final Output
 						  }
 	spacer_width = 1
 	
-	width_list = {'B': 12, 'C': spacer_width, 'D': 0, # Name and CAS
-				  'E': 8, 'F': 11, 'G': 7, 'H': spacer_width, 'I': 15, 'J': 12, 'K': 8, 'L': spacer_width*2, # left Sample
-				  'M': 8, 'N': 11, 'O': 7, 'P': spacer_width, 'Q': 15, 'R': 12, 'S': 8, 'T': spacer_width*2, # right Sample
+	width_list = {'B': 12, 'C': spacer_width*2, 'D': 0, # Name and CAS
+				  'E': 8, 'F': 11, 'G': 7, 'H': spacer_width, 'I': 15, 'J': 14, 'K': 8, 'L': spacer_width*2, # left Sample
+				  'M': 8, 'N': 11, 'O': 7, 'P': spacer_width, 'Q': 15, 'R': 14, 'S': 8, 'T': spacer_width*2, # right Sample
 				  'U': 11, 'V': 10, 'W': 7, 'X': spacer_width,		# RT t-test
 				  'Y': 11, 'Z': 10, 'AA': 7, 'AB': spacer_width,	# Area t-test
 				  'AC': 11, 'AD': 10, 'AE': 7, 'AF': spacer_width,	# Area Welch's t-test
@@ -470,7 +627,7 @@ def comparisonFormat(inputFile, a_value=0.05):  # Formatting for Final Output
 	for column in ['W', 'AA', 'AE']:
 		alignment_list[column] = 'center'
 	
-	format_sheet(ws, number_format_list, width_list, alignment_list)
+	format_sheet(ws, number_format_list, width_list, alignment_list)#
 	
 	
 	"""Header"""
