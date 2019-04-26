@@ -93,8 +93,14 @@ utils.paths:
 -----
 
 utils.progbar:
-	Based from http://wxpython-users.1045709.n5.nabble.com/Gauge-in-Statusbar-td2321906.html
+	Based on http://wxpython-users.1045709.n5.nabble.com/Gauge-in-Statusbar-td2321906.html
 	Copyright 2005 Ray Pasco
+	Adapted in 2019 by Dominic Davis-Foster
+-----
+
+utils.pubchempy:
+	Copyright Matt Swain <m.swain@me.com>
+	Available under the MIT License
 	Adapted in 2019 by Dominic Davis-Foster
 -----
 
@@ -127,6 +133,11 @@ utils.timing:
     From http://stackoverflow.com/a/1557906/6009280
     Licensed under CC-BY-SA
     Adapted 2018 by Dominic Davis-Foster
+-----
+
+utils.wxBitmap
+    Functions Copyright 2005 Antoine Pitrou
+    From https://sourceforge.net/p/wxglade/mailman/message/6475744/
 -----
 
 Icons:

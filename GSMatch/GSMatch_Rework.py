@@ -518,7 +518,7 @@ def Match_Counter(ms_comp_list,seperator=";"):
 	
 	for peak, ms in zip(peak_data, ms_comp_list):
 		write_peak(statistics_full_output,peak, ms)
-		if peak["hits"][0]["Count"] > (PL_len/2): # Write to Statistics; also need similarity > 800
+		if peak["hits"][0]["Count"] > (PL_len/2): # Write to Statistics; TODO: also need similarity > 800
 			write_peak(statistics_output,peak, ms)
 			if peak["hits"][0]["CAS"].replace("-","") in CAS_list: # Write to Statistics_Lit
 				write_peak(statistics_lit_output,peak, ms)

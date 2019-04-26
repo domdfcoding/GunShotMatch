@@ -25,9 +25,11 @@ import os
 import wx
 import sys
 import csv
+import json
 import types
 import numpy
-import pandas
+#import pandas
+import jinja2
 import traceback
 import webbrowser
 import configparser as ConfigParser
@@ -36,13 +38,14 @@ from utils.paths import maybe_make, relpath
 #from utils.progbar import ProgressStatusBar
 from utils.ChromatogramDisplay import Display
 from utils.wxTools import file_dialog
-from utils.mathematical import df_count
+from utils.mathematical import df_count, rounders
+from utils.helper import str2tuple, list2str
+from utils.wxTools import coming_soon
+import utils.pubchempy as pcp
 
 import wx.html2
 import wx.richtext
 from wx import grid
-
-from utils.helper import str2tuple, list2str
 
 from pyms.Peak.IO import load_peaks
 from pyms.GCMS.Class import IonChromatogram
@@ -52,12 +55,9 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
-from gsm_gui import border_config, ChartViewer, AboutDialog, paths_dialog, list_dialog
-
 from gsm_core import pretty_name_from_info
 
-from utils.wxTools import coming_soon
-
+from gsm_gui import border_config, ChartViewer, AboutDialog, paths_dialog, list_dialog
 from gsm_gui.threads import StatusThread, EVT_STATUS, EVT_CONVERSION, EVT_CONVERSION_LOG, EVT_PROJECT, \
 	EVT_PROJECT_LOG, EVT_COMPARISON, EVT_COMPARISON_LOG, ConversionThread, ProjectThread, QueueThread, \
 	ComparisonThread, conversion_thread_running, project_thread_running, comparison_thread_running
@@ -222,6 +222,83 @@ class Launcher(wx.Frame):
 		
 		self.chromatogram_canvas = FigureCanvas(self.chromatogram_parent_panel, wx.ID_ANY, self.chromatogram_figure)
 		self.browse_project_data = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
+		self.dv_toolbar = wx.Panel(self.browse_project_data, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		self.dv_toolbar.SetMinSize((1,40))
+		self.dv_toolbar.SetMaxSize((-1,40))
+		self.dv_focus_thief = wx.Button(self.dv_toolbar, wx.ID_ANY, "")
+		self.dv_CloseProject = wx.BitmapButton(self.dv_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/close_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.dv_main_panel = wx.Panel(self.browse_project_data, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		self.data_viewer_v_splitter = wx.SplitterWindow(self.dv_main_panel, wx.ID_ANY, style=wx.SP_3D | wx.SP_BORDER | wx.SP_LIVE_UPDATE)
+		self.dv_list_panel = wx.Panel(self.data_viewer_v_splitter, wx.ID_ANY)
+		self.data_viewer_list = wx.ListCtrl(self.dv_list_panel, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+		self.dv_data_panel = wx.Panel(self.data_viewer_v_splitter, wx.ID_ANY)
+		self.data_viewer_h_splitter = wx.SplitterWindow(self.dv_data_panel, wx.ID_ANY, style=wx.SP_3D | wx.SP_BORDER | wx.SP_LIVE_UPDATE)
+		self.dv_spec_panel = wx.Panel(self.data_viewer_h_splitter, wx.ID_ANY)
+		self.data_viewer_notebook = wx.Notebook(self.dv_spec_panel, wx.ID_ANY, style=wx.NB_BOTTOM)
+		self.data_viewer_reference = wx.Panel(self.data_viewer_notebook, wx.ID_ANY)
+		self.dv_reference_panel = wx.Panel(self.data_viewer_reference, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		
+		# create the figure with a single plot and create a canvas with the figure
+		self.dv_reference_spec_figure = Figure()
+		matplotlib.projections.register_projection(My_Axes)
+		self.dv_reference_spec_axes = self.dv_reference_spec_figure.add_subplot(111, projection="My_Axes")  # 1x1 grid, first subplot
+		
+		
+		
+		self.dv_reference_spec_canvas = FigureCanvas(self.dv_reference_panel, wx.ID_ANY, self.dv_reference_spec_figure)
+		self.dv_reference_toolbar = wx.Panel(self.data_viewer_reference, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		self.dv_reference_toolbar.SetMaxSize((-1,40))
+		self.dv_reference_focus_thief = wx.Button(self.dv_reference_toolbar, wx.ID_ANY, "")
+		self.dv_reference_previous_btn = wx.BitmapButton(self.dv_reference_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_back_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.dv_reference_next_btn = wx.BitmapButton(self.dv_reference_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_forward_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.dv_reference_png_button = wx.ToggleButton(self.dv_reference_toolbar, wx.ID_ANY, "PNG")
+		self.dv_reference_svg_button = wx.ToggleButton(self.dv_reference_toolbar, wx.ID_ANY, "SVG")
+		self.dv_reference_pdf_button = wx.ToggleButton(self.dv_reference_toolbar, wx.ID_ANY, "PDF")
+		self.dv_reference_save_btn = wx.BitmapButton(self.dv_reference_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/save_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.data_viewer_samples = wx.Panel(self.data_viewer_notebook, wx.ID_ANY)
+		self.dv_samples_panel = wx.Panel(self.data_viewer_samples, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		
+		# create the figure with a single plot and create a canvas with the figure
+		self.dv_samples_spec_figure = Figure()
+		matplotlib.projections.register_projection(My_Axes)
+		self.dv_samples_spec_axes = self.dv_samples_spec_figure.add_subplot(111, projection="My_Axes")  # 1x1 grid, first subplot
+		
+		
+		
+		self.dv_samples_spec_canvas = FigureCanvas(self.dv_samples_panel, wx.ID_ANY, self.dv_samples_spec_figure)
+		self.dv_samples_toolbar = wx.Panel(self.data_viewer_samples, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		self.dv_samples_toolbar.SetMaxSize((-1,40))
+		self.dv_samples_focus_thief = wx.Button(self.dv_samples_toolbar, wx.ID_ANY, "")
+		self.dv_samples_previous_btn = wx.BitmapButton(self.dv_samples_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_back_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.dv_samples_next_btn = wx.BitmapButton(self.dv_samples_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_forward_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.dv_samples_png_button = wx.ToggleButton(self.dv_samples_toolbar, wx.ID_ANY, "PNG")
+		self.dv_samples_svg_button = wx.ToggleButton(self.dv_samples_toolbar, wx.ID_ANY, "SVG")
+		self.dv_samples_pdf_button = wx.ToggleButton(self.dv_samples_toolbar, wx.ID_ANY, "PDF")
+		self.dv_samples_save_btn = wx.BitmapButton(self.dv_samples_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/save_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.data_viewer_head2tail = wx.Panel(self.data_viewer_notebook, wx.ID_ANY)
+		self.dv_head2tail_panel = wx.Panel(self.data_viewer_head2tail, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		
+		# create the figure with a single plot and create a canvas with the figure
+		self.dv_head2tail_spec_figure = Figure()
+		matplotlib.projections.register_projection(My_Axes)
+		self.dv_head2tail_spec_axes = self.dv_head2tail_spec_figure.add_subplot(111, projection="My_Axes")  # 1x1 grid, first subplot
+		
+		
+		
+		self.dv_head2tail_spec_canvas = FigureCanvas(self.dv_head2tail_panel, wx.ID_ANY, self.dv_head2tail_spec_figure)
+		self.dv_head2tail_toolbar = wx.Panel(self.data_viewer_head2tail, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		self.dv_head2tail_toolbar.SetMaxSize((-1,40))
+		self.dv_head2tail_focus_thief = wx.Button(self.dv_head2tail_toolbar, wx.ID_ANY, "")
+		self.dv_head2tail_previous_btn = wx.BitmapButton(self.dv_head2tail_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_back_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.dv_head2tail_next_btn = wx.BitmapButton(self.dv_head2tail_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_forward_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.dv_head2tail_png_button = wx.ToggleButton(self.dv_head2tail_toolbar, wx.ID_ANY, "PNG")
+		self.dv_head2tail_svg_button = wx.ToggleButton(self.dv_head2tail_toolbar, wx.ID_ANY, "SVG")
+		self.dv_head2tail_pdf_button = wx.ToggleButton(self.dv_head2tail_toolbar, wx.ID_ANY, "PDF")
+		self.dv_head2tail_save_btn = wx.BitmapButton(self.dv_head2tail_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/save_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.dv_html_panel = wx.Panel(self.data_viewer_h_splitter, wx.ID_ANY)
+		self.dv_html = wx.html2.WebView.New(self.dv_html_panel, wx.ID_ANY)
+		self.dv_html_home = "http://domdfcoding.github.com/GunShotMatch"
+		self.dv_html.LoadURL(self.dv_html_home)
 		self.browse_project_comparison = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
 		self.Compare_Projects = wx.Panel(self.notebook_1, wx.ID_ANY)
 		self.comparison_panel = wx.Panel(self.Compare_Projects, wx.ID_ANY, style=wx.BORDER_SUNKEN)
@@ -305,6 +382,15 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.on_view_spectrum, self.ViewSpectrum_Btn)
 		self.Bind(wx.EVT_BUTTON, self.do_configure_borders, self.config_borders_button)
 		self.Bind(wx.EVT_BUTTON, self.do_save_chrom, self.chrom_save_btn)
+		self.Bind(wx.EVT_BUTTON, self.on_close_project, self.dv_CloseProject)
+		self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.do_select_peak, self.data_viewer_list)
+		self.Bind(wx.EVT_BUTTON, self.dv_do_save_reference, self.dv_reference_save_btn)
+		self.Bind(wx.EVT_BUTTON, self.dv_on_samples_previous, self.dv_samples_previous_btn)
+		self.Bind(wx.EVT_BUTTON, self.dv_on_samples_next, self.dv_samples_next_btn)
+		self.Bind(wx.EVT_BUTTON, self.dv_do_save_samples, self.dv_samples_save_btn)
+		self.Bind(wx.EVT_BUTTON, self.dv_on_head2tail_previous, self.dv_head2tail_previous_btn)
+		self.Bind(wx.EVT_BUTTON, self.dv_on_head2tail_next, self.dv_head2tail_next_btn)
+		self.Bind(wx.EVT_BUTTON, self.dv_do_save_head2tail, self.dv_head2tail_save_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_left_comparison_browse, self.comparison_left_browse_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_right_comparison_browse, self.comparison_right_browse_btn)
 		self.Bind(wx.EVT_BUTTON, self.comparison_run, self.run_comparison_button)
@@ -399,6 +485,14 @@ class Launcher(wx.Frame):
 		self.comparison_right_project_name = None
 		self.comparison_left_project = None
 		self.comparison_left_project_name = None
+		
+		self.browser_peak_data = []
+		
+		# Setup Jinja2 Template
+		templateLoader = jinja2.FileSystemLoader(searchpath="./")
+		templateEnv = jinja2.Environment(loader=templateLoader)
+		TEMPLATE_FILE = "properties_template.html"
+		self.template = templateEnv.get_template(TEMPLATE_FILE)
 		
 	
 	def __set_properties(self):
@@ -542,6 +636,47 @@ class Launcher(wx.Frame):
 		self.chrom_save_btn.SetSize(self.chrom_save_btn.GetBestSize())
 		self.chromatogram_toolbar.SetMinSize((-1, 32))
 		self.chromatogram_canvas.SetMinSize((1, 1))
+		self.dv_focus_thief.SetMinSize((1, 1))
+		self.dv_CloseProject.SetMinSize((38, 38))
+		self.dv_CloseProject.SetToolTip("Close Project")
+		self.dv_toolbar.SetMinSize((-1, 32))
+		self.data_viewer_list.AppendColumn("Time", format=wx.LIST_FORMAT_LEFT, width=80)
+		self.data_viewer_list.AppendColumn("Name", format=wx.LIST_FORMAT_LEFT, width=400)
+		self.data_viewer_list.AppendColumn("CAS", format=wx.LIST_FORMAT_LEFT, width=80)
+		self.dv_reference_focus_thief.SetMinSize((1, 1))
+		self.dv_reference_previous_btn.SetMinSize((38, 38))
+		self.dv_reference_previous_btn.SetToolTip("Go back")
+		self.dv_reference_previous_btn.Enable(False)
+		self.dv_reference_next_btn.SetMinSize((38, 38))
+		self.dv_reference_next_btn.SetToolTip("Go forward")
+		self.dv_reference_next_btn.Enable(False)
+		self.dv_reference_png_button.SetMinSize((45, -1))
+		self.dv_reference_svg_button.SetMinSize((45, -1))
+		self.dv_reference_pdf_button.SetMinSize((45, -1))
+		self.dv_reference_save_btn.SetMinSize((38, 38))
+		self.dv_reference_toolbar.SetMaxSize((10000000,40))
+		self.dv_samples_focus_thief.SetMinSize((1, 1))
+		self.dv_samples_previous_btn.SetMinSize((38, 38))
+		self.dv_samples_previous_btn.SetToolTip("Go back")
+		self.dv_samples_next_btn.SetMinSize((38, 38))
+		self.dv_samples_next_btn.SetToolTip("Go forward")
+		self.dv_samples_png_button.SetMinSize((45, -1))
+		self.dv_samples_svg_button.SetMinSize((45, -1))
+		self.dv_samples_pdf_button.SetMinSize((45, -1))
+		self.dv_samples_save_btn.SetMinSize((38, 38))
+		self.dv_samples_toolbar.SetMaxSize((10000000,40))
+		self.dv_head2tail_focus_thief.SetMinSize((1, 1))
+		self.dv_head2tail_previous_btn.SetMinSize((38, 38))
+		self.dv_head2tail_previous_btn.SetToolTip("Go back")
+		self.dv_head2tail_next_btn.SetMinSize((38, 38))
+		self.dv_head2tail_next_btn.SetToolTip("Go forward")
+		self.dv_head2tail_png_button.SetMinSize((45, -1))
+		self.dv_head2tail_svg_button.SetMinSize((45, -1))
+		self.dv_head2tail_pdf_button.SetMinSize((45, -1))
+		self.dv_head2tail_save_btn.SetMinSize((38, 38))
+		self.dv_head2tail_toolbar.SetMaxSize((10000000,40))
+		self.data_viewer_h_splitter.SetMinimumPaneSize(40)
+		self.data_viewer_v_splitter.SetMinimumPaneSize(20)
 		self.comparison_left_picker.SetMinSize((171, -1))
 		self.comparison_left_browse_btn.SetMinSize((29, 29))
 		self.comparison_left_header.SetMinSize((200, 160))
@@ -598,6 +733,22 @@ class Launcher(wx.Frame):
 		comparison_left = wx.BoxSizer(wx.VERTICAL)
 		comparison_left_picker_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		browse_project_tab_sizer = wx.BoxSizer(wx.VERTICAL)
+		data_viewer_sizer = wx.BoxSizer(wx.VERTICAL)
+		dv_main_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		dv_data_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		dv_html_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		dv_spec_sizer = wx.BoxSizer(wx.VERTICAL)
+		dv_head2tail_main_sizer = wx.BoxSizer(wx.VERTICAL)
+		dv_head2tail_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		dv_head2tail_sizer = wx.BoxSizer(wx.VERTICAL)
+		dv_sample_main_sizer = wx.BoxSizer(wx.VERTICAL)
+		dv_samples_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		dv_samples_sizer = wx.BoxSizer(wx.VERTICAL)
+		dv_reference_main_sizer = wx.BoxSizer(wx.VERTICAL)
+		dv_reference_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		dv_reference_sizer = wx.BoxSizer(wx.VERTICAL)
+		dv_list_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		dv_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		browse_project_chromatogram_sizer = wx.BoxSizer(wx.VERTICAL)
 		chromatogram_main_sizer = wx.BoxSizer(wx.VERTICAL)
 		chrom_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -914,6 +1065,93 @@ class Launcher(wx.Frame):
 		self.chromatogram_parent_panel.SetSizer(chromatogram_main_sizer)
 		browse_project_chromatogram_sizer.Add(self.chromatogram_parent_panel, 1, wx.EXPAND, 10)
 		self.browse_project_chromatogram.SetSizer(browse_project_chromatogram_sizer)
+		dv_toolbar_sizer.Add(self.dv_focus_thief, 0, 0, 0)
+		dv_toolbar_sizer.Add(self.dv_CloseProject, 0, 0, 0)
+		dv_toolbar_spacer_1 = wx.StaticLine(self.dv_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		dv_toolbar_spacer_1.SetMinSize((-1, 38))
+		dv_toolbar_sizer.Add(dv_toolbar_spacer_1, 0, wx.BOTTOM | wx.EXPAND, 5)
+		dv_toolbar_sizer.Add((0, 0), 0, 0, 0)
+		dv_toolbar_sizer.Add((0, 0), 0, 0, 0)
+		self.dv_toolbar.SetSizer(dv_toolbar_sizer)
+		data_viewer_sizer.Add(self.dv_toolbar, 1, wx.EXPAND, 0)
+		dv_list_sizer.Add(self.data_viewer_list, 1, wx.EXPAND | wx.LEFT | wx.TOP, 5)
+		dv_list_line = wx.StaticLine(self.dv_list_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
+		dv_list_sizer.Add(dv_list_line, 0, wx.EXPAND, 0)
+		self.dv_list_panel.SetSizer(dv_list_sizer)
+		dv_reference_sizer.Add(self.dv_reference_spec_canvas, 1, wx.EXPAND, 0)
+		self.dv_reference_panel.SetSizer(dv_reference_sizer)
+		dv_reference_main_sizer.Add(self.dv_reference_panel, 1, wx.EXPAND, 10)
+		dv_reference_toolbar_sizer.Add(self.dv_reference_focus_thief, 0, 0, 0)
+		dv_reference_toolbar_sizer.Add(self.dv_reference_previous_btn, 0, 0, 0)
+		dv_reference_toolbar_sizer.Add(self.dv_reference_next_btn, 0, 0, 0)
+		dv_reference_toolbar_spacer_1 = wx.StaticLine(self.dv_reference_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		dv_reference_toolbar_sizer.Add(dv_reference_toolbar_spacer_1, 0, wx.EXPAND, 0)
+		dv_reference_save_label = wx.StaticText(self.dv_reference_toolbar, wx.ID_ANY, "Save: ")
+		dv_reference_toolbar_sizer.Add(dv_reference_save_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+		dv_reference_toolbar_sizer.Add(self.dv_reference_png_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_reference_toolbar_sizer.Add(self.dv_reference_svg_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_reference_toolbar_sizer.Add(self.dv_reference_pdf_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_reference_toolbar_sizer.Add(self.dv_reference_save_btn, 0, 0, 0)
+		dv_reference_toolbar_spacer_2 = wx.StaticLine(self.dv_reference_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		dv_reference_toolbar_sizer.Add(dv_reference_toolbar_spacer_2, 0, wx.EXPAND, 0)
+		self.dv_reference_toolbar.SetSizer(dv_reference_toolbar_sizer)
+		dv_reference_main_sizer.Add(self.dv_reference_toolbar, 0, wx.EXPAND, 0)
+		self.data_viewer_reference.SetSizer(dv_reference_main_sizer)
+		dv_samples_sizer.Add(self.dv_samples_spec_canvas, 1, wx.EXPAND, 0)
+		self.dv_samples_panel.SetSizer(dv_samples_sizer)
+		dv_sample_main_sizer.Add(self.dv_samples_panel, 1, wx.EXPAND, 10)
+		dv_samples_toolbar_sizer.Add(self.dv_samples_focus_thief, 0, 0, 0)
+		dv_samples_toolbar_sizer.Add(self.dv_samples_previous_btn, 0, 0, 0)
+		dv_samples_toolbar_sizer.Add(self.dv_samples_next_btn, 0, 0, 0)
+		dv_samples_toolbar_spacer_1 = wx.StaticLine(self.dv_samples_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		dv_samples_toolbar_sizer.Add(dv_samples_toolbar_spacer_1, 0, wx.EXPAND, 0)
+		dv_samples_save_label = wx.StaticText(self.dv_samples_toolbar, wx.ID_ANY, "Save: ")
+		dv_samples_toolbar_sizer.Add(dv_samples_save_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+		dv_samples_toolbar_sizer.Add(self.dv_samples_png_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_samples_toolbar_sizer.Add(self.dv_samples_svg_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_samples_toolbar_sizer.Add(self.dv_samples_pdf_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_samples_toolbar_sizer.Add(self.dv_samples_save_btn, 0, 0, 0)
+		dv_samples_toolbar_spacer_2 = wx.StaticLine(self.dv_samples_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		dv_samples_toolbar_sizer.Add(dv_samples_toolbar_spacer_2, 0, wx.EXPAND, 0)
+		self.dv_samples_toolbar.SetSizer(dv_samples_toolbar_sizer)
+		dv_sample_main_sizer.Add(self.dv_samples_toolbar, 0, wx.EXPAND, 0)
+		self.data_viewer_samples.SetSizer(dv_sample_main_sizer)
+		dv_head2tail_sizer.Add(self.dv_head2tail_spec_canvas, 1, wx.EXPAND, 0)
+		self.dv_head2tail_panel.SetSizer(dv_head2tail_sizer)
+		dv_head2tail_main_sizer.Add(self.dv_head2tail_panel, 1, wx.EXPAND, 10)
+		dv_head2tail_toolbar_sizer.Add(self.dv_head2tail_focus_thief, 0, 0, 0)
+		dv_head2tail_toolbar_sizer.Add(self.dv_head2tail_previous_btn, 0, 0, 0)
+		dv_head2tail_toolbar_sizer.Add(self.dv_head2tail_next_btn, 0, 0, 0)
+		dv_head2tail_toolbar_spacer_1 = wx.StaticLine(self.dv_head2tail_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		dv_head2tail_toolbar_sizer.Add(dv_head2tail_toolbar_spacer_1, 0, wx.EXPAND, 0)
+		dv_head2tail_save_label = wx.StaticText(self.dv_head2tail_toolbar, wx.ID_ANY, "Save: ")
+		dv_head2tail_toolbar_sizer.Add(dv_head2tail_save_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+		dv_head2tail_toolbar_sizer.Add(self.dv_head2tail_png_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_head2tail_toolbar_sizer.Add(self.dv_head2tail_svg_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_head2tail_toolbar_sizer.Add(self.dv_head2tail_pdf_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dv_head2tail_toolbar_sizer.Add(self.dv_head2tail_save_btn, 0, 0, 0)
+		dv_head2tail_toolbar_spacer_2 = wx.StaticLine(self.dv_head2tail_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		dv_head2tail_toolbar_sizer.Add(dv_head2tail_toolbar_spacer_2, 0, wx.EXPAND, 0)
+		self.dv_head2tail_toolbar.SetSizer(dv_head2tail_toolbar_sizer)
+		dv_head2tail_main_sizer.Add(self.dv_head2tail_toolbar, 0, wx.EXPAND, 0)
+		self.data_viewer_head2tail.SetSizer(dv_head2tail_main_sizer)
+		self.data_viewer_notebook.AddPage(self.data_viewer_reference, "Reference")
+		self.data_viewer_notebook.AddPage(self.data_viewer_samples, "Samples")
+		self.data_viewer_notebook.AddPage(self.data_viewer_head2tail, "Head to Tail")
+		dv_spec_sizer.Add(self.data_viewer_notebook, 1, wx.EXPAND, 0)
+		dv_data_line = wx.StaticLine(self.dv_spec_panel, wx.ID_ANY)
+		dv_spec_sizer.Add(dv_data_line, 0, wx.EXPAND, 0)
+		self.dv_spec_panel.SetSizer(dv_spec_sizer)
+		dv_html_sizer.Add(self.dv_html, 1, wx.EXPAND, 0)
+		self.dv_html_panel.SetSizer(dv_html_sizer)
+		self.data_viewer_h_splitter.SplitHorizontally(self.dv_spec_panel, self.dv_html_panel)
+		dv_data_sizer.Add(self.data_viewer_h_splitter, 1, wx.EXPAND, 0)
+		self.dv_data_panel.SetSizer(dv_data_sizer)
+		self.data_viewer_v_splitter.SplitVertically(self.dv_list_panel, self.dv_data_panel)
+		dv_main_sizer.Add(self.data_viewer_v_splitter, 1, wx.EXPAND, 0)
+		self.dv_main_panel.SetSizer(dv_main_sizer)
+		data_viewer_sizer.Add(self.dv_main_panel, 7, wx.EXPAND, 10)
+		self.browse_project_data.SetSizer(data_viewer_sizer)
 		self.browse_project_notebook.AddPage(self.browse_project_charts, "Charts")
 		self.browse_project_notebook.AddPage(self.browse_project_chromatogram, "Chromatogram")
 		self.browse_project_notebook.AddPage(self.browse_project_data, "Data")
@@ -1722,6 +1960,8 @@ class Launcher(wx.Frame):
 		
 		self.comparison_prefixList = []
 		
+		self.browser_peak_data = []
+		
 		event.Skip()
 	
 	def setup_project_browser(self, selected_project):
@@ -1744,7 +1984,15 @@ class Launcher(wx.Frame):
 		# Show chromatogram for first sample
 		self.display_chromatogram(self.browser_sample_list[self.browser_sample_idx])
 		
-		self.comparison_project = None
+		
+		with open(os.path.join(self.Config.CSV_DIRECTORY, "{}_peak_data.json".format(self.current_project_name)), "r") as jsonfile:
+			for peak in jsonfile.readlines():
+				self.browser_peak_data.append(json.loads(peak))
+		
+		
+		self.populate_data_viewer()
+
+		
 		
 	
 	"""Browse Project > Charts Tab Buttons"""
@@ -2185,7 +2433,69 @@ class Launcher(wx.Frame):
 		self.comparison_log_text_control.AppendText(evt.log_text)
 	
 	
+	"""Data Viewer"""
+	
+	def populate_data_viewer(self):
+		self.data_viewer_list.DeleteAllItems()
+	
+		for peak in self.browser_peak_data:
+			print(list(peak))
+			print(list(peak["hits"][0]))
+			self.data_viewer_list.Append([rounders(peak["average_rt"],"0.000"), peak["hits"][0]["Name"], peak["hits"][0]["CAS"]])
 
+
+	def do_select_peak(self, event):  # wxGlade: Launcher.<event_handler>
+		dv_selection = self.data_viewer_list.GetFocusedItem()
+		print(dv_selection)
+		self.dv_selection_data = self.browser_peak_data[dv_selection]
+		print(self.dv_selection_data)
+		
+		CAS = self.dv_selection_data["hits"][0]["CAS"]
+		Name = self.dv_selection_data["hits"][0]["Name"]
+		
+		
+		html_file_directory = os.path.join(self.Config.RESULTS_DIRECTORY, "html_peak_data", self.current_project_name)
+		
+		maybe_make(html_file_directory)
+		
+		html_file_name = os.path.join(html_file_directory, f"{CAS}.html")
+
+		if not os.path.isfile(html_file_name):
+			comp = pcp.get_compounds(CAS, 'name')[0]
+		
+			outputText = self.template.render(comp=comp)
+		
+			print(comp.hill_formula)
+		
+			with open(html_file_name, "w") as f:
+				f.write(outputText)
+			
+		self.dv_html.LoadURL(f"file://{html_file_name}")
+
+		event.Skip()
+
+		
+	def dv_do_save_reference(self, event):  # wxGlade: Launcher.<event_handler>
+		print("Event handler 'dv_do_save_reference' not implemented!")
+		event.Skip()
+	def dv_on_samples_previous(self, event):  # wxGlade: Launcher.<event_handler>
+		print("Event handler 'dv_on_samples_previous' not implemented!")
+		event.Skip()
+	def dv_on_samples_next(self, event):  # wxGlade: Launcher.<event_handler>
+		print("Event handler 'dv_on_samples_next' not implemented!")
+		event.Skip()
+	def dv_do_save_samples(self, event):  # wxGlade: Launcher.<event_handler>
+		print("Event handler 'dv_do_save_samples' not implemented!")
+		event.Skip()
+	def dv_on_head2tail_previous(self, event):  # wxGlade: Launcher.<event_handler>
+		print("Event handler 'dv_on_head2tail_previous' not implemented!")
+		event.Skip()
+	def dv_on_head2tail_next(self, event):  # wxGlade: Launcher.<event_handler>
+		print("Event handler 'dv_on_head2tail_next' not implemented!")
+		event.Skip()
+	def dv_do_save_head2tail(self, event):  # wxGlade: Launcher.<event_handler>
+		print("Event handler 'dv_do_save_head2tail' not implemented!")
+		event.Skip()
 # end of class Launcher
 
 

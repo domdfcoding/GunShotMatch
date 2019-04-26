@@ -107,8 +107,14 @@ utils.paths:
 -----
 
 utils.progbar:
-	Based from http://wxpython-users.1045709.n5.nabble.com/Gauge-in-Statusbar-td2321906.html
+	Based on http://wxpython-users.1045709.n5.nabble.com/Gauge-in-Statusbar-td2321906.html
 	Copyright 2005 Ray Pasco
+	Adapted in 2019 by Dominic Davis-Foster
+-----
+
+utils.pubchempy:
+	Copyright Matt Swain <m.swain@me.com>
+	Available under the MIT License
 	Adapted in 2019 by Dominic Davis-Foster
 -----
 
