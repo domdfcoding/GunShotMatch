@@ -145,7 +145,19 @@ class GSMCompare(object):
 			features.append(compound)
 		
 		pca_data = pandas.DataFrame(data=pca_data)
-		self.pca = PrincipalComponentAnalysis(pca_data, features, targets, mode=self.pca_mode, figsize=figsize, colours=self.colours)
+		
+		pca_chart = PrincipalComponentAnalysis()
+		self.pca = pca_chart.setup_data(pca_data, features, targets)
+		pca_chart.setup_subplots(figsize)
+		pca_chart.setup_datapoints(self.colours)
+		pca_chart.create_chart()
+		pca_chart.create_legend()
+		pca_chart.fig.tight_layout()
+		if self.pca_mode == "display":
+			pca_chart.show_chart()
+		else:
+			pca_chart.save_chart(self.pca_mode)
+		
 			
 
 	def peak_comparison(self, a_value=0.05):

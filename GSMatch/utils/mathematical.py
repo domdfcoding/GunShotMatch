@@ -182,3 +182,80 @@ def within1min(value1, value2):
 		return (float(value1) - 1) < (float(value2)) < (float(value1) + 1)
 	else:
 		return False
+
+
+# The following ased on:
+#   https://www.psychometrica.de/effect_size.html#transform
+#   https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/hedgeg.htm
+# and Cohen, J. (1988). Statistical power analysis for the behavioral sciences (2nd Edition). Hillsdale, NJ: Lawrence Erlbaum Associates
+
+def pooled_sd(sample1, sample2, weighted=False):
+	"""weighted=True for weighted pooled SD
+	Formula from https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/hedgeg.htm"""
+	import numpy as np
+	
+	sd1 = np.std(sample1)
+	sd2 = np.std(sample2)
+	n1 = len(sample1)
+	n2 = len(sample2)
+	if weighted:
+		return np.sqrt((((n1 - 1) * (sd1 ** 2)) + ((n2 - 1) * (sd2 ** 2))) / (n1 + n2 - 2))
+	else:
+		return np.sqrt(((sd1 ** 2) + (sd2 ** 2)) / 2)
+
+
+def d_cohen(sample1, sample2, sd=1, tail=1, pooled=False):
+	import numpy as np
+	
+	mean1 = np.mean(sample1)
+	mean2 = np.mean(sample2)
+	
+	if sd == 1:
+		sd = np.std(sample1)
+	else:
+		sd = np.std(sample2)
+	
+	if pooled:
+		sd = pooled_sd(sample1, sample2)
+	
+	if tail == 2:
+		return np.abs(mean1 - mean2) / sd
+	
+	return (mean1 - mean2) / sd
+
+
+def g_hedge(sample1, sample2):
+	import numpy as np
+	
+	mean1 = np.mean(sample1)
+	mean2 = np.mean(sample2)
+	return (mean1 - mean2) / pooled_sd(sample1, sample2, True)
+
+
+def g_durlak_bias(g, n):
+	"""Application of Durlak's bias correction to the Hedge's g statistic.
+	Formula from https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/hedgeg.htm
+	
+	n = n1+n2"""
+	
+	import numpy as np
+	
+	Durlak = ((n - 3) / (n - 2.25)) * np.sqrt((n - 2) / n)
+	return g * Durlak
+
+
+def interpret_d(d_or_g):
+	"""Interpret Cohen's d or Hedge's g values using Table 1
+	from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3444174/"""
+	import numpy as np
+	
+	if d_or_g < 0:
+		return f"{interpret_d(np.abs(d_or_g)).split(' ')[0]} Adverse Effect"
+	elif 0.0 <= d_or_g < 0.2:
+		return "No Effect"
+	elif 0.2 <= d_or_g < 0.5:
+		return "Small Effect"
+	elif 0.5 <= d_or_g < 0.8:
+		return "Intermediate Effect"
+	elif 0.8 <= d_or_g:
+		return "Large Effect"

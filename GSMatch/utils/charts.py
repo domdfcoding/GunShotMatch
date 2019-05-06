@@ -124,12 +124,14 @@ class chart():
 	def save_chart(self, filepath, filetypes=default_filetypes):
 		matplotlib.use("Agg")
 		for filetype in filetypes:
-			plt.savefig(filepath + ".{}".format(filetype))
+			#plt.savefig(filepath + ".{}".format(filetype))
+			self.fig.savefig(filepath + ".{}".format(filetype))
 		plt.close()
 	
 	def show_chart(self):
 		matplotlib.use("TkAgg")
-		plt.show()
+		#plt.show()
+		self.fig.show()
 		plt.close()
 
 
@@ -321,8 +323,20 @@ class box_whisker(chart):
 		self.ax.xaxis.set_minor_locator(ticker.FixedLocator(x_vals))
 		
 		if groupings:
-			self.ax.xaxis.set_minor_formatter(
-				ticker.FixedFormatter(["Unfired\nPropellant", "Fired\nCartridge Case"] * (len(self.sample_list) // 2)))
+
+			#print(self.sample_list)
+
+			x_labels = []
+
+			for sample, _ in self.sample_list:
+				if sample.endswith("Fired"):
+					x_labels.append("Fired\nCartridge Case")
+				else:
+					x_labels.append("Unfired\nPropellant")
+
+			#self.ax.xaxis.set_minor_formatter(
+			#	ticker.FixedFormatter(["Unfired\nPropellant", "Fired\nCartridge Case"] * (len(self.sample_list) // 2)))
+			self.ax.xaxis.set_minor_formatter(ticker.FixedFormatter(x_labels))
 			
 			# Labels at Top for Groupings
 			#print(x_vals)
@@ -335,7 +349,7 @@ class box_whisker(chart):
 			# Thick Vertical Lines Between Groups
 			#print(minor_x_vals)
 			#print(minor_x_vals[::2])
-			
+
 			for minor_x_val in minor_x_vals[::2]:
 				self.ax.axvline(x=minor_x_val, ymax=1.02, color="black", clip_on=False)
 			
@@ -348,7 +362,7 @@ class box_whisker(chart):
 							 transform=transforms.blended_transform_factory(self.ax.transData, self.ax.transAxes))
 			
 			# plt.title("Ammunition", fontsize=12, y=1.03)
-			self.fig.title("Ammunition", fontsize=12, y=1.03)
+			self.ax.set_title("Ammunition", fontsize=12, y=1.03)
 		
 		else:
 			self.ax.xaxis.set_minor_formatter(ticker.FixedFormatter(IDs))
@@ -364,7 +378,7 @@ class box_whisker(chart):
 		self.show_raw_data = show_raw_data
 		self.err_bar = err_bar
 	
-	def create_legend(self, leg_cols=1):
+	def create_legend(self, legend=(0.5, -0.06), leg_cols=1):
 		from itertools import cycle
 		from matplotlib.lines import Line2D
 		
@@ -390,25 +404,28 @@ class box_whisker(chart):
 		elif self.err_bar == "range":
 			legend_elements.append(Line2D([0], [0], marker=None, color=None, label="Error Bars Indicate Range",
 										  markerfacecolor=None, alpha=0, markersize=0, linestyle="None"))
-		
-		fig, ax = plt.subplots(figsize=(4 * leg_cols, 1 + (0.5 * len(self.peak_areas))))
-		plt.clf()
-		plt.axis('off')
-		# fig.set_size_inches(4, 4)
-		plt.legend(handles=legend_elements, loc="center", scatterpoints=1, ncol=leg_cols, title="Legend")
-		fig.tight_layout()
+
+		#plt.legend(handles=legend_elements, loc="center", scatterpoints=1, ncol=leg_cols, title="Legend")
+		#return self.ax.legend(handles=legend_elements, bbox_to_anchor=legend, scatterpoints=1, ncol=leg_cols, title="Legend",  bbox_transform=self.fig.transFigure)
+		legend = self.fig.legend(handles=legend_elements, bbox_to_anchor=legend, scatterpoints=1, ncol=leg_cols, title="Legend")
+		legend.set_in_layout(True)
+		return legend
+		# TODO: Switch to figure legend and change where the legend is deleted
 	
 	def save_chart(self, filepath, filetypes=default_filetypes):
 		matplotlib.use("Agg")
-		plt.tight_layout()
+		#plt.tight_layout()
+		self.fig.tight_layout()
 		for filetype in filetypes:
-			plt.savefig(f"{filepath}_CHART.{filetype}")
+			#plt.savefig(f"{filepath}_CHART.{filetype}")
+			self.fig.savefig(f"{filepath}_CHART.{filetype}")
 		plt.close()
 	
 	def save_legend(self, filepath, filetypes=default_filetypes):
 		matplotlib.use("Agg")
 		for filetype in filetypes:
-			plt.savefig(f"{filepath}_LEGEND.{filetype}")
+			#plt.savefig(f"{filepath}_LEGEND.{filetype}")
+			self.fig.savefig(f"{filepath}_LEGEND.{filetype}")
 		plt.close()
 	
 
@@ -499,7 +516,7 @@ class mean_peak_area(chart):
 				legend_elements.append(
 					Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
 			
-			self.ax.legend(handles=legend_elements[::-1], loc=9, bbox_to_anchor=legend, ncol=1)
+			return self.fig.legend(handles=legend_elements[::-1], loc=9, bbox_to_anchor=legend, ncol=1)
 
 
 class peak_area(chart):
@@ -576,7 +593,7 @@ class peak_area(chart):
 				legend_elements.append(
 					Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
 			#print(legend)
-			self.ax.legend(handles=legend_elements[::-1], bbox_to_anchor=legend, ncol=1)
+			return self.fig.legend(handles=legend_elements[::-1], bbox_to_anchor=legend, ncol=1)
 			
 			
 
@@ -659,7 +676,7 @@ class radar_chart(chart):
 	
 	def create_legend(self, legend=(0.15, 0.07)):
 		if legend:  # Add a legend
-			self.ax.legend(bbox_to_anchor=legend, ncol=1)
+			return self.fig.legend(bbox_to_anchor=legend, ncol=1)
 
 
 
@@ -792,71 +809,114 @@ def box_whisker_wrapper(peak_areas, sample_list,
 	else:
 		chart.save_chart(mode, filetypes)
 		if legend:
-			chart.create_legend(leg_cols)
+			fig, ax = plt.subplots(figsize=(4 * leg_cols, 1 + (0.5 * len(peak_areas))))
+			plt.clf()
+			plt.axis('off')
+			# fig.set_size_inches(4, 4)
+			chart.create_legend(leg_cols=leg_cols)
+			fig.tight_layout()
 			chart.save_legend(mode, filetypes)
+
+
+class PrincipalComponentAnalysis(chart):
+	def __init__(self):
+		"""\
+		err_bar options: range, stdev
+		outlier_mode options: mad,2stdev,quartile
+		leg_cols: Number of columns for legend
+		"""
+		pass
+	
+	def setup_data(self, data, features, targets):
+		import pandas as pd
+		from sklearn.decomposition import PCA
+		from sklearn.preprocessing import StandardScaler
+		# from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
+		# Separating out the features
+		x = data.loc[:, features].values
+		# Separating out the target
+		y = data.loc[:, ['target']].values
+		# Standardizing the features
+		x = StandardScaler().fit_transform(x)
+		
+		pca = PCA(n_components=2)
+		principalComponents = pca.fit_transform(x)
+		# principalComponents = pca.fit(x).transform(x) # how is this different?
+		
+		# Percentage of variance explained for each components
+		print(f'\nExplained variance ratio (first two components): {pca.explained_variance_ratio_}')
+		print("This is the percentage of variance explained by each of the two principal components.")
+		
+		principalDf = pd.DataFrame(data=principalComponents, columns=['principal component 1', 'principal component 2'])
+		self.finalDf = pd.concat([principalDf, data[['target']]], axis=1)
+		self.targets = targets
+		
+		return pca.explained_variance_ratio_
+		
+	def setup_subplots(self, figsize=None):
+		if figsize == None:
+			figsize = (8,8)
+		
+		self.fig, self.ax = plt.subplots(figsize=figsize)
+	
+	def setup_datapoints(self, colours=default_colours):
+		self.colours = colours
+	
+	def create_chart(self):
+		from itertools import cycle
+		
+		self.ax.set_xlabel('Principal Component 1', fontsize=15)
+		self.ax.set_ylabel('Principal Component 2', fontsize=15)
+		self.ax.set_title('2 component PCA', fontsize=20)
+		colour_cycle = cycle(self.colours)
+		
+		for target in self.targets:
+			indicesToKeep = self.finalDf['target'] == target
+			self.ax.scatter(self.finalDf.loc[indicesToKeep, 'principal component 1'],
+							self.finalDf.loc[indicesToKeep, 'principal component 2'],
+							c=next(colour_cycle), s=50, alpha=0.8, lw=2)
+	
+		self.ax.grid()
+		self.ax.set_axisbelow(True)
+		
+	
+	def create_legend(self, legend=(0.5, -0.06), leg_cols=1):
+		legend = self.fig.legend(self.targets, bbox_to_anchor=legend, ncol=leg_cols, shadow=False)
+
+		#legend = self.fig.legend(self.targets, loc='best', shadow=False)
+
+		legend.set_in_layout(True)
+		return legend
+		
+	def save_chart(self, filepath, filetypes=default_filetypes):
+		matplotlib.use("Agg")
+		self.fig.tight_layout()
+		for filetype in filetypes:
+			self.fig.savefig(f"{filepath}_CHART.{filetype}")
+		plt.close()
 	
 
-
-def PrincipalComponentAnalysis(data, features, targets, colours=default_colours, mode="display",
+def pca_wrapper(data, features, targets, colours=default_colours, mode="display",
 							   filetypes=default_filetypes, figsize=(8, 8)):
 	
-	import pandas as pd
-	from itertools import cycle
-	from sklearn.decomposition import PCA
-	from sklearn.preprocessing import StandardScaler
-	#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+	chart = PrincipalComponentAnalysis()
+	print(chart.setup_data(data, features, targets))
+	chart.setup_subplots(figsize)
+	chart.setup_datapoints(colours)
+	chart.create_chart()
+	#chart.create_legend(leg_cols)
+	chart.fig.legend(chart.targets, loc='best', shadow=False)
 	
-	
-	colour_cycle = cycle(colours)
-	
-	if mode.lower() == "display":
-		matplotlib.use("TkAgg")
+	if mode == "display":
+		chart.show_chart()
 	else:
-		matplotlib.use("Agg")
+		chart.save_chart(mode, filetypes)
 	
-	# Separating out the features
-	x = data.loc[:, features].values
-	# Separating out the target
-	y = data.loc[:, ['target']].values
-	# Standardizing the features
-	x = StandardScaler().fit_transform(x)
 	
-	pca = PCA(n_components=2)
-	principalComponents = pca.fit_transform(x)
-	# principalComponents = pca.fit(x).transform(x) # how is this different?
 	
-	# Percentage of variance explained for each components
-	print(f'\nExplained variance ratio (first two components): {pca.explained_variance_ratio_}')
-	print("This is the percentage of variance explained by each of the two principal components.")
 	
-	principalDf = pd.DataFrame(data=principalComponents, columns=['principal component 1', 'principal component 2'])
-	finalDf = pd.concat([principalDf, data[['target']]], axis=1)
-	
-	fig = plt.figure(figsize=figsize)
-	ax = fig.add_subplot(1, 1, 1)
-	ax.set_xlabel('Principal Component 1', fontsize=15)
-	ax.set_ylabel('Principal Component 2', fontsize=15)
-	ax.set_title('2 component PCA', fontsize=20)
-	
-	for target in targets:
-		indicesToKeep = finalDf['target'] == target
-		ax.scatter(finalDf.loc[indicesToKeep, 'principal component 1'],
-				   finalDf.loc[indicesToKeep, 'principal component 2'],
-				   c=next(colour_cycle), s=50, alpha=0.8, lw=2)
-	
-	ax.legend(targets, loc='best', shadow=False)
-	ax.grid()
-	ax.set_axisbelow(True)
-	
-	if mode.lower() == "display":
-		plt.show()
-	else:
-		for filetype in filetypes:
-			plt.savefig(mode + ".{}".format(filetype))
-	
-	plt.close()
-	
-	return pca.explained_variance_ratio_
+
 
 
 if __name__ == "__main__":

@@ -340,7 +340,7 @@ def nist_ms_comparison(sample_name, mass_list, mass_spec, n_hits=5):
 		pynist.reload_ini(nist_path)
 		sys.exit(1)
 	
-	print("\r\033[KSearch Complete")
+	print("\r\033[KSearch Complete", end='')
 	pynist.reload_ini(nist_path)
 	return matches_dict
 
@@ -501,11 +501,15 @@ def Match_Counter(ms_comp_list,seperator=";"):
 	statistics_output = open(os.path.join(CSV_DIRECTORY, "{}_STATISTICS.csv".format(lot_name)),"w")
 	statistics_lit_output = open(os.path.join(CSV_DIRECTORY, "{}_STATISTICS_LIT.csv".format(lot_name)),"w")
 	
-	statistics_header = "{};;;;Retention Time;;;;Peak Area;;;;Match Factor\
-		;;;;Reverse Match Factor;;;;Hit Number;;;;MS Comparison;;;\n\
-		Name;CAS Number;;;Mean;STDEV;%RSD;;Mean;STDEV;%RSD;;Mean;STDEV;\
-		%RSD;;Mean;STDEV;%RSD;;Mean;STDEV;%RSD;;Mean;STDEV;%RSD\n"\
-		.format(lot_name)
+	statistics_header = ";".join([lot_name,'','','',
+								  "Retention Time",'','','',
+								  "Peak Area",'','','',
+								  "Match Factor",'','','',
+								  "Reverse Match Factor",'','','',
+								  "Hit Number",'','','',
+								  "MS Comparison",'','','',
+								  "\nName", "CAS Number", '','']
+								+ ["Mean","STDEV","%RSD",'']*6) + "\n"
 	
 	statistics_full_output.write(statistics_header)
 	statistics_output.write(statistics_header)
@@ -516,7 +520,10 @@ def Match_Counter(ms_comp_list,seperator=";"):
 	for prefix in prefixList:
 		chart_data[prefix] = []
 	
+	
 	for peak, ms in zip(peak_data, ms_comp_list):
+		peak["ms_comparison"] = ms
+		
 		write_peak(statistics_full_output,peak, ms)
 		if peak["hits"][0]["Count"] > (PL_len/2): # Write to Statistics; TODO: also need similarity > 800
 			write_peak(statistics_output,peak, ms)
@@ -785,6 +792,7 @@ def GenerateSpectraFromAlignment(rt_data, ms_data):
 	#		bar.update(bar_counter); bar_counter += 1
 	
 	#bar.finish()
+	
 
 def SpectrumImageWrapper(args):
 	return GenerateSpectrumImage(*args)
@@ -937,7 +945,7 @@ if __name__ == '__main__':
 		with Pool(PL_len) as p:
 			p.map(quantitative_processing, [os.path.join(RAW_DIRECTORY,"{}.JDX".format(prefix)) for prefix in prefixList])
 		for prefix in prefixList:
-		#	quantitative_processing("/media/VIDEO/ownCloud/GSR/GunShotMatch/GSMatch/Results/RAW/{}.JDX".format(prefix))
+		#	quantitative_processing(os.path.join(RAW_DIRECTORY,"{}.JDX".format(prefix)), False)
 			"""Read and Print Log"""
 			with open(os.path.join(LOG_DIRECTORY, prefix + ".log"), "r") as f:
 				print(f.read())
@@ -1007,38 +1015,64 @@ if __name__ == '__main__':
 
 	if do_spectra:
 		GenerateSpectraFromAlignment(rt_alignment, ms_alignment)
+
+		# Write Mass Spectra to OpenChrom-like CSV files
+		
+		def generate_spectra_csv(rt_data, ms_data, name):
+			# Write Mass Spectra to OpenChrom-like CSV files
+			
+			ms = ms_data[0] # first mass spectrum
+			
+			spectrum_csv_file = os.path.join(SPECTRA_DIRECTORY, lot_name, f"{name}_data.csv")
+			spectrum_csv = open(spectrum_csv_file, 'w')
+			spectrum_csv.write('RT(milliseconds);RT(minutes) - NOT USED BY IMPORT;RI;')
+			spectrum_csv.write(';'.join(str(mz) for mz in ms.mass_list))
+			spectrum_csv.write("\n")
+			
+			for rt, ms in zip(rt_data, ms_data):
+				spectrum_csv.write(f"{int(rt*60000)};{rounders(rt,'0.0000000000')};0;")
+				spectrum_csv.write(';'.join(str(intensity) for intensity in ms.mass_spec))
+				spectrum_csv.write('\n')
+			spectrum_csv.close()
+			
+		for prefix in prefixList:
+			print(prefix)
+			#print(rt_alignment[prefix])
+			#print(ms_alignment[prefix])
+			generate_spectra_csv(rt_alignment[prefix], ms_alignment[prefix], prefix)
+		
+		
 	
 	if do_charts:
 		print("\nGenerating Charts")
-		maybe_make(os.path.join(CHARTS_DIRECTORY, lot_name))
-
+		
 		chart_data.to_csv(os.path.join(CSV_DIRECTORY,"{}_CHART_DATA.csv".format(lot_name)), sep=";")
 		
-		#from utils.charts import peak_area_wrapper, radar_chart_wrapper
+		maybe_make(os.path.join(CHARTS_DIRECTORY, lot_name))
 		
-		radar_chart_wrapper(chart_data, [lot_name], use_log = 10, legend=False,
-					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "radar_log10_peak_area"))
-		radar_chart_wrapper(chart_data, [lot_name], use_log = False, legend=False,
-					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "radar_peak_area"))
-		mean_peak_area_wrapper(chart_data, [lot_name],
-					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "mean_peak_area"))
-		peak_area_wrapper(chart_data, lot_name, prefixList,
-					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "peak_area_percentage"))
-		peak_area_wrapper(chart_data, lot_name, prefixList, percentage = False,
-					mode=os.path.join(CHARTS_DIRECTORY, lot_name, "peak_area"))
-		peak_area_wrapper(chart_data, lot_name, prefixList, use_log=10, mode=os.path.join(CHARTS_DIRECTORY, lot_name, "log10_peak_area_percentage"))
+		if chart_data.empty:
+			print("ALERT: No peaks were found for compounds that have")
+			print("       previously been reported in literature.")
+			print("       Check the results for more information\n")
 		
-		samples_to_compare = [
-			(lot_name, prefixList),
-			#	("ELEY_CASE_SUBTRACT","Eley Case"),
-			#	("WINCHESTER_SUBTRACT","Winchester Pistol"),
-			#	("WINCHESTER_CASE_SUBTRACT","Winchester Case"),
-			#	("GECO_SUBTRACT","Geco"),
-			#	("GECO_CASE_SUBTRACT","Geco Case"),
-			#	("ELEY_SHOTGUN_SUBTRACT", "Eley Hawk"),
-		]  # must be in order you want them on the graph
-		
-		box_whisker_wrapper(chart_data, samples_to_compare, mode=os.path.join(CHARTS_DIRECTORY, lot_name, "box_whisker"))
+		else:
+			#from utils.charts import peak_area_wrapper, radar_chart_wrapper
+			
+			radar_chart_wrapper(chart_data, [lot_name], use_log = 10, legend=False,
+						mode=os.path.join(CHARTS_DIRECTORY, lot_name, "radar_log10_peak_area"))
+			radar_chart_wrapper(chart_data, [lot_name], use_log = False, legend=False,
+						mode=os.path.join(CHARTS_DIRECTORY, lot_name, "radar_peak_area"))
+			mean_peak_area_wrapper(chart_data, [lot_name],
+						mode=os.path.join(CHARTS_DIRECTORY, lot_name, "mean_peak_area"))
+			peak_area_wrapper(chart_data, lot_name, prefixList,
+						mode=os.path.join(CHARTS_DIRECTORY, lot_name, "peak_area_percentage"))
+			peak_area_wrapper(chart_data, lot_name, prefixList, percentage = False,
+						mode=os.path.join(CHARTS_DIRECTORY, lot_name, "peak_area"))
+			peak_area_wrapper(chart_data, lot_name, prefixList, use_log=10, mode=os.path.join(CHARTS_DIRECTORY, lot_name, "log10_peak_area_percentage"))
+			
+			samples_to_compare = [(lot_name, prefixList)]
+			
+			box_whisker_wrapper(chart_data, samples_to_compare, mode=os.path.join(CHARTS_DIRECTORY, lot_name, "box_whisker"))
 		
 	
 	with open(os.path.join(RESULTS_DIRECTORY, f"{lot_name}.info"),"w") as info_file:

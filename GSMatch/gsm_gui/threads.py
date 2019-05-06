@@ -151,7 +151,7 @@ class ConversionThread(threading.Thread):
 				process = subprocess.Popen(["wine",
 											"./lib/WatersRaw.exe",
 											"-i",
-											os.path.join(self._parent.Config.get("main", "rawpath"),
+											os.path.join(self._parent.Config.RAW_DIRECTORY,
 														 raw_file)
 											], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				
@@ -396,41 +396,25 @@ class QueueThread(threading.Thread):
 			for queue_entry in queue_selection:
 				
 				self.parent.project_queue_grid.SetCellValue(queue_entry, 0, "Waiting")
-				self.parent.Config.set("import", "bb_points",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 3))
-				self.parent.Config.set("import", "bb_scans",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 4))
-				self.parent.Config.set("import", "noise_thresh",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 5))
-				self.parent.Config.set("import", "target_range",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 6))
-				self.parent.Config.set("import", "exclude_ions",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 7))
-				self.parent.Config.set("import", "tophat", self.parent.project_queue_grid.GetCellValue(queue_entry, 8))
-				self.parent.Config.set("import", "tophat_unit",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 9))
-				self.parent.Config.set("import", "mass_range",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 10))
+				self.parent.Config.bb_points = self.parent.project_queue_grid.GetCellValue(queue_entry, 3)
+				self.parent.Config.bb_scans = self.parent.project_queue_grid.GetCellValue(queue_entry, 4)
+				self.parent.Config.noise_thresh = self.parent.project_queue_grid.GetCellValue(queue_entry, 5)
+				self.parent.Config.target_range = self.parent.project_queue_grid.GetCellValue(queue_entry, 6).split(",")
+				self.parent.Config.exclude_ions = self.parent.project_queue_grid.GetCellValue(queue_entry, 7)
+				self.parent.Config.tophat = self.parent.project_queue_grid.GetCellValue(queue_entry, 8)
+				self.parent.Config.tophat_unit = self.parent.project_queue_grid.GetCellValue(queue_entry, 9)
+				self.parent.Config.mass_range = self.parent.project_queue_grid.GetCellValue(queue_entry, 10).split(",")
 				
-				self.parent.Config.set("alignment", "rt_modulation",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 11))
-				self.parent.Config.set("alignment", "gap_penalty",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 12))
-				self.parent.Config.set("alignment", "min_peaks",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 13))
+				self.parent.Config.rt_modulation = self.parent.project_queue_grid.GetCellValue(queue_entry, 11)
+				self.parent.Config.gap_penalty = self.parent.project_queue_grid.GetCellValue(queue_entry, 12)
+				self.parent.Config.min_peaks = self.parent.project_queue_grid.GetCellValue(queue_entry, 13)
 				
-				self.parent.Config.set("analysis", "do_quantitative",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 14))
-				self.parent.Config.set("analysis", "do_qualitative",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 15))
-				self.parent.Config.set("analysis", "do_merge",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 16))
-				self.parent.Config.set("analysis", "do_counter",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 17))
-				self.parent.Config.set("analysis", "do_spectra",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 18))
-				self.parent.Config.set("analysis", "do_charts",
-									   self.parent.project_queue_grid.GetCellValue(queue_entry, 19))
+				self.parent.Config.do_quantitative = self.parent.project_queue_grid.GetCellValue(queue_entry, 14)
+				self.parent.Config.do_qualitative = self.parent.project_queue_grid.GetCellValue(queue_entry, 15)
+				self.parent.Config.do_merge = self.parent.project_queue_grid.GetCellValue(queue_entry, 16)
+				self.parent.Config.do_counter = self.parent.project_queue_grid.GetCellValue(queue_entry, 17)
+				self.parent.Config.do_spectra = self.parent.project_queue_grid.GetCellValue(queue_entry, 18)
+				self.parent.Config.do_charts = self.parent.project_queue_grid.GetCellValue(queue_entry, 19)
 				
 				# Check if the thread is already running:
 				while project_thread_running:

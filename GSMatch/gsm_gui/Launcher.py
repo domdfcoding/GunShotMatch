@@ -33,6 +33,8 @@ import jinja2
 import traceback
 import webbrowser
 import configparser as ConfigParser
+import pickle
+
 
 from utils.paths import maybe_make, relpath
 #from utils.progbar import ProgressStatusBar
@@ -69,6 +71,7 @@ import wx.grid
 # begin wxGlade: extracode
 # end wxGlade
 
+template_settings = {"css":os.path.join(os.getcwd(),"lib","bootstrap.min.css")}
 
 # Constrain pan to x-axis
 # From https://stackoverflow.com/questions/16705452/matplotlib-forcing-pan-zoom-to-constrain-to-x-axes
@@ -107,6 +110,8 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.on_menu_pa, id=self.frame_menubar.i_menu_pa.GetId())
 		self.frame_menubar.i_menu_bw = wxglade_tmp_menu.Append(wx.ID_ANY, "Box Whisker", "")
 		self.Bind(wx.EVT_MENU, self.on_menu_box_whisker, id=self.frame_menubar.i_menu_bw.GetId())
+		self.frame_menubar.i_menu_pca = wxglade_tmp_menu.Append(wx.ID_ANY, "Principal Component Analysis", "")
+		self.Bind(wx.EVT_MENU, self.on_menu_pca, id=self.frame_menubar.i_menu_pca.GetId())
 		self.frame_menubar.Append(wxglade_tmp_menu, "Chart Viewer")
 		self.SetMenuBar(self.frame_menubar)
 		# Menu Bar end
@@ -126,7 +131,7 @@ class Launcher(wx.Frame):
 		self.comparison_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/comparison_green_110.png", wx.BITMAP_TYPE_ANY))
 		self.comparison_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
 		self.launcher_right_panel = wx.Panel(self.Launcher, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-		self.messages_panel = wx.Panel(self.launcher_right_panel, wx.ID_ANY, style=wx.BORDER_RAISED)
+		self.messages_panel = wx.Panel(self.launcher_right_panel, wx.ID_ANY)
 		self.messages = wx.richtext.RichTextCtrl(self.messages_panel, wx.ID_ANY, style=wx.richtext.RE_MULTILINE | wx.richtext.RE_READONLY)
 		self.Import = wx.Panel(self.notebook_1, wx.ID_ANY)
 		self.import_picker_panel = wx.Panel(self.Import, wx.ID_ANY)
@@ -139,6 +144,7 @@ class Launcher(wx.Frame):
 		self.new_project_settings = wx.Panel(self.new_project_notebook, wx.ID_ANY)
 		self.new_project_picker_panel = wx.Panel(self.new_project_settings, wx.ID_ANY)
 		self.check_list_box_2 = wx.CheckListBox(self.new_project_picker_panel, wx.ID_ANY, choices=[], style=wx.LB_HSCROLL | wx.LB_MULTIPLE | wx.LB_SORT)
+		self.new_project_delete_btn = wx.Button(self.new_project_picker_panel, wx.ID_ANY, "Delete")
 		self.new_project_settings_panel = wx.Panel(self.new_project_settings, wx.ID_ANY)
 		self.bb_points_value = wx.SpinCtrl(self.new_project_settings_panel, wx.ID_ANY, "0", min=0, max=100, style=0)
 		self.bb_scans_value = wx.SpinCtrl(self.new_project_settings_panel, wx.ID_ANY, "0", min=0, max=100, style=0)
@@ -301,7 +307,7 @@ class Launcher(wx.Frame):
 		self.dv_html.LoadURL(self.dv_html_home)
 		self.browse_project_comparison = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
 		self.Compare_Projects = wx.Panel(self.notebook_1, wx.ID_ANY)
-		self.comparison_panel = wx.Panel(self.Compare_Projects, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		self.comparison_panel = wx.Panel(self.Compare_Projects, wx.ID_ANY)
 		self.comparison_left_picker = wx.TextCtrl(self.comparison_panel, wx.ID_ANY, "", style=wx.TE_READONLY)
 		self.comparison_left_browse_btn = wx.BitmapButton(self.comparison_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/open_16.png", wx.BITMAP_TYPE_ANY))
 		self.comparison_left_header = wx.html2.WebView.New(self.comparison_panel, wx.ID_ANY)
@@ -322,9 +328,10 @@ class Launcher(wx.Frame):
 		self.comparison_radar_button = wx.Button(self.comparison_panel, wx.ID_ANY, "Radar Chart")
 		self.comparison_mean_pa_button = wx.Button(self.comparison_panel, wx.ID_ANY, "Mean Peak Area")
 		self.comparison_box_whisker_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "Box Whisker Plot")
+		self.comparison_pca_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "")
 		self.comparison_log_text_control = wx.TextCtrl(self.comparison_panel, wx.ID_ANY, "", style=wx.TE_CHARWRAP | wx.TE_MULTILINE | wx.TE_READONLY)
 		self.Help = wx.Panel(self.notebook_1, wx.ID_ANY)
-		self.help_toolbar_panel = wx.Panel(self.Help, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		self.help_toolbar_panel = wx.Panel(self.Help, wx.ID_ANY)
 		self.chromatogram_toolbar.SetMaxSize((-1,40))
 		self.help_focus_thief = wx.Button(self.help_toolbar_panel, wx.ID_ANY, "")
 		self.help_back_btn = wx.BitmapButton(self.help_toolbar_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/go_back_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
@@ -352,6 +359,7 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.on_open_comparison, self.comparison_button)
 		self.Bind(wx.EVT_BUTTON, self.do_comparison_info, self.comparison_info_button)
 		self.Bind(wx.EVT_BUTTON, self.do_import, self.import_btn)
+		self.Bind(wx.EVT_BUTTON, self.do_delete, self.new_project_delete_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_pretty_name_clear, self.pretty_name_clear)
 		self.Bind(wx.EVT_BUTTON, self.do_apply, self.import_apply_btn)
 		self.Bind(wx.EVT_BUTTON, self.do_default, self.default)
@@ -410,6 +418,7 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.comparison_show_radar, self.comparison_radar_button)
 		self.Bind(wx.EVT_BUTTON, self.comparison_show_box_whisker, self.comparison_box_whisker_btn)
 		self.Bind(wx.EVT_BUTTON, self.comparison_show_mean_peak_area, self.comparison_mean_pa_button)
+		self.Bind(wx.EVT_BUTTON, self.comparison_show_pca, self.comparison_pca_btn)
 		
 		if sys.platform == "win32":
 			self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.notebook_1_handler_win32, self.notebook_1)
@@ -491,9 +500,10 @@ class Launcher(wx.Frame):
 		# Setup Jinja2 Template
 		templateLoader = jinja2.FileSystemLoader(searchpath="./")
 		templateEnv = jinja2.Environment(loader=templateLoader)
-		TEMPLATE_FILE = "properties_template.html"
+		TEMPLATE_FILE = "lib/properties_template.html"
 		self.template = templateEnv.get_template(TEMPLATE_FILE)
-		
+		self.template.globals['rounders'] = rounders
+		self.template.globals['np'] = numpy
 	
 	def __set_properties(self):
 		# begin wxGlade: Launcher.__set_properties
@@ -693,6 +703,8 @@ class Launcher(wx.Frame):
 		self.comparison_radar_button.Enable(False)
 		self.comparison_mean_pa_button.Enable(False)
 		self.comparison_box_whisker_btn.Enable(False)
+		self.comparison_pca_btn.Enable(False)
+		self.comparison_pca_btn.SetLabel("Principal\nComponent\nAnalysis")
 		self.help_focus_thief.SetMinSize((1, 1))
 		self.help_back_btn.SetMinSize((38, 38))
 		self.help_back_btn.SetToolTip("Go back")
@@ -710,6 +722,12 @@ class Launcher(wx.Frame):
 		self.help_toolbar_panel.SetMaxSize((10000000,40))
 		self.notebook_1.SetBackgroundColour(wx.Colour(240, 240, 240))
 		# end wxGlade
+		
+		log_font = wx.Font(12, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "FreeMono")
+		
+		self.import_log_text_control.SetFont(log_font)
+		self.project_log_text_control.SetFont(log_font)
+		self.comparison_log_text_control.SetFont(log_font)
 
 	def __do_layout(self):
 		# begin wxGlade: Launcher.__do_layout
@@ -826,7 +844,7 @@ class Launcher(wx.Frame):
 		self.messages_panel.SetSizer(messages_sizer)
 		launcher_right_sizer.Add(self.messages_panel, 1, wx.ALL | wx.EXPAND, 5)
 		self.launcher_right_panel.SetSizer(launcher_right_sizer)
-		launcher_parent_sizer.Add(self.launcher_right_panel, 2, wx.EXPAND, 10)
+		launcher_parent_sizer.Add(self.launcher_right_panel, 2, wx.BOTTOM | wx.EXPAND | wx.RIGHT | wx.TOP, 10)
 		self.Launcher.SetSizer(launcher_parent_sizer)
 		import_picker_label = wx.StaticText(self.import_picker_panel, wx.ID_ANY, ".RAW Files to Import")
 		import_picker_sizer.Add(import_picker_label, 0, wx.BOTTOM, 18)
@@ -843,6 +861,7 @@ class Launcher(wx.Frame):
 		new_project_picker_label = wx.StaticText(self.new_project_picker_panel, wx.ID_ANY, "Samples to Process: ")
 		new_project_picker_sizer.Add(new_project_picker_label, 0, wx.BOTTOM, 18)
 		new_project_picker_sizer.Add(self.check_list_box_2, 1, wx.BOTTOM | wx.EXPAND, 7)
+		new_project_picker_sizer.Add(self.new_project_delete_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
 		self.new_project_picker_panel.SetSizer(new_project_picker_sizer)
 		project_settings_sizer.Add(self.new_project_picker_panel, 5, wx.ALL | wx.EXPAND, 10)
 		bb_top_text = wx.StaticText(self.new_project_settings_panel, wx.ID_ANY, "Settings for Biller and Biemann Peak Detection")
@@ -1160,7 +1179,6 @@ class Launcher(wx.Frame):
 		browse_project_tab_sizer.Add((0, 0), 0, 0, 0)
 		browse_project_tab_sizer.Add((0, 0), 0, 0, 0)
 		self.Browse_Project.SetSizer(browse_project_tab_sizer)
-		comparison_sizer.Add((10, 20), 0, 0, 0)
 		comparison_left_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Compare these Samples...", style=wx.ALIGN_LEFT)
 		comparison_left.Add(comparison_left_label, 0, 0, 25)
 		comparison_left_picker_sizer.Add(self.comparison_left_picker, 0, 0, 0)
@@ -1177,9 +1195,9 @@ class Launcher(wx.Frame):
 		comparison_right.Add(comparison_right_picker_sizer, 0, wx.BOTTOM | wx.TOP, 5)
 		comparison_right.Add(self.comparison_right_header, 0, wx.EXPAND, 5)
 		comparison_pickers_grid.Add(comparison_right, 1, wx.EXPAND, 0)
-		comparison_option_sizer.Add(comparison_pickers_grid, 1, wx.ALL | wx.EXPAND, 10)
+		comparison_option_sizer.Add(comparison_pickers_grid, 1, wx.EXPAND, 10)
 		static_line_3 = wx.StaticLine(self.comparison_panel, wx.ID_ANY)
-		comparison_option_sizer.Add(static_line_3, 0, wx.EXPAND, 0)
+		comparison_option_sizer.Add(static_line_3, 0, wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
 		comparison_settings_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Settings")
 		comparison_settings_label.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
 		comparison_settings_sizer.Add(comparison_settings_label, 0, 0, 0)
@@ -1220,9 +1238,10 @@ class Launcher(wx.Frame):
 		comparison_button_sizer.Add(self.comparison_radar_button, 0, wx.BOTTOM | wx.LEFT, 3)
 		comparison_button_sizer.Add(self.comparison_mean_pa_button, 0, wx.BOTTOM | wx.LEFT, 3)
 		comparison_button_sizer.Add(self.comparison_box_whisker_btn, 0, wx.BOTTOM | wx.LEFT, 3)
+		comparison_button_sizer.Add(self.comparison_pca_btn, 0, wx.BOTTOM | wx.LEFT, 3)
 		comparison_settings_grid.Add(comparison_button_sizer, 1, wx.EXPAND, 0)
-		comparison_option_sizer.Add(comparison_settings_grid, 2, wx.ALL | wx.EXPAND, 10)
-		comparison_sizer.Add(comparison_option_sizer, 1, wx.EXPAND, 0)
+		comparison_option_sizer.Add(comparison_settings_grid, 2, wx.EXPAND | wx.LEFT, 10)
+		comparison_sizer.Add(comparison_option_sizer, 1, wx.EXPAND | wx.RIGHT, 10)
 		comparison_log_line = wx.StaticLine(self.comparison_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
 		comparison_sizer.Add(comparison_log_line, 0, wx.EXPAND, 0)
 		comparison_log_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Log:")
@@ -1230,7 +1249,7 @@ class Launcher(wx.Frame):
 		comparison_log_sizer.Add(self.comparison_log_text_control, 4, wx.EXPAND | wx.RIGHT, 10)
 		comparison_sizer.Add(comparison_log_sizer, 3, wx.ALL | wx.EXPAND, 10)
 		self.comparison_panel.SetSizer(comparison_sizer)
-		comparison_parent_sizer.Add(self.comparison_panel, 7, wx.EXPAND, 10)
+		comparison_parent_sizer.Add(self.comparison_panel, 7, wx.ALL | wx.EXPAND, 10)
 		self.Compare_Projects.SetSizer(comparison_parent_sizer)
 		help_toolbar_sizer.Add(self.help_focus_thief, 0, 0, 0)
 		help_toolbar_sizer.Add(self.help_back_btn, 0, 0, 0)
@@ -1370,21 +1389,31 @@ class Launcher(wx.Frame):
 	def on_menu_radar(self, event):  # wxGlade: Launcher.<event_handler>
 		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="radar")
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 		
 	def on_menu_mean_pa(self, event):  # wxGlade: Launcher.<event_handler>
 		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="mean_peak_area")
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 		
 	def on_menu_pa(self, event):  # wxGlade: Launcher.<event_handler>
 		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="peak_area")
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 		
 	def on_menu_box_whisker(self, event):  # wxGlade: Launcher.<event_handler>
 		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="box_whisker")
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
+		event.Skip()
+	
+	def on_menu_pca(self, event):  # wxGlade: Launcher.<event_handler>
+		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="pca")
+		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 		
 	
@@ -2006,6 +2035,7 @@ class Launcher(wx.Frame):
 												   #sample_lists={self.current_project_name: self.current_prefixList}
 												  )
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def show_mean_peak_area_chart(self, event):  # wxGlade: Launcher.<event_handler>
@@ -2017,6 +2047,7 @@ class Launcher(wx.Frame):
 												   #sample_lists={self.current_project_name: self.current_prefixList}
 												  )
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def show_box_whisker_chart(self, event):  # wxGlade: Launcher.<event_handler>
@@ -2027,6 +2058,7 @@ class Launcher(wx.Frame):
 												   #sample_lists={self.current_project_name: self.current_prefixList}
 												  )
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def show_peak_area_chart(self, event):  # wxGlade: Launcher.<event_handler>
@@ -2037,6 +2069,7 @@ class Launcher(wx.Frame):
 												   #sample_lists={self.current_project_name: self.current_prefixList}
 												  )
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def show_chromatogram(self, event):  # wxGlade: Launcher.<event_handler>
@@ -2359,6 +2392,7 @@ class Launcher(wx.Frame):
 		if self.comparison_right_project and self.comparison_left_project:
 			self.run_comparison_button.Enable()
 			self.comparison_box_whisker_btn.Enable()
+			self.comparison_pca_btn.Enable()
 			self.comparison_mean_pa_button.Enable()
 			self.comparison_radar_button.Enable()
 	
@@ -2408,6 +2442,16 @@ class Launcher(wx.Frame):
 																	self.comparison_right_project],
 												  )
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
+		event.Skip()
+	
+	def comparison_show_pca(self, event):
+		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="pca",
+												   initial_samples=[self.comparison_left_project,
+																	self.comparison_right_project],
+												  )
+		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def comparison_show_radar(self, event):  # wxGlade: Launcher.<event_handler>
@@ -2416,6 +2460,7 @@ class Launcher(wx.Frame):
 																	self.comparison_right_project],
 												   )
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def comparison_show_mean_peak_area(self, event):  # wxGlade: Launcher.<event_handler>
@@ -2424,6 +2469,7 @@ class Launcher(wx.Frame):
 																	self.comparison_right_project],
 												   )
 		self.ChartViewer.Show()
+		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def OnComparisonDone(self, event):
@@ -2452,18 +2498,35 @@ class Launcher(wx.Frame):
 		
 		CAS = self.dv_selection_data["hits"][0]["CAS"]
 		Name = self.dv_selection_data["hits"][0]["Name"]
+		rt = self.dv_selection_data["average_rt"]
 		
 		
 		html_file_directory = os.path.join(self.Config.RESULTS_DIRECTORY, "html_peak_data", self.current_project_name)
 		
 		maybe_make(html_file_directory)
+		maybe_make("cache") # Internal Cache Directory
 		
-		html_file_name = os.path.join(html_file_directory, f"{CAS}.html")
-
+		html_file_name = os.path.join(html_file_directory, f"{CAS}_{rt}.html")
+		
+		if CAS.replace("-",'').replace("0",'') == '':
+			return
+			# CAS Number is all zeros
+			
 		if not os.path.isfile(html_file_name):
-			comp = pcp.get_compounds(CAS, 'name')[0]
-		
-			outputText = self.template.render(comp=comp)
+			if os.path.exists(os.path.join("cache",CAS)):
+				with open(os.path.join("cache",CAS), "rb") as f:
+					comp = pickle.load(f)
+			else:
+				comp = pcp.get_compounds(CAS, 'name')[0]
+				# Save to cache
+				with open(os.path.join("cache",CAS), "wb") as f:
+					pickle.dump(comp, f)
+			print(comp.melting_point == "NotFound")
+			outputText = self.template.render(comp=comp,
+											  settings=template_settings,
+											  data=self.dv_selection_data,
+											  samples=self.browser_sample_list
+											  )
 		
 			print(comp.hill_formula)
 		
@@ -2496,6 +2559,15 @@ class Launcher(wx.Frame):
 	def dv_do_save_head2tail(self, event):  # wxGlade: Launcher.<event_handler>
 		print("Event handler 'dv_do_save_head2tail' not implemented!")
 		event.Skip()
+	def do_delete(self, event):  # wxGlade: Launcher.<event_handler>
+		dlg = wx.MessageDialog(self, "Are you sure want to delete this sample?\nThis cannot be undone!", caption="Confirm Deletion",
+					  style=wx.YES_NO | wx.NO_DEFAULT | wx.CENTRE | wx.ICON_EXCLAMATION, pos=wx.DefaultPosition)
+		dlg.SetYesNoLabels("Confirm",wx.ID_CANCEL)
+		res = dlg.ShowModal()
+		if res == wx.ID_YES:
+			print("The file should now be deleted")
+		event.Skip()
+
 # end of class Launcher
 
 

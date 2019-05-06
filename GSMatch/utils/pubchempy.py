@@ -729,8 +729,8 @@ class Compound(object):
 						try:
 							self._physical_properties = {**self._physical_properties, **toxnet(self.CAS)}
 						except ValueError: # Not Found in TOXNET
-							import traceback
-							traceback.print_exc()
+							#import traceback
+							#traceback.print_exc()
 							pass
 						for physical_property in section["Section"]:
 							name = physical_property["TOCHeading"]
@@ -767,6 +767,8 @@ class Compound(object):
 								physical_property["Information"][0]["Value"]["Unit"]
 							except KeyError:
 								self._physical_properties[name]["Unit"] = None
+						import pprint
+						pprint.pprint(self._physical_properties)
 			elif record["TOCHeading"] == "Names and Identifiers":
 				for section in record["Section"]:
 					if section["TOCHeading"] == "Record Description":

@@ -23,8 +23,10 @@ import os
 import wx
 import traceback
 
+from gsm_gui.utils import collapse_label
+
 from utils.wxTools import file_dialog, toggle, file_dialog_multiple
-from utils.charts import box_whisker, peak_area, mean_peak_area, radar_chart, bw_default_colours, bw_default_styles, default_colours, default_filetypes
+from utils.charts import box_whisker, peak_area, mean_peak_area, radar_chart, PrincipalComponentAnalysis, bw_default_colours, bw_default_styles, default_colours, default_filetypes
 
 import wx.html2
 import wx.richtext
@@ -57,7 +59,7 @@ class ChartViewer(wx.Frame):
 		#self.projects = projects
 		#self.sample_lists = sample_lists
 		# begin wxGlade: ChartViewer.__init__
-		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE | wx.MAXIMIZE | wx.MINIMIZE
+		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 		wx.Frame.__init__(self, *args, **kwds)
 		self.SetSize((900, 900))
 		self.ChartViewer_v_splitter = wx.SplitterWindow(self, wx.ID_ANY, style=wx.SP_3D | wx.SP_BORDER | wx.SP_LIVE_UPDATE)
@@ -75,31 +77,32 @@ class ChartViewer(wx.Frame):
 		self.v_splitter_right_panel = wx.Panel(self.ChartViewer_v_splitter, wx.ID_ANY)
 		self.ChartViewer_Settings_Panel = wx.Panel(self, wx.ID_ANY)
 		self.settings_scroller = wx.ScrolledWindow(self.ChartViewer_Settings_Panel, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
-		self.samples_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ Samples", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.samples_header = wx.Button(self.settings_scroller, wx.ID_ANY, "Samples", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.samples_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.up_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/up_16.png", wx.BITMAP_TYPE_ANY))
-		self.down_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("/ownCloud/ownCloud/GunShotMatch/GSMatch/lib/icons/down_16.png", wx.BITMAP_TYPE_ANY))
-		self.add_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("/ownCloud/ownCloud/GunShotMatch/GSMatch/lib/icons/add_16.png", wx.BITMAP_TYPE_ANY))
-		self.remove_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("/ownCloud/ownCloud/GunShotMatch/GSMatch/lib/icons/delete_16.png", wx.BITMAP_TYPE_ANY))
+		self.down_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/down_16.png", wx.BITMAP_TYPE_ANY))
+		self.add_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/add_16.png", wx.BITMAP_TYPE_ANY))
+		self.remove_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/delete_16.png", wx.BITMAP_TYPE_ANY))
 		self.sample_list_viewer = wx.ListBox(self.samples_panel, wx.ID_ANY, choices=[])
-		self.general_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ General", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.general_header = wx.Button(self.settings_scroller, wx.ID_ANY, "General", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.general_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.colours_button = wx.Button(self.general_panel, wx.ID_ANY, "Choose")
 		self.styles_button = wx.Button(self.general_panel, wx.ID_ANY, "Choose")
 		self.width_value = wx.SpinCtrlDouble(self.general_panel, wx.ID_ANY, "", min=0.1, max=10.0)
 		self.width_value.SetDigits(1)
 		self.percentage_checkbox = wx.CheckBox(self.general_panel, wx.ID_ANY, "")
-		self.data_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ Data", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.groups_checkbox = wx.CheckBox(self.general_panel, wx.ID_ANY, "")
+		self.data_header = wx.Button(self.settings_scroller, wx.ID_ANY, "Data", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.data_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.show_raw_data_checkbox = wx.CheckBox(self.data_panel, wx.ID_ANY, "")
 		self.show_outliers_checkbox = wx.CheckBox(self.data_panel, wx.ID_ANY, "")
 		self.outlier_mode_choice = wx.Choice(self.data_panel, wx.ID_ANY, choices=["2Stdev", "Quartiles", "MAD"])
 		self.error_bar_choice = wx.Choice(self.data_panel, wx.ID_ANY, choices=["Range", "Stdev", "None"])
-		self.log_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ Logarithmic", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.log_header = wx.Button(self.settings_scroller, wx.ID_ANY, "Logarithmic", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.log_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.use_log_checkbox = wx.CheckBox(self.log_panel, wx.ID_ANY, "")
 		self.log_base_value = wx.SpinCtrl(self.log_panel, wx.ID_ANY, "10", min=0, max=100, style=0)
-		self.legend_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ Legend", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.legend_header = wx.Button(self.settings_scroller, wx.ID_ANY, "Legend", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.legend_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.legend_checkbox = wx.CheckBox(self.legend_panel, wx.ID_ANY, "")
 		self.leg_cols_value = wx.SpinCtrl(self.legend_panel, wx.ID_ANY, "1", min=1, max=5, style=0)
@@ -107,11 +110,11 @@ class ChartViewer(wx.Frame):
 		self.leg_x_pos_value.SetDigits(2)
 		self.leg_y_pos_value = wx.SpinCtrlDouble(self.legend_panel, wx.ID_ANY, "0.5", min=-0.5, max=1.5)
 		self.leg_y_pos_value.SetDigits(2)
-		self.size_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ Size", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.size_header = wx.Button(self.settings_scroller, wx.ID_ANY, "Size", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.size_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.figure_width_value = wx.SpinCtrlDouble(self.size_panel, wx.ID_ANY, "", min=0.0, max=5000.0)
 		self.figure_height_value = wx.SpinCtrlDouble(self.size_panel, wx.ID_ANY, "", min=0.0, max=5000.0)
-		self.borders_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ Borders", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.borders_header = wx.Button(self.settings_scroller, wx.ID_ANY, "Borders", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.borders_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.top_border_value = wx.SpinCtrlDouble(self.borders_panel, wx.ID_ANY, "0.9", min=0.0, max=2.0)
 		self.top_border_value.SetDigits(3)
@@ -122,17 +125,17 @@ class ChartViewer(wx.Frame):
 		self.right_border_value = wx.SpinCtrlDouble(self.borders_panel, wx.ID_ANY, "0.9", min=0.0, max=2.0)
 		self.right_border_value.SetDigits(3)
 		self.tight_layout_button = wx.Button(self.borders_panel, wx.ID_ANY, "&Tight Layout")
-		self.ylim_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ y-Axis", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.ylim_header = wx.Button(self.settings_scroller, wx.ID_ANY, "y-Axis", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.ylim_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.y_ax_max_value = wx.SpinCtrl(self.ylim_panel, wx.ID_ANY, "0", min=0, max=10000000000)
 		self.y_ax_min_value = wx.SpinCtrl(self.ylim_panel, wx.ID_ANY, "0", min=0, max=10000000000)
-		self.xlim_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ x-Axis", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.xlim_header = wx.Button(self.settings_scroller, wx.ID_ANY, "x-Axis", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.xlim_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.x_ax_max_value = wx.SpinCtrlDouble(self.xlim_panel, wx.ID_ANY, "0.0", min=-100.0, max=100.0)
 		self.x_ax_max_value.SetDigits(3)
 		self.x_ax_min_value = wx.SpinCtrlDouble(self.xlim_panel, wx.ID_ANY, "0.0", min=-100.0, max=100.0)
 		self.x_ax_min_value.SetDigits(3)
-		self.filetypes_header = wx.Button(self.settings_scroller, wx.ID_ANY, u"⯆ Filetypes", style=wx.BORDER_NONE | wx.BU_LEFT)
+		self.filetypes_header = wx.Button(self.settings_scroller, wx.ID_ANY, "Filetypes", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.filetypes_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
 		self.png_checkbox = wx.CheckBox(self.filetypes_panel, wx.ID_ANY, "")
 		self.svg_checkbox = wx.CheckBox(self.filetypes_panel, wx.ID_ANY, "")
@@ -160,6 +163,7 @@ class ChartViewer(wx.Frame):
 		self.Bind(wx.EVT_TEXT, self.replot_chart, self.width_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.replot_chart, self.width_value)
 		self.Bind(wx.EVT_CHECKBOX, self.update_percentage, self.percentage_checkbox)
+		self.Bind(wx.EVT_CHECKBOX, self.replot_chart, self.groups_checkbox)
 		self.Bind(wx.EVT_BUTTON, self.collapse_data, self.data_header)
 		self.Bind(wx.EVT_CHECKBOX, self.replot_chart, self.show_raw_data_checkbox)
 		self.Bind(wx.EVT_CHECKBOX, self.toggle_outliers, self.show_outliers_checkbox)
@@ -175,12 +179,12 @@ class ChartViewer(wx.Frame):
 		self.Bind(wx.EVT_SPINCTRL, self.update_legend, self.leg_cols_value)
 		self.Bind(wx.EVT_TEXT, self.update_legend, self.leg_cols_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.update_legend, self.leg_cols_value)
-		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.update_legend, self.leg_x_pos_value)
-		self.Bind(wx.EVT_TEXT, self.update_legend, self.leg_x_pos_value)
-		self.Bind(wx.EVT_TEXT_ENTER, self.update_legend, self.leg_x_pos_value)
-		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.update_legend, self.leg_y_pos_value)
-		self.Bind(wx.EVT_TEXT, self.update_legend, self.leg_y_pos_value)
-		self.Bind(wx.EVT_TEXT_ENTER, self.update_legend, self.leg_y_pos_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.move_legend, self.leg_x_pos_value)
+		self.Bind(wx.EVT_TEXT, self.move_legend, self.leg_x_pos_value)
+		self.Bind(wx.EVT_TEXT_ENTER, self.move_legend, self.leg_x_pos_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.move_legend, self.leg_y_pos_value)
+		self.Bind(wx.EVT_TEXT, self.move_legend, self.leg_y_pos_value)
+		self.Bind(wx.EVT_TEXT_ENTER, self.move_legend, self.leg_y_pos_value)
 		self.Bind(wx.EVT_BUTTON, self.collapse_size, self.size_header)
 		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_splitter_changed, self.figure_width_value)
 		self.Bind(wx.EVT_TEXT, self.on_splitter_changed, self.figure_width_value)
@@ -228,6 +232,19 @@ class ChartViewer(wx.Frame):
 
 		self.styles = bw_default_styles
 		self.colours = default_colours
+
+		# Setup Collapse Buttons
+		self.general_header.SetLabel(collapse_label("General", False))
+		self.legend_header.SetLabel(collapse_label("Legend", False))
+		self.size_header.SetLabel(collapse_label("Size", False))
+		self.borders_header.SetLabel(collapse_label("Borders", False))
+		self.ylim_header.SetLabel(collapse_label("y-Axis", False))
+		self.filetypes_header.SetLabel(collapse_label("Filetypes", False))
+		self.xlim_header.SetLabel(collapse_label("x-Axis", False))
+		self.data_header.SetLabel(collapse_label("Data", False))
+		self.log_header.SetLabel(collapse_label("Logarithmic", False))
+		self.samples_header.SetLabel(collapse_label("Samples", False))
+
 		
 		# Setup Keyboard Shortcuts
 		ctrl_p_id = wx.NewId()
@@ -271,8 +288,11 @@ class ChartViewer(wx.Frame):
 		self.chart_data = pandas.DataFrame()
 		
 		#self.sample_list_viewer.Append(self.projects)
-		for sample in initial_samples:
-			self.add_sample(sample)
+		if initial_samples:
+			for sample in initial_samples:
+				self.add_sample(sample)
+
+			self.compound_order()
 
 		
 		# self.do_update_chart()
@@ -291,12 +311,13 @@ class ChartViewer(wx.Frame):
 		self.h_splitter_bottom_panel.SetMinSize((1, 1))
 		self.ChartViewer_h_splitter.SetMinimumPaneSize(20)
 		self.ChartViewer_v_splitter.SetMinimumPaneSize(20)
-		self.samples_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.samples_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.up_btn.SetMinSize((29, 29))
 		self.down_btn.SetMinSize((29, 29))
 		self.add_btn.SetMinSize((29, 29))
 		self.remove_btn.SetMinSize((29, 29))
-		self.general_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.sample_list_viewer.SetMinSize((-1, 120))
+		self.general_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.colours_button.SetMinSize((120, -1))
 		self.styles_button.SetMinSize((120, -1))
 		self.styles_button.Enable(False)
@@ -304,7 +325,8 @@ class ChartViewer(wx.Frame):
 		self.width_value.Enable(False)
 		self.width_value.SetIncrement(0.1)
 		self.percentage_checkbox.Enable(False)
-		self.data_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.groups_checkbox.Enable(False)
+		self.data_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.show_raw_data_checkbox.Enable(False)
 		self.show_outliers_checkbox.Enable(False)
 		self.show_outliers_checkbox.SetValue(1)
@@ -314,11 +336,11 @@ class ChartViewer(wx.Frame):
 		self.error_bar_choice.SetMinSize((120, -1))
 		self.error_bar_choice.Enable(False)
 		self.error_bar_choice.SetSelection(0)
-		self.log_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.log_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.use_log_checkbox.Enable(False)
 		self.log_base_value.SetMinSize((120, -1))
 		self.log_base_value.Enable(False)
-		self.legend_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.legend_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.leg_cols_value.SetMinSize((120, -1))
 		self.leg_cols_value.Enable(False)
 		self.leg_x_pos_value.SetMinSize((120, -1))
@@ -327,10 +349,10 @@ class ChartViewer(wx.Frame):
 		self.leg_y_pos_value.SetMinSize((120, -1))
 		self.leg_y_pos_value.Enable(False)
 		self.leg_y_pos_value.SetIncrement(0.01)
-		self.size_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.size_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.figure_width_value.SetMinSize((120, -1))
 		self.figure_height_value.SetMinSize((120, -1))
-		self.borders_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.borders_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.top_border_value.SetMinSize((120, -1))
 		self.top_border_value.SetIncrement(0.005)
 		self.bottom_border_value.SetMinSize((120, -1))
@@ -340,15 +362,15 @@ class ChartViewer(wx.Frame):
 		self.right_border_value.SetMinSize((120, -1))
 		self.right_border_value.SetIncrement(0.005)
 		self.tight_layout_button.SetMinSize((120, -1))
-		self.ylim_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.ylim_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.y_ax_max_value.Enable(False)
 		self.y_ax_min_value.Enable(False)
-		self.xlim_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.xlim_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.x_ax_max_value.Enable(False)
 		self.x_ax_max_value.SetIncrement(0.005)
 		self.x_ax_min_value.Enable(False)
 		self.x_ax_min_value.SetIncrement(0.005)
-		self.filetypes_header.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+		self.filetypes_header.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		self.png_checkbox.SetValue(1)
 		self.svg_checkbox.SetValue(1)
 		self.pdf_checkbox.SetValue(1)
@@ -358,10 +380,11 @@ class ChartViewer(wx.Frame):
 		self.save_settings_button.SetMinSize((85, -1))
 		self.save_button.SetMinSize((178, -1))
 		self.close_btn.SetMinSize((85, -1))
-		self.ChartViewer_Settings_Panel.SetMinSize((280, -1))
+		self.ChartViewer_Settings_Panel.SetMinSize((300, -1))
 		# end wxGlade
 
 	def __do_layout(self):
+		self.Maximize()
 		# begin wxGlade: ChartViewer.__do_layout
 		ChartViewer_Sizer = wx.BoxSizer(wx.HORIZONTAL)
 		settings_outer_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -376,7 +399,7 @@ class ChartViewer(wx.Frame):
 		legend_grid = wx.GridSizer(4, 2, 0, 0)
 		log_grid = wx.GridSizer(2, 2, 0, 0)
 		data_grid = wx.GridSizer(4, 2, 0, 0)
-		general_grid = wx.GridSizer(4, 2, 0, 0)
+		general_grid = wx.GridSizer(5, 2, 0, 0)
 		samples_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		samples_button_sizer = wx.BoxSizer(wx.VERTICAL)
 		v_splitter_right_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -405,9 +428,9 @@ class ChartViewer(wx.Frame):
 		samples_button_sizer.Add(self.add_btn, 0, 0, 0)
 		samples_button_sizer.Add(self.remove_btn, 0, 0, 0)
 		samples_sizer.Add(samples_button_sizer, 0, wx.EXPAND | wx.RIGHT, 5)
-		samples_sizer.Add(self.sample_list_viewer, 1, wx.EXPAND | wx.RIGHT, 13)
+		samples_sizer.Add(self.sample_list_viewer, 1, wx.RIGHT, 13)
 		self.samples_panel.SetSizer(samples_sizer)
-		settings_sizer.Add(self.samples_panel, 1, wx.EXPAND | wx.LEFT, 10)
+		settings_sizer.Add(self.samples_panel, 0, wx.EXPAND | wx.LEFT, 10)
 		samples_line = wx.StaticLine(self.settings_scroller, wx.ID_ANY)
 		settings_sizer.Add(samples_line, 0, wx.EXPAND | wx.TOP, 5)
 		settings_sizer.Add(self.general_header, 0, 0, 5)
@@ -426,6 +449,10 @@ class ChartViewer(wx.Frame):
 		percentage_label.Enable(False)
 		general_grid.Add(percentage_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		general_grid.Add(self.percentage_checkbox, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		groups_label = wx.StaticText(self.general_panel, wx.ID_ANY, "Groups: ")
+		groups_label.Enable(False)
+		general_grid.Add(groups_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		general_grid.Add(self.groups_checkbox, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		self.general_panel.SetSizer(general_grid)
 		settings_sizer.Add(self.general_panel, 0, wx.EXPAND | wx.LEFT, 10)
 		general_line = wx.StaticLine(self.settings_scroller, wx.ID_ANY)
@@ -556,20 +583,20 @@ class ChartViewer(wx.Frame):
 		settings_sizer.Add(filetypes_line, 0, wx.EXPAND | wx.TOP, 5)
 		settings_sizer.Add((0, 0), 0, 0, 0)
 		self.settings_scroller.SetSizer(settings_sizer)
-		settings_outer_sizer.Add(self.settings_scroller, 1, wx.EXPAND, 5)
+		settings_outer_sizer.Add(self.settings_scroller, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
 		static_line_8 = wx.StaticLine(self.ChartViewer_Settings_Panel, wx.ID_ANY)
 		settings_outer_sizer.Add(static_line_8, 0, wx.BOTTOM | wx.EXPAND | wx.TOP, 5)
 		button_grid.Add(self.reset_button, 0, wx.ALIGN_CENTER, 10)
 		button_grid.Add(self.load_button, 0, wx.ALIGN_CENTER, 10)
 		button_grid.Add(self.save_settings_button, 0, wx.ALIGN_CENTER, 10)
-		settings_outer_sizer.Add(button_grid, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 0)
+		settings_outer_sizer.Add(button_grid, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 		static_line_9 = wx.StaticLine(self.ChartViewer_Settings_Panel, wx.ID_ANY)
 		settings_outer_sizer.Add(static_line_9, 0, wx.BOTTOM | wx.EXPAND | wx.TOP, 5)
 		save_close_grid.Add(self.save_button, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT, 4)
 		save_close_grid.Add(self.close_btn, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT, 4)
-		settings_outer_sizer.Add(save_close_grid, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 0)
+		settings_outer_sizer.Add(save_close_grid, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 		self.ChartViewer_Settings_Panel.SetSizer(settings_outer_sizer)
-		ChartViewer_Sizer.Add(self.ChartViewer_Settings_Panel, 0, wx.ALL | wx.EXPAND, 10)
+		ChartViewer_Sizer.Add(self.ChartViewer_Settings_Panel, 0, wx.EXPAND, 10)
 		self.SetSizer(ChartViewer_Sizer)
 		self.Layout()
 		# end wxGlade
@@ -593,14 +620,14 @@ class ChartViewer(wx.Frame):
 						  self.percentage_checkbox: ["mean_peak_area", "peak_area"],
 						  err_bar_label: ["mean_peak_area", "peak_area", "box_whisker"],
 						  self.error_bar_choice: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.y_ax_max_label: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.y_ax_max_value: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.y_ax_min_label: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.y_ax_min_value: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.x_ax_max_label: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.x_ax_max_value: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.x_ax_min_label: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.x_ax_min_value: ["mean_peak_area", "peak_area", "box_whisker"],
+						  self.y_ax_max_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+						  self.y_ax_max_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+						  self.y_ax_min_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+						  self.y_ax_min_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+						  self.x_ax_max_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+						  self.x_ax_max_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+						  self.x_ax_min_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+						  self.x_ax_min_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
 						  use_log_label: ["peak_area", "radar"],
 						  self.use_log_checkbox: ["peak_area", "radar"],
 						  show_outliers_label: ["box_whisker"],
@@ -611,6 +638,8 @@ class ChartViewer(wx.Frame):
 						  self.outlier_mode_choice: ["box_whisker"],
 						  styles_label: ["box_whisker"],
 						  self.styles_button: ["box_whisker"],
+						  groups_label: ["box_whisker"],
+						  self.groups_checkbox: ["box_whisker"],
 						 }
 		
 		hide_options = {self.ylim_header: ["radar"],
@@ -619,17 +648,18 @@ class ChartViewer(wx.Frame):
 						self.xlim_header: ["radar"],
 						self.xlim_panel: ["radar"],
 						xlim_line: ["radar"],
-						self.data_header: ["radar"],
-						self.data_panel: ["radar"],
-						data_line: ["radar"],
+						self.data_header: ["radar", "pca"],
+						self.data_panel: ["radar", "pca"],
+						data_line: ["radar", "pca"],
 						self.samples_header: ["peak_area"],
 						self.samples_panel: ["peak_area"],
 						samples_line: ["peak_area"],
-						self.log_header: ["mean_peak_area", "box_whisker"],
-						self.log_panel: ["mean_peak_area", "box_whisker"],
-						log_line: ["mean_peak_area", "box_whisker"],
+						self.log_header: ["mean_peak_area", "box_whisker", "pca"],
+						self.log_panel: ["mean_peak_area", "box_whisker", "pca"],
+						log_line: ["mean_peak_area", "box_whisker", "pca"],
 						}
 		
+		# TODO: keep disabled while no samples selected
 		for item, charts in enable_options.items():
 			if self.chart_type in charts:
 				item.Enable(True)
@@ -664,10 +694,12 @@ class ChartViewer(wx.Frame):
 			self.chart = mean_peak_area()
 		elif self.chart_type == "box_whisker":
 			self.chart = box_whisker()
+		elif self.chart_type == "pca":
+			self.chart = PrincipalComponentAnalysis()
 		elif self.chart_type == "radar":
 			self.chart = radar_chart()
 		
-		if self.chart_type in ["mean_peak_area", "peak_area", "box_whisker"]:
+		if self.chart_type in ["mean_peak_area", "peak_area", "box_whisker", "pca"]:
 			self.chart_axes = self.chart_figure.add_subplot(111)  # 1x1 grid, first subplot
 		elif self.chart_type == "radar":
 			self.chart_axes = self.chart_figure.add_subplot(111, polar=True)
@@ -721,26 +753,33 @@ class ChartViewer(wx.Frame):
 		self.leg_y_pos_value.Enable(self.legend_checkbox.GetValue())
 		self.leg_x_pos_label.Enable(self.legend_checkbox.GetValue())
 		self.leg_y_pos_label.Enable(self.legend_checkbox.GetValue())
-		if self.chart_type == "box_whisker":
+		if self.chart_type in ["box_whisker", "pca"]:
 			self.leg_cols_label.Enable(self.legend_checkbox.GetValue())
 			self.leg_cols_value.Enable(self.legend_checkbox.GetValue())
 		
 		self.Layout()
-		
+
+		# Remove legend
+		try:
+			# self.chart.ax.get_legend().remove()
+			# self.chart.fig.get_legend().remove()
+			self.legend.remove()
+		#	self.chart_figure.canvas.draw_idle()
+		except AttributeError:  # If there is no legend
+			#traceback.print_exc()
+			pass
+		except ValueError:  # If there is no legend
+			#traceback.print_exc()
+			pass
+
 		if self.legend_checkbox.GetValue():
 			
 			# Add legend to Chart
-			self.chart.create_legend((self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()))
-			self.chart_figure.canvas.draw_idle()
+			self.legend = self.chart.create_legend((self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()), leg_cols=self.leg_cols_value.GetValue())
+
+		self.chart_figure.canvas.draw_idle()
 		
-		else:
-			
-			# Remove legend
-			try:
-				self.chart.ax.get_legend().remove()
-				self.chart_figure.canvas.draw_idle()
-			except AttributeError:  # If there is no legend
-				pass
+
 		
 		"""if self.legend_checkbox.GetValue():
 
@@ -843,6 +882,28 @@ class ChartViewer(wx.Frame):
 		
 		if self.chart_type == "box_whisker":
 			self.chart.setup_data(self.chart_data, [(name, self.sample_lists[name]) for name in self.projects], outlier_mode)
+		elif self.chart_type == "pca":
+			pca_data = {"target": []}
+			targets = []
+			features = []
+			
+			for name in self.projects:
+				for i in range(len(self.sample_lists[name])):
+					pca_data["target"].append(name)
+				targets.append(name)
+			
+			for compound in self.chart_data.index.values:
+				area_list = []
+				for name in self.projects:
+					for prefix in self.sample_lists[name]:
+						area_list.append(self.chart_data.loc[compound, prefix])
+				
+				pca_data[compound] = area_list
+				features.append(compound)
+			
+			pca_data = pandas.DataFrame(data=pca_data)
+			self.pca = self.chart.setup_data(pca_data, features, targets)
+			
 		elif self.chart_type in ["mean_peak_area", "radar"]:
 			self.chart.setup_data(self.chart_data, self.projects)
 		elif self.chart_type == "peak_area":
@@ -871,17 +932,17 @@ class ChartViewer(wx.Frame):
 		err_bar = self.error_bar_choice.GetString(self.error_bar_choice.GetSelection()).lower()
 		leg_cols = self.leg_cols_value.GetValue()
 		column_width = self.width_value.GetValue()
-		groupings = None
-		
-		#print(show_outliers)
-		#print(show_raw_data)
-		#print(err_bar)
-		#print(leg_cols)
-		#print(column_width)
-		
+
+		groupings = False
+		if self.groups_checkbox.GetValue():
+			groupings = [x.replace(" Fired",'') for x in self.projects[::2]]
+
 		if self.chart_type == "box_whisker":
 			self.chart.setup_datapoints(column_width, self.styles, self.colours)
 			self.chart.create_chart(show_outliers, show_raw_data, err_bar, groupings)
+		if self.chart_type == "pca":
+			self.chart.setup_datapoints(self.colours)
+			self.chart.create_chart()
 		elif self.chart_type == "mean_peak_area":
 			self.chart.create_chart(barWidth=column_width, percentage=percentage, err_bar=err_bar, colours=self.colours)
 		elif self.chart_type == "peak_area":
@@ -1155,90 +1216,90 @@ class ChartViewer(wx.Frame):
 	def collapse_general(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.general_panel.Hide():
 			self.general_panel.Show()
-			self.general_header.SetLabel(u"⯆ General")
+			self.general_header.SetLabel(collapse_label("General", False))
 		else:
-			self.general_header.SetLabel(u"⯈ General")
+			self.general_header.SetLabel(collapse_label("General"))
 		self.Layout()
 		event.Skip()
 	
 	def collapse_legend(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.legend_panel.Hide():
 			self.legend_panel.Show()
-			self.legend_header.SetLabel(u"⯆ Legend")
+			self.legend_header.SetLabel(collapse_label("Legend", False))
 		else:
-			self.legend_header.SetLabel(u"⯈ Legend")
+			self.legend_header.SetLabel(collapse_label("Legend"))
 		self.Layout()
 		event.Skip()
 	
 	def collapse_size(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.size_panel.Hide():
 			self.size_panel.Show()
-			self.size_header.SetLabel(u"⯆ Size")
+			self.size_header.SetLabel(collapse_label("Size", False))
 		else:
-			self.size_header.SetLabel(u"⯈ Size")
+			self.size_header.SetLabel(collapse_label("Size"))
 		self.Layout()
 		event.Skip()
 	
 	def collapse_borders(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.borders_panel.Hide():
 			self.borders_panel.Show()
-			self.borders_header.SetLabel(u"⯆ Borders")
+			self.borders_header.SetLabel(collapse_label("Borders", False))
 		else:
-			self.borders_header.SetLabel(u"⯈ Borders")
+			self.borders_header.SetLabel(collapse_label("Borders"))
 		self.Layout()
 		event.Skip()
 	
 	def collapse_ylim(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.ylim_panel.Hide():
 			self.ylim_panel.Show()
-			self.ylim_header.SetLabel(u"⯆ y-Axis")
+			self.ylim_header.SetLabel(collapse_label("y-Axis", False))
 		else:
-			self.ylim_header.SetLabel(u"⯈ y-Axis")
+			self.ylim_header.SetLabel(collapse_label("y-Axis"))
 		self.Layout()
 		event.Skip()
 	
 	def collapse_filetypes(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.filetypes_panel.Hide():
 			self.filetypes_panel.Show()
-			self.filetypes_header.SetLabel(u"⯆ Filetypes")
+			self.filetypes_header.SetLabel(collapse_label("Filetypes", False))
 		else:
-			self.filetypes_header.SetLabel(u"⯈ Filetypes")
+			self.filetypes_header.SetLabel(collapse_label("Filetypes"))
 		self.Layout()
 		event.Skip()
 
 	def collapse_xlim(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.xlim_panel.Hide():
 			self.xlim_panel.Show()
-			self.xlim_header.SetLabel(u"⯆ x-Axis")
+			self.xlim_header.SetLabel(collapse_label("x-Axis", False))
 		else:
-			self.xlim_header.SetLabel(u"⯈ x-Axis")
+			self.xlim_header.SetLabel(collapse_label("x-Axis"))
 		self.Layout()
 		event.Skip()
 		
 	def collapse_data(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.data_panel.Hide():
 			self.data_panel.Show()
-			self.data_header.SetLabel(u"⯆ Data")
+			self.data_header.SetLabel(collapse_label("Data", False))
 		else:
-			self.data_header.SetLabel(u"⯈ Data")
+			self.data_header.SetLabel(collapse_label("Data"))
 		self.Layout()
 		event.Skip()
 
 	def collapse_log(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.log_panel.Hide():
 			self.log_panel.Show()
-			self.log_header.SetLabel(u"⯆ Logarithmic")
+			self.log_header.SetLabel(collapse_label("Logarithmic", False))
 		else:
-			self.log_header.SetLabel(u"⯈ Logarithmic")
+			self.log_header.SetLabel(collapse_label("Logarithmic"))
 		self.Layout()
 		event.Skip()
 	
 	def collapse_samples(self, event):  # wxGlade: ChartViewer.<event_handler>
 		if not self.samples_panel.Hide():
 			self.samples_panel.Show()
-			self.samples_header.SetLabel(u"⯆ Samples")
+			self.samples_header.SetLabel(collapse_label("Samples", False))
 		else:
-			self.samples_header.SetLabel(u"⯈ Samples")
+			self.samples_header.SetLabel(collapse_label("Samples"))
 		self.Layout()
 		event.Skip()
 	
@@ -1270,9 +1331,12 @@ class ChartViewer(wx.Frame):
 		selected_projects = file_dialog_multiple(self, "info", "Choose a Project to Open", "info files",
 									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE,
 									   defaultDir=self.parent.Config.RESULTS_DIRECTORY)
+		if selected_projects == None:
+			return
 		
 		for project in selected_projects:
 			self.add_sample(project)
+		self.compound_order()
 		
 		self.recalculate_data()
 		self.replot_chart()
@@ -1291,7 +1355,7 @@ class ChartViewer(wx.Frame):
 		self.load_data(selected_project, pretty_name)
 		
 	def load_data(self, selected_project, pretty_name):
-	
+
 		# Load Chart Data
 		self.chart_data = pandas.concat(
 			[self.chart_data,
@@ -1306,7 +1370,9 @@ class ChartViewer(wx.Frame):
 		
 		self.chart_data.drop("Compound Names", axis=1, inplace=True)
 		self.chart_data['Compound Names'] = self.chart_data.index
-		
+
+	def compound_order(self):
+
 		# determine order of compounds on graph
 		for compound in self.chart_data.index.values:
 			self.chart_data["Count"] = self.chart_data.apply(df_count, args=(
@@ -1316,8 +1382,7 @@ class ChartViewer(wx.Frame):
 		self.chart_data = self.chart_data.sort_values(['Count', 'Compound Names'])
 		self.chart_data.fillna(0, inplace=True)
 		
-		self.projects = [self.sample_list_viewer.GetString(item) for item in range(self.sample_list_viewer.GetCount())]
-		
+
 
 		
 	def on_sample_remove(self, event):  # wxGlade: ChartViewer.<event_handler>
@@ -1336,10 +1401,10 @@ class ChartViewer(wx.Frame):
 		
 		# Reload Chart Data
 		self.chart_data = pandas.DataFrame()
-		
+		self.projects = [self.sample_list_viewer.GetString(item) for item in range(self.sample_list_viewer.GetCount())]
 		for pretty_name in self.projects:
 			self.load_data(self.index_files[pretty_name], pretty_name)
-		
+		self.compound_order()
 		self.recalculate_data()
 		self.replot_chart()
 		
@@ -1361,5 +1426,11 @@ class ChartViewer(wx.Frame):
 		
 		event.skip()
 
+	def move_legend(self, event):  # wxGlade: ChartViewer.<event_handler>
+		if self.legend_checkbox.GetValue():
+			self.legend.set_bbox_to_anchor((self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()))
+			self.chart_figure.canvas.draw_idle()
+		else:
+			pass
 # end of class ChartViewer
 

@@ -139,7 +139,14 @@ utils.wxBitmap
     From https://sourceforge.net/p/wxglade/mailman/message/6475744/
 -----
 
+Fonts:
+    FreeMono Font (lib/FreeMono.ttf)
+    Available under the GNU GPL Version 3 
+    https://www.gnu.org/software/freefont/index.html
+
+-----
 Icons:
+
     Uses icons from GIMP.
     Licenced under the GNU General Public License v3
     https://www.gimp.org/about/authors.html
