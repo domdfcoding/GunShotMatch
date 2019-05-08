@@ -71,4 +71,7 @@ PyCluster
 GunShotMatch requires PyCluster >= 1.58.
 Windows installers and Linux source can be downloaded from http://bonsai.hgc.jp/~mdehoon/software/cluster/software.htm
 
+OpenPyXL
+--------------
 
+You may also require the files in `lib/openpyxl-patch`. These can be copied into the OpenPyXL installation directory.

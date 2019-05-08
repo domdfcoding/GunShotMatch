@@ -17,7 +17,6 @@
 #  MA 02110-1301, USA.
 #
 
-
 import sys
 sys.path.append("..")
 
@@ -27,6 +26,7 @@ import time
 import traceback
 import threading
 import subprocess
+import requests
 
 from gsm_core import EventBoilerplate as ProjectEvent
 from gsm_core import EventBoilerplate as ConversionEvent
@@ -39,30 +39,14 @@ from gsm_core import LogEventBoilerplate as ComparisonLogEvent
 import wx.html2
 import wx.richtext
 from wx.adv import NotificationMessage
-import multiprocessing
-from multiprocessing.queues import Queue
+#import multiprocessing
+#from multiprocessing.queues import Queue
 
-
-# Statusbar and Importer Code
 # Based on https://wiki.wxpython.org/Non-Blocking%20Gui
+
 myEVT_STATUS = wx.NewEventType()
 EVT_STATUS = wx.PyEventBinder(myEVT_STATUS, 1)
-myEVT_QUEUE = wx.NewEventType()
-EVT_QUEUE = wx.PyEventBinder(myEVT_QUEUE, 1)
-myEVT_CONVERSION = wx.NewEventType()
-myEVT_CONVERSION_LOG = wx.NewEventType()
-EVT_CONVERSION = wx.PyEventBinder(myEVT_CONVERSION, 1)
-EVT_CONVERSION_LOG = wx.PyEventBinder(myEVT_CONVERSION_LOG, 1)
-myEVT_PROJECT = wx.NewEventType()
-myEVT_PROJECT_LOG = wx.NewEventType()
-EVT_PROJECT = wx.PyEventBinder(myEVT_PROJECT, 1)
-EVT_PROJECT_LOG = wx.PyEventBinder(myEVT_PROJECT_LOG, 1)
-myEVT_COMPARISON = wx.NewEventType()
-EVT_COMPARISON = wx.PyEventBinder(myEVT_COMPARISON, 1)
-myEVT_COMPARISON_LOG = wx.NewEventType()
-EVT_COMPARISON_LOG = wx.PyEventBinder(myEVT_COMPARISON_LOG, 1)
-myEVT_DATA_VIEWER = wx.NewEventType()
-EVT_DATA_VIEWER = wx.PyEventBinder(myEVT_DATA_VIEWER, 1)
+kill_status_thread = False
 
 class StatusEvent(wx.PyCommandEvent):
 	"""Event to signal that a new status is ready to be displayed"""
@@ -78,10 +62,6 @@ class StatusEvent(wx.PyCommandEvent):
 
 		"""
 		return self._value
-
-
-kill_status_thread = False
-
 
 class StatusThread(threading.Thread):
 	# Includes code from https://gist.github.com/samarthbhargav/5a515a399f7113137331
@@ -112,25 +92,15 @@ class StatusThread(threading.Thread):
 		""" Stop the thread and wait for it to end. """
 		self._stopevent.set()
 		threading.Thread.join(self, timeout)
-	
-	"""	global kill_status_thread
-		try:
-			while True:
-				print(kill_status_thread)
-				if kill_status_thread:
-					break
-				time.sleep(1) # our simulated calculation time
-				evt = StatusEvent(myEVT_STATUS, -1, self._value)
-				wx.PostEvent(self._parent, evt)
-			print("Status Thread Exiting")
-		except RuntimeError:
-			print("StatusThread Exiting")
-			return
-			# a runtime error was being raised when the main window closed"""
 
 
+##########################
 
-
+myEVT_CONVERSION = wx.NewEventType()
+myEVT_CONVERSION_LOG = wx.NewEventType()
+EVT_CONVERSION = wx.PyEventBinder(myEVT_CONVERSION, 1)
+EVT_CONVERSION_LOG = wx.PyEventBinder(myEVT_CONVERSION_LOG, 1)
+conversion_thread_running = False
 
 class ConversionThread(threading.Thread):
 	def __init__(self, parent, file_list):
@@ -184,52 +154,39 @@ class ConversionThread(threading.Thread):
 			traceback.print_exc()
 			conversion_thread_running = False
 	# a runtime error was being raised when the main window closed
- 
+
+
+###########################
+
+myEVT_DATA_VIEWER = wx.NewEventType()
+EVT_DATA_VIEWER = wx.PyEventBinder(myEVT_DATA_VIEWER, 1)
+
 class Flask_Thread(threading.Thread):
-	def __init__(self, parent):
+	def __init__(self, parent, url):
 		"""
 		@param parent: The gui object to send events to
 		"""
-		self._stopevent = threading.Event()
+		#self._stopevent = threading.Event()
 		threading.Thread.__init__(self, name="FlaskThread")
 		self._parent = parent
+		self.url = url
 	
 	def run(self):
 		"""Overrides Thread.run. Don't call this directly its called internally
 		when you call Thread.start().
 		"""
-		args = ["python3", "-u", "./data_viewer_flask.py"]
-		process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		print("Hello")
-		stop=False
-		try:
-			while not self._stopevent.isSet() and not stop:
-			
-				for line in iter(process.stdout.readline, b''):
-					if not re.match(r'^\s*$', line.decode("utf-8")):
-						# line is empty (has only the following: \t\n\r and whitespace)print(line.decode("utf-8"))
-						if line.decode("utf-8").startswith("###GUNSHOTMATCH###"):
-							if line.decode("utf-8").split(":")[1].startswith("Ready"):
-								print("I Am Ready!#############")
-								evt = ProjectEvent(myEVT_DATA_VIEWER, -1)
-								wx.PostEvent(self._parent, evt)
-							elif line.decode("utf-8").split(":")[1].startswith("Shutdown"):
-								stop=True
-								break
-								
-						else:
-							print(line.decode("utf-8"))
-					
-		except:
-			traceback.print_exc()
+		requests.get(self.url)
+		evt = DataViewerEvent(myEVT_DATA_VIEWER, -1)
+		wx.PostEvent(self._parent, evt)
 		
-	
-	def join(self, timeout=None):
-		""" Stop the thread and wait for it to end. """
-		self._stopevent.set()
-		threading.Thread.join(self, timeout)
-	
 
+###########################
+
+myEVT_COMPARISON = wx.NewEventType()
+myEVT_COMPARISON_LOG = wx.NewEventType()
+EVT_COMPARISON = wx.PyEventBinder(myEVT_COMPARISON, 1)
+EVT_COMPARISON_LOG = wx.PyEventBinder(myEVT_COMPARISON_LOG, 1)
+comparison_thread_running = False
 
 class ComparisonThread(threading.Thread):
 	def __init__(self, parent, left_sample, right_sample, Config, a_value):
@@ -339,6 +296,14 @@ class ComparisonThread(threading.Thread):
 			print("An Error Occurred!")
 		
 
+#########################
+
+myEVT_PROJECT = wx.NewEventType()
+myEVT_PROJECT_LOG = wx.NewEventType()
+EVT_PROJECT = wx.PyEventBinder(myEVT_PROJECT, 1)
+EVT_PROJECT_LOG = wx.PyEventBinder(myEVT_PROJECT_LOG, 1)
+project_thread_running = False
+
 class ProjectThread(threading.Thread):
 	def __init__(self, parent, file_list, pretty_name):
 		"""
@@ -414,6 +379,11 @@ def project_log(instance, log_text):
 	evt = ProjectLogEvent(myEVT_PROJECT_LOG, -1, log_text=log_text)
 	wx.PostEvent(instance, evt)
 
+#########################
+
+myEVT_QUEUE = wx.NewEventType()
+EVT_QUEUE = wx.PyEventBinder(myEVT_QUEUE, 1)
+queue_thread_running = False
 
 class QueueThread(threading.Thread):
 	def __init__(self, parent):
@@ -508,7 +478,7 @@ class QueueThread(threading.Thread):
 			conversion_thread_running = False
 # a runtime error was being raised when the main window closed
 
-
+#################################
 
 class StdoutLog(object):
 	def __init__(self, filename):
@@ -517,7 +487,4 @@ class StdoutLog(object):
 	def write(self, text):
 		self.file.write(text.encode("utf-8"))
 	
-conversion_thread_running = False
-project_thread_running = False
-queue_thread_running = False
-comparison_thread_running = False
+

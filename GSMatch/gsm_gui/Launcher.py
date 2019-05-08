@@ -66,6 +66,9 @@ from gsm_gui.threads import StatusThread, EVT_STATUS, EVT_CONVERSION, EVT_CONVER
 	ComparisonThread, conversion_thread_running, project_thread_running, comparison_thread_running, \
 	Flask_Thread, EVT_DATA_VIEWER
 
+from multiprocessing import Process
+
+
 # begin wxGlade: dependencies
 import wx.grid
 # end wxGlade
@@ -483,6 +486,12 @@ class Launcher(wx.Frame):
 		self.Bind(EVT_COMPARISON, self.OnComparisonDone)
 		self.Bind(EVT_COMPARISON_LOG, self.OnComparisonLog)
 		
+		from data_viewer_server import app
+		self.flask = Process(target=app.run)
+		self.flask.start()
+			
+		#Flask_Thread(self)
+		#self.flask.start()
 		self.Bind(EVT_DATA_VIEWER, self.Data_Viewer_Ready)
 		
 		self.display_chromatogram()
@@ -1536,8 +1545,15 @@ class Launcher(wx.Frame):
 		
 		print("Waiting for threads to finish...")
 		self.worker.join()
-		requests.get("http://localhost:5000/shutdown")
+		self.flask.terminate()
 		self.flask.join()
+		
+		#try:
+		#	requests.get("http://localhost:5000/shutdown")
+		#	self.flask.join()
+		#except:
+		#	traceback.print_exc()
+		
 		
 		self.Destroy()  # you may also do:  event.Skip() since the default event handler does call Destroy(), too
 	
@@ -1978,13 +1994,6 @@ class Launcher(wx.Frame):
 	"""Browse Project Tab"""
 	
 	def on_close_project(self, event):  # wxGlade: Launcher.<event_handler>
-		try:
-			requests.get("http://localhost:5000/shutdown")
-		except:
-			pass
-			
-		self.flask.join()
-		
 		self.current_project_name = None
 		self.notebook_1.ChangeSelection(0)
 		
@@ -2008,9 +2017,7 @@ class Launcher(wx.Frame):
 		event.Skip()
 	
 	def setup_project_browser(self, selected_project):
-		self.flask = Flask_Thread(self)
-		self.flask.start()
-		
+	
 		self.current_project = selected_project
 		self.current_project_name = os.path.splitext(os.path.split(selected_project)[-1])[0]
 		self.notebook_1.SetPageText(3, self.current_project_name)
@@ -2520,8 +2527,11 @@ class Launcher(wx.Frame):
 		if os.path.isfile(os.path.join("cache", CAS)):
 			self.Data_Viewer_Ready()
 		else:
+			data_getter = Flask_Thread(self, self.dv_url)
+			data_getter.start()
 			#self.dv_html.LoadURL("http://webkit.org/blog-files/bounce.html")
-			self.dv_html.LoadURL(f"http://localhost:5000/loader?url={self.dv_url}")
+			#self.dv_html.LoadURL(f"http://localhost:5000/loader?url={self.dv_url}")
+			self.dv_html.LoadURL(f"file://{os.path.join(os.getcwd(),'lib','loading.html')}")
 		return
 	
 	def Data_Viewer_Ready(self, *args):

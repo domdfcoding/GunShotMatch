@@ -1,6 +1,6 @@
 """Test for PubChemPy"""
 
-import pubchempy as pcp
+import utils.pubchempy as pcp
 from decimal import Decimal
 
 comp = pcp.get_compounds("diphenylamine", 'name')[0]
