@@ -33,7 +33,8 @@ import jinja2
 import traceback
 import webbrowser
 import configparser as ConfigParser
-import pickle
+import requests
+
 
 
 from utils.paths import maybe_make, relpath
@@ -62,7 +63,8 @@ from gsm_core import pretty_name_from_info
 from gsm_gui import border_config, ChartViewer, AboutDialog, paths_dialog, list_dialog
 from gsm_gui.threads import StatusThread, EVT_STATUS, EVT_CONVERSION, EVT_CONVERSION_LOG, EVT_PROJECT, \
 	EVT_PROJECT_LOG, EVT_COMPARISON, EVT_COMPARISON_LOG, ConversionThread, ProjectThread, QueueThread, \
-	ComparisonThread, conversion_thread_running, project_thread_running, comparison_thread_running
+	ComparisonThread, conversion_thread_running, project_thread_running, comparison_thread_running, \
+	Flask_Thread, EVT_DATA_VIEWER
 
 # begin wxGlade: dependencies
 import wx.grid
@@ -71,7 +73,7 @@ import wx.grid
 # begin wxGlade: extracode
 # end wxGlade
 
-template_settings = {"css":os.path.join(os.getcwd(),"lib","bootstrap.min.css")}
+#template_settings = {"css":os.path.join(os.getcwd(),"lib","bootstrap.min.css")}
 
 # Constrain pan to x-axis
 # From https://stackoverflow.com/questions/16705452/matplotlib-forcing-pan-zoom-to-constrain-to-x-axes
@@ -481,6 +483,8 @@ class Launcher(wx.Frame):
 		self.Bind(EVT_COMPARISON, self.OnComparisonDone)
 		self.Bind(EVT_COMPARISON_LOG, self.OnComparisonLog)
 		
+		self.Bind(EVT_DATA_VIEWER, self.Data_Viewer_Ready)
+		
 		self.display_chromatogram()
 		
 		self.current_project = None
@@ -504,6 +508,7 @@ class Launcher(wx.Frame):
 		self.template = templateEnv.get_template(TEMPLATE_FILE)
 		self.template.globals['rounders'] = rounders
 		self.template.globals['np'] = numpy
+		self.template.globals['len'] = len
 	
 	def __set_properties(self):
 		# begin wxGlade: Launcher.__set_properties
@@ -1531,6 +1536,8 @@ class Launcher(wx.Frame):
 		
 		print("Waiting for threads to finish...")
 		self.worker.join()
+		requests.get("http://localhost:5000/shutdown")
+		self.flask.join()
 		
 		self.Destroy()  # you may also do:  event.Skip() since the default event handler does call Destroy(), too
 	
@@ -1971,6 +1978,13 @@ class Launcher(wx.Frame):
 	"""Browse Project Tab"""
 	
 	def on_close_project(self, event):  # wxGlade: Launcher.<event_handler>
+		try:
+			requests.get("http://localhost:5000/shutdown")
+		except:
+			pass
+			
+		self.flask.join()
+		
 		self.current_project_name = None
 		self.notebook_1.ChangeSelection(0)
 		
@@ -1994,6 +2008,9 @@ class Launcher(wx.Frame):
 		event.Skip()
 	
 	def setup_project_browser(self, selected_project):
+		self.flask = Flask_Thread(self)
+		self.flask.start()
+		
 		self.current_project = selected_project
 		self.current_project_name = os.path.splitext(os.path.split(selected_project)[-1])[0]
 		self.notebook_1.SetPageText(3, self.current_project_name)
@@ -2492,51 +2509,24 @@ class Launcher(wx.Frame):
 
 	def do_select_peak(self, event):  # wxGlade: Launcher.<event_handler>
 		dv_selection = self.data_viewer_list.GetFocusedItem()
-		print(dv_selection)
 		self.dv_selection_data = self.browser_peak_data[dv_selection]
-		print(self.dv_selection_data)
 		
 		CAS = self.dv_selection_data["hits"][0]["CAS"]
-		Name = self.dv_selection_data["hits"][0]["Name"]
-		rt = self.dv_selection_data["average_rt"]
 		
+		data_path = os.path.join(self.Config.CSV_DIRECTORY, "{}_peak_data.json".format(self.current_project_name)).replace("&","%26")
+		samples = "/".join(self.browser_sample_list)
+		self.dv_url = f"http://localhost:5000/{samples}?filename={data_path}&index={dv_selection}"
 		
-		html_file_directory = os.path.join(self.Config.RESULTS_DIRECTORY, "html_peak_data", self.current_project_name)
-		
-		maybe_make(html_file_directory)
-		maybe_make("cache") # Internal Cache Directory
-		
-		html_file_name = os.path.join(html_file_directory, f"{CAS}_{rt}.html")
-		
-		if CAS.replace("-",'').replace("0",'') == '':
-			return
-			# CAS Number is all zeros
-			
-		if not os.path.isfile(html_file_name):
-			if os.path.exists(os.path.join("cache",CAS)):
-				with open(os.path.join("cache",CAS), "rb") as f:
-					comp = pickle.load(f)
-			else:
-				comp = pcp.get_compounds(CAS, 'name')[0]
-				# Save to cache
-				with open(os.path.join("cache",CAS), "wb") as f:
-					pickle.dump(comp, f)
-			print(comp.melting_point == "NotFound")
-			outputText = self.template.render(comp=comp,
-											  settings=template_settings,
-											  data=self.dv_selection_data,
-											  samples=self.browser_sample_list
-											  )
-		
-			print(comp.hill_formula)
-		
-			with open(html_file_name, "w") as f:
-				f.write(outputText)
-			
-		self.dv_html.LoadURL(f"file://{html_file_name}")
-
-		event.Skip()
-
+		if os.path.isfile(os.path.join("cache", CAS)):
+			self.Data_Viewer_Ready()
+		else:
+			#self.dv_html.LoadURL("http://webkit.org/blog-files/bounce.html")
+			self.dv_html.LoadURL(f"http://localhost:5000/loader?url={self.dv_url}")
+		return
+	
+	def Data_Viewer_Ready(self, *args):
+		if self.dv_html.GetCurrentURL() != self.dv_url:
+			self.dv_html.LoadURL(self.dv_url)
 		
 	def dv_do_save_reference(self, event):  # wxGlade: Launcher.<event_handler>
 		print("Event handler 'dv_do_save_reference' not implemented!")

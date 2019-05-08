@@ -41,7 +41,7 @@ or:
 
 .. code-block:: bash
 
-    $ python3 -m pip --user install sklearn, numpy, pandas, openpyxl, matplotlib, scipy, PyMassSpec
+    $ python3 -m pip --user install sklearn, numpy, pandas, openpyxl, matplotlib, scipy, PyMassSpec, bs4, jinja2, flask
 
 
 wxPython
@@ -64,4 +64,11 @@ Linux
     $ python3 -m pip --user install \
         -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-16.04 \
         wxPython
+
+PyCluster
+--------------
+
+GunShotMatch requires PyCluster >= 1.58.
+Windows installers and Linux source can be downloaded from http://bonsai.hgc.jp/~mdehoon/software/cluster/software.htm
+
 

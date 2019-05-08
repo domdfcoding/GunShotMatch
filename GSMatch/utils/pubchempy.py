@@ -10,7 +10,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import division
 
-from utils.toxnet import toxnet
+#from utils.toxnet import toxnet
+from .toxnet import toxnet
 import functools
 import json
 import logging
@@ -20,7 +21,7 @@ import time
 import warnings
 import binascii
 from decimal import Decimal
-from utils.property_format import *
+from .property_format import *
 
 import requests
 from collections import Counter
@@ -669,9 +670,11 @@ class Compound(object):
 		self._bonds = {}
 		self.record = record
 		self.hazards = []		# COSHH Hazards
+		self.CAS = ''
 		self._physical_properties = {}	# Physical Properties (dictionary)
 		self._full_record = get_full_json(self.cid)
 		self.parse_full_record()
+
 
 	
 	@property
@@ -767,8 +770,8 @@ class Compound(object):
 								physical_property["Information"][0]["Value"]["Unit"]
 							except KeyError:
 								self._physical_properties[name]["Unit"] = None
-						import pprint
-						pprint.pprint(self._physical_properties)
+						#import pprint
+						#pprint.pprint(self._physical_properties)
 			elif record["TOCHeading"] == "Names and Identifiers":
 				for section in record["Section"]:
 					if section["TOCHeading"] == "Record Description":

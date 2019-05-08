@@ -92,6 +92,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#linux">1.1.1.2. Linux</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#pycluster">1.1.2. PyCluster</a></li>
 </ul>
 </li>
 </ul>
@@ -177,6 +178,7 @@
 <li><p><a class="reference internal" href="#linux" id="id5">Linux</a></p></li>
 </ul>
 </li>
+<li><p><a class="reference internal" href="#pycluster" id="id6">PyCluster</a></p></li>
 </ul>
 </li>
 </ul>
@@ -197,13 +199,17 @@ command, such as <code class="docutils literal notranslate"><span class="pre">py
 <div class="section" id="installation-with-pip">
 <h2><a class="toc-backref" href="#id2">1.1. Installation with pip</a><a class="headerlink" href="#installation-with-pip" title="Permalink to this headline">¶</a></h2>
 <p>GunShotMatch depends on the following packages:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sklearn</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">scikit</span><span class="o">-</span><span class="n">learn</span><span class="o">&gt;=</span><span class="mf">0.20</span><span class="o">.</span><span class="mi">3</span>
 <span class="n">numpy</span><span class="o">&gt;=</span><span class="mf">1.16</span><span class="o">.</span><span class="mi">2</span>
 <span class="n">pandas</span><span class="o">&gt;=</span><span class="mf">0.24</span><span class="o">.</span><span class="mi">1</span>
 <span class="n">openpyxl</span><span class="o">&gt;=</span><span class="mf">2.5</span><span class="o">.</span><span class="mi">14</span>
 <span class="n">matplotlib</span><span class="o">&gt;=</span><span class="mf">3.0</span><span class="o">.</span><span class="mi">3</span>
 <span class="n">scipy</span><span class="o">&gt;=</span><span class="mf">1.2</span><span class="o">.</span><span class="mi">1</span>
 <span class="n">PyMassSpec</span><span class="o">&gt;=</span><span class="mf">2.1</span><span class="o">.</span><span class="mi">0</span>
+<span class="n">bs4</span><span class="o">&gt;=</span><span class="mf">0.0</span><span class="o">.</span><span class="mi">1</span>
+<span class="n">requests</span><span class="o">&gt;=</span><span class="mf">2.21</span><span class="o">.</span><span class="mi">0</span>
+<span class="n">Flask</span><span class="o">&gt;=</span><span class="mf">1.0</span><span class="o">.</span><span class="mi">2</span>
+
 </pre></div>
 </div>
 <p>The recommended installation method is to use <code class="docutils literal notranslate"><span class="pre">pip</span></code> with the following command:</p>
@@ -211,7 +217,7 @@ command, such as <code class="docutils literal notranslate"><span class="pre">py
 </pre></div>
 </div>
 <p>or:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip --user install sklearn, numpy, pandas, openpyxl, matplotlib, scipy, PyMassSpec
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip --user install sklearn, numpy, pandas, openpyxl, matplotlib, scipy, PyMassSpec, bs4, jinja2, flask
 </pre></div>
 </div>
 <div class="section" id="wxpython">
@@ -231,6 +237,11 @@ command, such as <code class="docutils literal notranslate"><span class="pre">py
 </pre></div>
 </div>
 </div>
+</div>
+<div class="section" id="pycluster">
+<h3><a class="toc-backref" href="#id6">1.1.2. PyCluster</a><a class="headerlink" href="#pycluster" title="Permalink to this headline">¶</a></h3>
+<p>GunShotMatch requires PyCluster &gt;= 1.58.
+Windows installers and Linux source can be downloaded from <a class="reference external" href="http://bonsai.hgc.jp/~mdehoon/software/cluster/software.htm">http://bonsai.hgc.jp/~mdehoon/software/cluster/software.htm</a></p>
 </div>
 </div>
 </div>

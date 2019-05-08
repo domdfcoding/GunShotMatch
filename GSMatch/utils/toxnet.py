@@ -23,7 +23,7 @@
 from bs4 import BeautifulSoup
 import requests
 from decimal import Decimal
-from utils.property_format import *
+from .property_format import *
 
 def toxnet(cas):
 	try:

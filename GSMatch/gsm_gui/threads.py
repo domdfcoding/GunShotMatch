@@ -31,6 +31,7 @@ import subprocess
 from gsm_core import EventBoilerplate as ProjectEvent
 from gsm_core import EventBoilerplate as ConversionEvent
 from gsm_core import EventBoilerplate as ComparisonEvent
+from gsm_core import EventBoilerplate as DataViewerEvent
 from gsm_core import LogEventBoilerplate as ProjectLogEvent
 from gsm_core import LogEventBoilerplate as ConversionLogEvent
 from gsm_core import LogEventBoilerplate as ComparisonLogEvent
@@ -60,6 +61,8 @@ myEVT_COMPARISON = wx.NewEventType()
 EVT_COMPARISON = wx.PyEventBinder(myEVT_COMPARISON, 1)
 myEVT_COMPARISON_LOG = wx.NewEventType()
 EVT_COMPARISON_LOG = wx.PyEventBinder(myEVT_COMPARISON_LOG, 1)
+myEVT_DATA_VIEWER = wx.NewEventType()
+EVT_DATA_VIEWER = wx.PyEventBinder(myEVT_DATA_VIEWER, 1)
 
 class StatusEvent(wx.PyCommandEvent):
 	"""Event to signal that a new status is ready to be displayed"""
@@ -182,6 +185,52 @@ class ConversionThread(threading.Thread):
 			conversion_thread_running = False
 	# a runtime error was being raised when the main window closed
  
+class Flask_Thread(threading.Thread):
+	def __init__(self, parent):
+		"""
+		@param parent: The gui object to send events to
+		"""
+		self._stopevent = threading.Event()
+		threading.Thread.__init__(self, name="FlaskThread")
+		self._parent = parent
+	
+	def run(self):
+		"""Overrides Thread.run. Don't call this directly its called internally
+		when you call Thread.start().
+		"""
+		args = ["python3", "-u", "./data_viewer_flask.py"]
+		process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		print("Hello")
+		stop=False
+		try:
+			while not self._stopevent.isSet() and not stop:
+			
+				for line in iter(process.stdout.readline, b''):
+					if not re.match(r'^\s*$', line.decode("utf-8")):
+						# line is empty (has only the following: \t\n\r and whitespace)print(line.decode("utf-8"))
+						if line.decode("utf-8").startswith("###GUNSHOTMATCH###"):
+							if line.decode("utf-8").split(":")[1].startswith("Ready"):
+								print("I Am Ready!#############")
+								evt = ProjectEvent(myEVT_DATA_VIEWER, -1)
+								wx.PostEvent(self._parent, evt)
+							elif line.decode("utf-8").split(":")[1].startswith("Shutdown"):
+								stop=True
+								break
+								
+						else:
+							print(line.decode("utf-8"))
+					
+		except:
+			traceback.print_exc()
+		
+	
+	def join(self, timeout=None):
+		""" Stop the thread and wait for it to end. """
+		self._stopevent.set()
+		threading.Thread.join(self, timeout)
+	
+
+
 class ComparisonThread(threading.Thread):
 	def __init__(self, parent, left_sample, right_sample, Config, a_value):
 		"""

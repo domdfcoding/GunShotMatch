@@ -5,3 +5,7 @@ openpyxl>=2.5.14
 matplotlib>=3.0.3
 scipy>=1.2.1
 PyMassSpec>=2.1.0
+bs4>=0.0.1
+requests>=2.21.0
+Flask>=1.0.2
+
