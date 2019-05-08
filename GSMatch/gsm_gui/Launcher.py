@@ -29,7 +29,6 @@ import json
 import types
 import numpy
 #import pandas
-import jinja2
 import traceback
 import webbrowser
 import configparser as ConfigParser
@@ -510,14 +509,6 @@ class Launcher(wx.Frame):
 		
 		self.browser_peak_data = []
 		
-		# Setup Jinja2 Template
-		templateLoader = jinja2.FileSystemLoader(searchpath="./")
-		templateEnv = jinja2.Environment(loader=templateLoader)
-		TEMPLATE_FILE = "lib/properties_template.html"
-		self.template = templateEnv.get_template(TEMPLATE_FILE)
-		self.template.globals['rounders'] = rounders
-		self.template.globals['np'] = numpy
-		self.template.globals['len'] = len
 	
 	def __set_properties(self):
 		# begin wxGlade: Launcher.__set_properties
@@ -1455,9 +1446,11 @@ class Launcher(wx.Frame):
 		#raw_dir = os.path.abspath(self.Config.get("main", "rawpath"))
 		raw_dir = os.path.abspath(self.Config.RAW_DIRECTORY)
 		#resultspath = os.path.abspath(self.Config.get("main", "resultspath"))
+		maybe_make(raw_dir)
 		
 		# List of files in RAW directory for Import
 		self.raw_list = []
+		
 		for rawfile in os.listdir(raw_dir):
 			if os.path.splitext(rawfile)[1].lower() == ".raw":
 				self.raw_list.append(rawfile)
