@@ -32,9 +32,6 @@ import numpy
 import traceback
 import webbrowser
 import configparser as ConfigParser
-import requests
-
-
 
 from utils.paths import maybe_make, relpath
 #from utils.progbar import ProgressStatusBar
@@ -43,7 +40,7 @@ from utils.wxTools import file_dialog
 from utils.mathematical import df_count, rounders
 from utils.helper import str2tuple, list2str
 from utils.wxTools import coming_soon
-import utils.pubchempy as pcp
+
 
 import wx.html2
 import wx.richtext
@@ -57,13 +54,19 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
-from gsm_core import pretty_name_from_info
+from gsm_core import pretty_name_from_info, GSMConfig
 
 from gsm_gui import border_config, ChartViewer, AboutDialog, paths_dialog, list_dialog
+from gsm_gui.utils import get_toolbar_icon
+from gsm_gui.launcher_tab import launcher_tab
+from gsm_gui.help_tab import help_tab
+from gsm_gui.compare_tab import compare_tab
 from gsm_gui.threads import StatusThread, EVT_STATUS, EVT_CONVERSION, EVT_CONVERSION_LOG, EVT_PROJECT, \
 	EVT_PROJECT_LOG, EVT_COMPARISON, EVT_COMPARISON_LOG, ConversionThread, ProjectThread, QueueThread, \
 	ComparisonThread, conversion_thread_running, project_thread_running, comparison_thread_running, \
 	Flask_Thread, EVT_DATA_VIEWER
+
+from data_viewer_server import app as flaskapp
 
 from multiprocessing import Process
 
@@ -75,15 +78,12 @@ import wx.grid
 # begin wxGlade: extracode
 # end wxGlade
 
-#template_settings = {"css":os.path.join(os.getcwd(),"lib","bootstrap.min.css")}
-
 # Constrain pan to x-axis
 # From https://stackoverflow.com/questions/16705452/matplotlib-forcing-pan-zoom-to-constrain-to-x-axes
 class My_Axes(matplotlib.axes.Axes):
 	name = "My_Axes"
 	def drag_pan(self, button, key, x, y):
 		matplotlib.axes.Axes.drag_pan(self, button, 'x', x, y) # pretend key=='x'
-
 
 class Launcher(wx.Frame):
 	def __init__(self, *args, **kwds):
@@ -124,19 +124,7 @@ class Launcher(wx.Frame):
 		self.notebook_1 = wx.Notebook(self, wx.ID_ANY)
 		self.Launcher = wx.Panel(self.notebook_1, wx.ID_ANY)
 		self.Launcher.Bind(wx.EVT_SET_FOCUS, self.refresh_launcher)
-		self.launcher_parent_panel = wx.Panel(self.Launcher, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-		self.import_raw_button = wx.Button(self.launcher_parent_panel, wx.ID_ANY, "", style=wx.BU_AUTODRAW)
-		self.import_raw_button.Bind(wx.EVT_SET_FOCUS, self.refresh_launcher)
-		self.import_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
-		self.new_project_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/new_project_110.png", wx.BITMAP_TYPE_ANY), style=wx.BU_AUTODRAW | wx.BU_EXACTFIT)
-		self.new_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
-		self.open_project_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/open_project_110.png", wx.BITMAP_TYPE_ANY))
-		self.open_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
-		self.comparison_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/comparison_green_110.png", wx.BITMAP_TYPE_ANY))
-		self.comparison_info_button = wx.BitmapButton(self.launcher_parent_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/info_48.png", wx.BITMAP_TYPE_ANY))
-		self.launcher_right_panel = wx.Panel(self.Launcher, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-		self.messages_panel = wx.Panel(self.launcher_right_panel, wx.ID_ANY)
-		self.messages = wx.richtext.RichTextCtrl(self.messages_panel, wx.ID_ANY, style=wx.richtext.RE_MULTILINE | wx.richtext.RE_READONLY)
+		self.launcher_tab = launcher_tab(self, self.Launcher, wx.ID_ANY)
 		self.Import = wx.Panel(self.notebook_1, wx.ID_ANY)
 		self.import_picker_panel = wx.Panel(self.Import, wx.ID_ANY)
 		self.check_list_box_1 = wx.CheckListBox(self.import_picker_panel, wx.ID_ANY, choices=[], style=wx.LB_HSCROLL | wx.LB_MULTIPLE | wx.LB_SORT)
@@ -163,7 +151,7 @@ class Launcher(wx.Frame):
 		self.target_range_min_value = wx.TextCtrl(self.new_project_settings_panel, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
 		self.target_range_max_value = wx.TextCtrl(self.new_project_settings_panel, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
 		self.pretty_name_value = wx.TextCtrl(self.new_project_settings_panel, wx.ID_ANY, "")
-		self.pretty_name_clear = wx.BitmapButton(self.new_project_settings_panel, wx.ID_ANY, wx.ArtProvider.GetBitmap(wx.ART_GO_BACK, wx.ART_MENU))
+		self.pretty_name_clear = wx.BitmapButton(self.new_project_settings_panel, wx.ID_ANY, get_toolbar_icon("ART_GO_BACK", 16))
 		self.project_quantitative = wx.CheckBox(self.new_project_settings_panel, wx.ID_ANY, "Quantitative")
 		self.project_merge = wx.CheckBox(self.new_project_settings_panel, wx.ID_ANY, "Merge")
 		self.project_qualitative = wx.CheckBox(self.new_project_settings_panel, wx.ID_ANY, "Qualitative")
@@ -188,12 +176,26 @@ class Launcher(wx.Frame):
 		self.project_log_text_control = wx.TextCtrl(self.project_log_panel, wx.ID_ANY, "", style=wx.TE_CHARWRAP | wx.TE_MULTILINE | wx.TE_READONLY)
 		self.project_log_save_btn = wx.Button(self.project_log_panel, wx.ID_ANY, "Save Log")
 		self.Browse_Project = wx.Panel(self.notebook_1, wx.ID_ANY)
+		self.browse_toolbar = wx.Panel(self.Browse_Project, wx.ID_ANY, style=wx.BORDER_SUNKEN)
+		self.browse_toolbar.SetMaxSize((-1,40))
+		self.focus_thief = wx.Button(self.browse_toolbar, wx.ID_ANY, "")
+		self.CloseProject = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/close_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.OpenSample = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/open_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.ViewPeakList = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/list_view_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.PreviousSample = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, get_toolbar_icon("ART_GO_BACK"), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.NextSample = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, get_toolbar_icon("ART_GO_FORWARD"), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.ResetView = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, get_toolbar_icon("ART_GO_HOME"), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.PreviousView = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, get_toolbar_icon("ART_GO_TO_PARENT"), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.Zoom_Btn = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/zoom_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.Pan_Btn = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/gimp-tool-move.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.ViewSpectrum_Btn = wx.BitmapButton(self.browse_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/Mass_Spectrum_by_Fredrik_Edfors_from_the_Noun_Project.24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
+		self.config_borders_button = wx.Button(self.browse_toolbar, wx.ID_ANY, "Configure Borders")
+		self.png_button = wx.ToggleButton(self.browse_toolbar, wx.ID_ANY, "PNG")
+		self.svg_button = wx.ToggleButton(self.browse_toolbar, wx.ID_ANY, "SVG")
+		self.pdf_button = wx.ToggleButton(self.browse_toolbar, wx.ID_ANY, "PDF")
+		self.save_btn = wx.BitmapButton(self.browse_toolbar, wx.ID_SAVE, get_toolbar_icon("ART_FLOPPY"), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
 		self.browse_project_notebook = wx.Notebook(self.Browse_Project, wx.ID_ANY, style=wx.NB_BOTTOM)
 		self.browse_project_charts = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
-		self.charts_toolbar = wx.Panel(self.browse_project_charts, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-		self.charts_toolbar.SetMaxSize((-1,40))
-		self.charts_focus_thief = wx.Button(self.charts_toolbar, wx.ID_ANY, "")
-		self.charts_CloseProject = wx.BitmapButton(self.charts_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/close_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
 		self.open_project_body_panel = wx.Panel(self.browse_project_charts, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 		self.radar_chart_button = wx.BitmapButton(self.open_project_body_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/radar_chart_192.png", wx.BITMAP_TYPE_ANY))
 		self.mean_peak_area_button = wx.BitmapButton(self.open_project_body_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/mean_peak_area_192.png", wx.BITMAP_TYPE_ANY))
@@ -203,24 +205,6 @@ class Launcher(wx.Frame):
 		self.peak_area_button = wx.BitmapButton(self.open_project_body_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/peak_area_192.png", wx.BITMAP_TYPE_ANY))
 		self.chromatogram_button = wx.BitmapButton(self.open_project_body_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/HPLC_Chromatogram_by_Fredrik_Edfors_from_the_Noun_Project_192.png", wx.BITMAP_TYPE_ANY))
 		self.browse_project_chromatogram = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
-		self.chromatogram_toolbar = wx.Panel(self.browse_project_chromatogram, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-		self.chromatogram_toolbar.SetMaxSize((-1,40))
-		self.focus_thief = wx.Button(self.chromatogram_toolbar, wx.ID_ANY, "")
-		self.CloseProject = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/close_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.OpenSample = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/open_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.ViewPeakList = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/list_view_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.PreviousSample = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_back_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.NextSample = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_forward_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.chrom_ResetView = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/home_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.chrom_PreviousView = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/go_up_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.chrom_Zoom_Btn = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/zoom_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.chrom_Pan_Btn = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/gimp-tool-move.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.ViewSpectrum_Btn = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/Mass_Spectrum_by_Fredrik_Edfors_from_the_Noun_Project.24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.config_borders_button = wx.Button(self.chromatogram_toolbar, wx.ID_ANY, "Configure Borders")
-		self.chrom_png_button = wx.ToggleButton(self.chromatogram_toolbar, wx.ID_ANY, "PNG")
-		self.chrom_svg_button = wx.ToggleButton(self.chromatogram_toolbar, wx.ID_ANY, "SVG")
-		self.chrom_pdf_button = wx.ToggleButton(self.chromatogram_toolbar, wx.ID_ANY, "PDF")
-		self.chrom_save_btn = wx.BitmapButton(self.chromatogram_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/save_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
 		self.chromatogram_parent_panel = wx.Panel(self.browse_project_chromatogram, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 		
 		# create the figure with a single plot and create a canvas with the figure
@@ -231,12 +215,8 @@ class Launcher(wx.Frame):
 		
 		
 		self.chromatogram_canvas = FigureCanvas(self.chromatogram_parent_panel, wx.ID_ANY, self.chromatogram_figure)
+		self.browse_project_comparison = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
 		self.browse_project_data = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
-		self.dv_toolbar = wx.Panel(self.browse_project_data, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-		self.dv_toolbar.SetMinSize((1,40))
-		self.dv_toolbar.SetMaxSize((-1,40))
-		self.dv_focus_thief = wx.Button(self.dv_toolbar, wx.ID_ANY, "")
-		self.dv_CloseProject = wx.BitmapButton(self.dv_toolbar, wx.ID_ANY, wx.Bitmap("./lib/icons/close_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
 		self.dv_main_panel = wx.Panel(self.browse_project_data, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 		self.data_viewer_v_splitter = wx.SplitterWindow(self.dv_main_panel, wx.ID_ANY, style=wx.SP_3D | wx.SP_BORDER | wx.SP_LIVE_UPDATE)
 		self.dv_list_panel = wx.Panel(self.data_viewer_v_splitter, wx.ID_ANY)
@@ -309,59 +289,14 @@ class Launcher(wx.Frame):
 		self.dv_html = wx.html2.WebView.New(self.dv_html_panel, wx.ID_ANY)
 		self.dv_html_home = "http://domdfcoding.github.com/GunShotMatch"
 		self.dv_html.LoadURL(self.dv_html_home)
-		self.browse_project_comparison = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
 		self.Compare_Projects = wx.Panel(self.notebook_1, wx.ID_ANY)
-		self.comparison_panel = wx.Panel(self.Compare_Projects, wx.ID_ANY)
-		self.comparison_left_picker = wx.TextCtrl(self.comparison_panel, wx.ID_ANY, "", style=wx.TE_READONLY)
-		self.comparison_left_browse_btn = wx.BitmapButton(self.comparison_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/open_16.png", wx.BITMAP_TYPE_ANY))
-		self.comparison_left_header = wx.html2.WebView.New(self.comparison_panel, wx.ID_ANY)
-		self.comparison_right_picker = wx.TextCtrl(self.comparison_panel, wx.ID_ANY, "", style=wx.TE_READONLY)
-		self.comparison_right_browse_btn = wx.BitmapButton(self.comparison_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/open_16.png", wx.BITMAP_TYPE_ANY))
-		self.comparison_right_header = wx.html2.WebView.New(self.comparison_panel, wx.ID_ANY)
-		self.comparison_alignment_Dw_value = wx.SpinCtrlDouble(self.comparison_panel, wx.ID_ANY, "0.0", min=0.0, max=99.0)
-		self.comparison_alignment_Dw_value.SetDigits(2)
-		self.comparison_alignment_Gw_value = wx.SpinCtrlDouble(self.comparison_panel, wx.ID_ANY, "0.0", min=0.0, max=99.0)
-		self.comparison_alignment_Gw_value.SetDigits(2)
-		self.comparison_alignment_min_peaks_value = wx.SpinCtrlDouble(self.comparison_panel, wx.ID_ANY, "0.0", min=0.0, max=99.0)
-		self.significance_level_value = wx.SpinCtrlDouble(self.comparison_panel, wx.ID_ANY, "0.05", min=0.0, max=1.0)
-		self.significance_level_value.SetDigits(3)
-		self.comparison_apply_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "Apply")
-		self.comparison_default_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "Default")
-		self.comparison_reset_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "Reset")
-		self.run_comparison_button = wx.Button(self.comparison_panel, wx.ID_ANY, u"▶ Run Comparison")
-		self.comparison_radar_button = wx.Button(self.comparison_panel, wx.ID_ANY, "Radar Chart")
-		self.comparison_mean_pa_button = wx.Button(self.comparison_panel, wx.ID_ANY, "Mean Peak Area")
-		self.comparison_box_whisker_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "Box Whisker Plot")
-		self.comparison_pca_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "")
-		self.comparison_log_text_control = wx.TextCtrl(self.comparison_panel, wx.ID_ANY, "", style=wx.TE_CHARWRAP | wx.TE_MULTILINE | wx.TE_READONLY)
+		self.compare_tab = compare_tab(self, self.Compare_Projects, wx.ID_ANY)
 		self.Help = wx.Panel(self.notebook_1, wx.ID_ANY)
-		self.help_toolbar_panel = wx.Panel(self.Help, wx.ID_ANY)
-		self.chromatogram_toolbar.SetMaxSize((-1,40))
-		self.help_focus_thief = wx.Button(self.help_toolbar_panel, wx.ID_ANY, "")
-		self.help_back_btn = wx.BitmapButton(self.help_toolbar_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/go_back_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.help_forward_btn = wx.BitmapButton(self.help_toolbar_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/go_forward_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.help_home_btn = wx.BitmapButton(self.help_toolbar_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/home_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.help_url_text_ctrl = wx.TextCtrl(self.help_toolbar_panel, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL | wx.TE_PROCESS_ENTER)
-		self.help_go_btn = wx.BitmapButton(self.help_toolbar_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/go_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.help_readme_btn = wx.BitmapButton(self.help_toolbar_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/help_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.help_github_btn = wx.BitmapButton(self.help_toolbar_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/GitHub-Mark_24.png", wx.BITMAP_TYPE_ANY), style=wx.BORDER_NONE | wx.BU_AUTODRAW | wx.BU_EXACTFIT | wx.BU_NOTEXT)
-		self.help_open_browser_btn = wx.Button(self.help_toolbar_panel, wx.ID_ANY, "Open in browser")
-		self.help_parent_panel = wx.Panel(self.Help, wx.ID_ANY, style=wx.BORDER_SUNKEN)
-		self.help_browser = wx.html2.WebView.New(self.help_parent_panel, wx.ID_ANY)
-		self.help_home ="http://domdfcoding.github.com/GunShotMatch"
-		self.help_browser.LoadURL(self.help_home)
+		self.help_tab = help_tab(self.Help, wx.ID_ANY)
 
 		self.__set_properties()
 		self.__do_layout()
 
-		self.Bind(wx.EVT_BUTTON, self.on_import, self.import_raw_button)
-		self.Bind(wx.EVT_BUTTON, self.do_import_info, self.import_info_button)
-		self.Bind(wx.EVT_BUTTON, self.on_new_project, self.new_project_button)
-		self.Bind(wx.EVT_BUTTON, self.do_new_info, self.new_info_button)
-		self.Bind(wx.EVT_BUTTON, self.on_open_project, self.open_project_button)
-		self.Bind(wx.EVT_BUTTON, self.do_open_info, self.open_info_button)
-		self.Bind(wx.EVT_BUTTON, self.on_open_comparison, self.comparison_button)
-		self.Bind(wx.EVT_BUTTON, self.do_comparison_info, self.comparison_info_button)
 		self.Bind(wx.EVT_BUTTON, self.do_import, self.import_btn)
 		self.Bind(wx.EVT_BUTTON, self.do_delete, self.new_project_delete_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_pretty_name_clear, self.pretty_name_clear)
@@ -376,25 +311,23 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.on_load_queue, self.project_queue_load_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_project_queue_run, self.project_queue_run_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_project_log_save, self.project_log_save_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_close_project, self.charts_CloseProject)
-		self.Bind(wx.EVT_BUTTON, self.show_radar_chart, self.radar_chart_button)
-		self.Bind(wx.EVT_BUTTON, self.show_mean_peak_area_chart, self.mean_peak_area_button)
-		self.Bind(wx.EVT_BUTTON, self.show_box_whisker_chart, self.box_whisker_button)
-		self.Bind(wx.EVT_BUTTON, self.show_peak_area_chart, self.peak_area_button)
-		self.Bind(wx.EVT_BUTTON, self.show_chromatogram, self.chromatogram_button)
 		self.Bind(wx.EVT_BUTTON, self.on_close_project, self.CloseProject)
 		self.Bind(wx.EVT_BUTTON, self.on_open_sample, self.OpenSample)
 		self.Bind(wx.EVT_BUTTON, self.on_view_peak_list, self.ViewPeakList)
 		self.Bind(wx.EVT_BUTTON, self.on_previous_sample, self.PreviousSample)
 		self.Bind(wx.EVT_BUTTON, self.on_next_sample, self.NextSample)
-		self.Bind(wx.EVT_BUTTON, self.on_chromatogram_reset_view, self.chrom_ResetView)
-		self.Bind(wx.EVT_BUTTON, self.on_chromatogram_previous_view, self.chrom_PreviousView)
-		self.Bind(wx.EVT_BUTTON, self.on_chromatogram_zoom, self.chrom_Zoom_Btn)
-		self.Bind(wx.EVT_BUTTON, self.on_chromatogram_pan, self.chrom_Pan_Btn)
+		self.Bind(wx.EVT_BUTTON, self.on_chromatogram_reset_view, self.ResetView)
+		self.Bind(wx.EVT_BUTTON, self.on_chromatogram_previous_view, self.PreviousView)
+		self.Bind(wx.EVT_BUTTON, self.on_chromatogram_zoom, self.Zoom_Btn)
+		self.Bind(wx.EVT_BUTTON, self.on_chromatogram_pan, self.Pan_Btn)
 		self.Bind(wx.EVT_BUTTON, self.on_view_spectrum, self.ViewSpectrum_Btn)
 		self.Bind(wx.EVT_BUTTON, self.do_configure_borders, self.config_borders_button)
-		self.Bind(wx.EVT_BUTTON, self.do_save_chrom, self.chrom_save_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_close_project, self.dv_CloseProject)
+		self.Bind(wx.EVT_BUTTON, self.do_save_chrom, self.save_btn)
+		self.Bind(wx.EVT_BUTTON, self.show_radar_chart, self.radar_chart_button)
+		self.Bind(wx.EVT_BUTTON, self.show_mean_peak_area_chart, self.mean_peak_area_button)
+		self.Bind(wx.EVT_BUTTON, self.show_box_whisker_chart, self.box_whisker_button)
+		self.Bind(wx.EVT_BUTTON, self.show_peak_area_chart, self.peak_area_button)
+		self.Bind(wx.EVT_BUTTON, self.show_chromatogram, self.chromatogram_button)
 		self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.do_select_peak, self.data_viewer_list)
 		self.Bind(wx.EVT_BUTTON, self.dv_do_save_reference, self.dv_reference_save_btn)
 		self.Bind(wx.EVT_BUTTON, self.dv_on_samples_previous, self.dv_samples_previous_btn)
@@ -403,26 +336,8 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.dv_on_head2tail_previous, self.dv_head2tail_previous_btn)
 		self.Bind(wx.EVT_BUTTON, self.dv_on_head2tail_next, self.dv_head2tail_next_btn)
 		self.Bind(wx.EVT_BUTTON, self.dv_do_save_head2tail, self.dv_head2tail_save_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_left_comparison_browse, self.comparison_left_browse_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_right_comparison_browse, self.comparison_right_browse_btn)
-		self.Bind(wx.EVT_BUTTON, self.comparison_run, self.run_comparison_button)
-		self.Bind(wx.EVT_BUTTON, self.on_help_back, self.help_back_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_help_forward, self.help_forward_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_help_home, self.help_home_btn)
-		self.Bind(wx.EVT_TEXT_ENTER, self.on_help_go, self.help_url_text_ctrl)
-		self.Bind(wx.EVT_BUTTON, self.on_help_go, self.help_go_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_help_readme, self.help_readme_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_help_github, self.help_github_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_help_browser, self.help_open_browser_btn)
+		self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_browse_tab_change, self.browse_project_notebook)
 		# end wxGlade
-		
-		self.Bind(wx.EVT_BUTTON, self.do_comparison_apply, self.comparison_apply_btn)
-		self.Bind(wx.EVT_BUTTON, self.do_comparison_default, self.comparison_default_btn)
-		self.Bind(wx.EVT_BUTTON, self.do_comparison_reset, self.comparison_reset_btn)
-		self.Bind(wx.EVT_BUTTON, self.comparison_show_radar, self.comparison_radar_button)
-		self.Bind(wx.EVT_BUTTON, self.comparison_show_box_whisker, self.comparison_box_whisker_btn)
-		self.Bind(wx.EVT_BUTTON, self.comparison_show_mean_peak_area, self.comparison_mean_pa_button)
-		self.Bind(wx.EVT_BUTTON, self.comparison_show_pca, self.comparison_pca_btn)
 		
 		if sys.platform == "win32":
 			self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.notebook_1_handler_win32, self.notebook_1)
@@ -430,15 +345,11 @@ class Launcher(wx.Frame):
 			self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.notebook_1_handler, self.notebook_1)
 			
 		# Configuration
-		#self.Config = ConfigParser.ConfigParser()
-		#self.Config.read("config.ini")
-		from gsm_core import GSMConfig
 		self.Config = GSMConfig("config.ini")
 		
 		# Load Settings &c.
 		self.rescan_files()
 		self.do_reset()
-		self.do_comparison_reset()
 		
 		self.pretty_name_list = {}
 		with open("lib/pretty_names_list", "r") as pretty_name_file:
@@ -457,8 +368,8 @@ class Launcher(wx.Frame):
 		self.on_load_queue(pathname="lib/queue.csv")
 		
 		# Window Size and Position
-		self.SetMinSize((1140, 650))
-		self.SetSize((1140, 650))
+		self.SetMinSize((1140, 750))
+		self.SetSize((1140, 750))
 		self.Center()
 		self.SetIcon(wx.Icon("lib/icons/GunShotMatch.ico"))
 		internal_config = ConfigParser.ConfigParser()
@@ -468,8 +379,6 @@ class Launcher(wx.Frame):
 		if not any(x > y for x, y in zip(position, wx.GetDisplaySize())):
 			self.Move(*position)
 		
-		# Help Browser Setup
-		self.Bind(wx.html2.EVT_WEBVIEW_NAVIGATED, self.help_update_url, self.help_browser)
 		
 		# Thread Setup
 		# self.Bind(EVT_QUEUE, self.OnQueueDone)
@@ -483,14 +392,10 @@ class Launcher(wx.Frame):
 		self.Bind(EVT_PROJECT, self.OnProjectDone)
 		self.Bind(EVT_PROJECT_LOG, self.OnProjectLog)
 		self.Bind(EVT_COMPARISON, self.OnComparisonDone)
-		self.Bind(EVT_COMPARISON_LOG, self.OnComparisonLog)
 		
-		from data_viewer_server import app
-		self.flask = Process(target=app.run)
+		self.flask = Process(target=flaskapp.run)
 		self.flask.start()
-			
-		#Flask_Thread(self)
-		#self.flask.start()
+		
 		self.Bind(EVT_DATA_VIEWER, self.Data_Viewer_Ready)
 		
 		self.display_chromatogram()
@@ -498,14 +403,10 @@ class Launcher(wx.Frame):
 		self.current_project = None
 		self.current_project_name = None
 		
-		self.chrom_pdf_button.SetValue(True)
-		self.chrom_png_button.SetValue(True)
-		self.chrom_svg_button.SetValue(True)
+		self.pdf_button.SetValue(True)
+		self.png_button.SetValue(True)
+		self.svg_button.SetValue(True)
 		
-		self.comparison_right_project = None
-		self.comparison_right_project_name = None
-		self.comparison_left_project = None
-		self.comparison_left_project_name = None
 		
 		self.browser_peak_data = []
 		
@@ -522,24 +423,6 @@ class Launcher(wx.Frame):
 		statusbar_fields = ["Status:", ""]
 		for i in range(len(statusbar_fields)):
 			self.statusbar.SetStatusText(statusbar_fields[i], i)
-		self.import_raw_button.SetMinSize((128, 128))
-		self.import_raw_button.SetToolTip("Import .RAW Files")
-		self.import_raw_button.SetBitmap(wx.Bitmap("./lib/icons/import_110.png", wx.BITMAP_TYPE_ANY))
-		self.import_info_button.SetToolTip("Show help for \"Import\"")
-		self.import_info_button.SetSize(self.import_info_button.GetBestSize())
-		self.new_project_button.SetMinSize((128, 128))
-		self.new_project_button.SetToolTip("Create New Project")
-		self.new_info_button.SetToolTip("Show help for \"New Project\"")
-		self.new_info_button.SetSize(self.new_info_button.GetBestSize())
-		self.open_project_button.SetMinSize((128, 128))
-		self.open_project_button.SetToolTip("Open Project")
-		self.open_info_button.SetToolTip("Show help for \"Open Project\"")
-		self.open_info_button.SetSize(self.open_info_button.GetBestSize())
-		self.comparison_button.SetMinSize((128, 128))
-		self.comparison_button.SetToolTip("Open Project")
-		self.comparison_info_button.SetToolTip("Show help for \"Comparison\"")
-		self.comparison_info_button.SetSize(self.comparison_info_button.GetBestSize())
-		self.launcher_parent_panel.SetBackgroundColour(wx.Colour(240, 240, 240))
 		self.Launcher.SetBackgroundColour(wx.Colour(240, 240, 240))
 		self.check_list_box_1.SetMinSize((256, 128))
 		self.check_list_box_1.SetMinSize((256, 128))
@@ -565,7 +448,7 @@ class Launcher(wx.Frame):
 		self.target_range_max_value.SetMinSize((55, 29))
 		self.target_range_max_value.SetMaxLength(5)
 		self.pretty_name_value.SetMinSize((260, 29))
-		self.pretty_name_clear.SetSize(self.pretty_name_clear.GetBestSize())
+		self.pretty_name_clear.SetMinSize((29, 29))
 		self.project_quantitative.SetValue(1)
 		self.project_merge.SetValue(1)
 		self.project_qualitative.SetValue(1)
@@ -614,47 +497,49 @@ class Launcher(wx.Frame):
 		self.project_queue_grid.SetColSize(18, 83)
 		self.project_queue_grid.SetColLabelValue(19, "do_charts")
 		self.project_queue_grid.SetColSize(19, 83)
-		self.charts_focus_thief.SetMinSize((1, 1))
-		self.charts_CloseProject.SetMinSize((38, 38))
-		self.charts_CloseProject.SetToolTip("Close Project")
-		self.charts_toolbar.SetMinSize((-1, 32))
+		self.focus_thief.SetMinSize((1, 1))
+		self.CloseProject.SetMinSize((38, 38))
+		self.CloseProject.SetToolTip("Close Project")
+		self.OpenSample.SetMinSize((38, 38))
+		self.OpenSample.SetToolTip("Open Sample Chromatogram")
+		self.OpenSample.Enable(False)
+		self.ViewPeakList.SetMinSize((38, 38))
+		self.ViewPeakList.SetToolTip("View Peak List")
+		self.PreviousSample.SetMinSize((38, 38))
+		self.PreviousSample.SetToolTip("Previous Sample")
+		self.PreviousSample.Enable(False)
+		self.NextSample.SetMinSize((38, 38))
+		self.NextSample.SetToolTip("Next Sample")
+		self.NextSample.Enable(False)
+		self.ResetView.SetMinSize((38, 38))
+		self.ResetView.SetToolTip("Reset View")
+		self.ResetView.Enable(False)
+		self.PreviousView.SetMinSize((38, 38))
+		self.PreviousView.SetToolTip("Previous View")
+		self.PreviousView.Enable(False)
+		self.Zoom_Btn.SetMinSize((38, 38))
+		self.Zoom_Btn.SetToolTip("Pan")
+		self.Zoom_Btn.Enable(False)
+		self.Pan_Btn.SetMinSize((38, 38))
+		self.Pan_Btn.SetToolTip("Pan")
+		self.Pan_Btn.Enable(False)
+		self.ViewSpectrum_Btn.SetMinSize((38, 38))
+		self.ViewSpectrum_Btn.SetToolTip("View Mass Spectrum")
+		self.ViewSpectrum_Btn.Enable(False)
+		self.config_borders_button.Enable(False)
+		self.png_button.SetMinSize((45, -1))
+		self.svg_button.SetMinSize((45, -1))
+		self.pdf_button.SetMinSize((45, -1))
+		self.save_btn.Enable(False)
+		self.save_btn.SetSize(self.save_btn.GetBestSize())
+		self.browse_toolbar.SetMinSize((-1, 32))
 		self.radar_chart_button.SetMinSize((200, 200))
 		self.mean_peak_area_button.SetMinSize((200, 200))
 		self.open_project_header_browser.SetMinSize((200, 200))
 		self.box_whisker_button.SetMinSize((200, 200))
 		self.peak_area_button.SetMinSize((200, 200))
 		self.chromatogram_button.SetMinSize((200, 200))
-		self.focus_thief.SetMinSize((1, 1))
-		self.CloseProject.SetMinSize((38, 38))
-		self.CloseProject.SetToolTip("Close Project")
-		self.OpenSample.SetMinSize((38, 38))
-		self.OpenSample.SetToolTip("Open Sample Chromatogram")
-		self.ViewPeakList.SetMinSize((38, 38))
-		self.ViewPeakList.SetToolTip("View Peak List")
-		self.PreviousSample.SetMinSize((38, 38))
-		self.PreviousSample.SetToolTip("Previous Sample")
-		self.NextSample.SetMinSize((38, 38))
-		self.NextSample.SetToolTip("Next Sample")
-		self.chrom_ResetView.SetMinSize((38, 38))
-		self.chrom_ResetView.SetToolTip("Reset View")
-		self.chrom_PreviousView.SetMinSize((38, 38))
-		self.chrom_PreviousView.SetToolTip("Previous View")
-		self.chrom_Zoom_Btn.SetMinSize((38, 38))
-		self.chrom_Zoom_Btn.SetToolTip("Pan")
-		self.chrom_Pan_Btn.SetMinSize((38, 38))
-		self.chrom_Pan_Btn.SetToolTip("Pan")
-		self.ViewSpectrum_Btn.SetMinSize((38, 38))
-		self.ViewSpectrum_Btn.SetToolTip("View Mass Spectrum")
-		self.chrom_png_button.SetMinSize((45, -1))
-		self.chrom_svg_button.SetMinSize((45, -1))
-		self.chrom_pdf_button.SetMinSize((45, -1))
-		self.chrom_save_btn.SetSize(self.chrom_save_btn.GetBestSize())
-		self.chromatogram_toolbar.SetMinSize((-1, 32))
 		self.chromatogram_canvas.SetMinSize((1, 1))
-		self.dv_focus_thief.SetMinSize((1, 1))
-		self.dv_CloseProject.SetMinSize((38, 38))
-		self.dv_CloseProject.SetToolTip("Close Project")
-		self.dv_toolbar.SetMinSize((-1, 32))
 		self.data_viewer_list.AppendColumn("Time", format=wx.LIST_FORMAT_LEFT, width=80)
 		self.data_viewer_list.AppendColumn("Name", format=wx.LIST_FORMAT_LEFT, width=400)
 		self.data_viewer_list.AppendColumn("CAS", format=wx.LIST_FORMAT_LEFT, width=80)
@@ -692,39 +577,6 @@ class Launcher(wx.Frame):
 		self.dv_head2tail_toolbar.SetMaxSize((10000000,40))
 		self.data_viewer_h_splitter.SetMinimumPaneSize(40)
 		self.data_viewer_v_splitter.SetMinimumPaneSize(20)
-		self.comparison_left_picker.SetMinSize((171, -1))
-		self.comparison_left_browse_btn.SetMinSize((29, 29))
-		self.comparison_left_header.SetMinSize((200, 160))
-		self.comparison_right_picker.SetMinSize((171, -1))
-		self.comparison_right_browse_btn.SetMinSize((29, 29))
-		self.comparison_right_header.SetMinSize((200, 160))
-		self.comparison_alignment_Dw_value.SetMinSize((120, 29))
-		self.comparison_alignment_Dw_value.SetIncrement(0.01)
-		self.comparison_alignment_Gw_value.SetMinSize((120, 29))
-		self.comparison_alignment_Gw_value.SetIncrement(0.01)
-		self.comparison_alignment_min_peaks_value.SetMinSize((120, 29))
-		self.significance_level_value.SetIncrement(0.001)
-		self.run_comparison_button.Enable(False)
-		self.comparison_radar_button.Enable(False)
-		self.comparison_mean_pa_button.Enable(False)
-		self.comparison_box_whisker_btn.Enable(False)
-		self.comparison_pca_btn.Enable(False)
-		self.comparison_pca_btn.SetLabel("Principal\nComponent\nAnalysis")
-		self.help_focus_thief.SetMinSize((1, 1))
-		self.help_back_btn.SetMinSize((38, 38))
-		self.help_back_btn.SetToolTip("Go back")
-		self.help_forward_btn.SetMinSize((38, 38))
-		self.help_forward_btn.SetToolTip("Go forward")
-		self.help_home_btn.SetMinSize((38, 38))
-		self.help_home_btn.SetToolTip("Open the homepage")
-		self.help_url_text_ctrl.SetMinSize((380, -1))
-		self.help_go_btn.SetMinSize((38, 38))
-		self.help_go_btn.SetToolTip("Go to URL")
-		self.help_readme_btn.SetMinSize((38, 38))
-		self.help_readme_btn.SetToolTip("View Readme")
-		self.help_github_btn.SetMinSize((38, 38))
-		self.help_github_btn.SetToolTip("View GitHub page")
-		self.help_toolbar_panel.SetMaxSize((10000000,40))
 		self.notebook_1.SetBackgroundColour(wx.Colour(240, 240, 240))
 		# end wxGlade
 		
@@ -732,29 +584,12 @@ class Launcher(wx.Frame):
 		
 		self.import_log_text_control.SetFont(log_font)
 		self.project_log_text_control.SetFont(log_font)
-		self.comparison_log_text_control.SetFont(log_font)
 
 	def __do_layout(self):
 		# begin wxGlade: Launcher.__do_layout
 		parent_sizer = wx.BoxSizer(wx.VERTICAL)
 		help_parent_sizer = wx.BoxSizer(wx.VERTICAL)
-		help_main_sizer = wx.BoxSizer(wx.VERTICAL)
-		help_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		comparison_parent_sizer = wx.BoxSizer(wx.VERTICAL)
-		comparison_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		comparison_log_sizer = wx.BoxSizer(wx.VERTICAL)
-		comparison_option_sizer = wx.BoxSizer(wx.VERTICAL)
-		comparison_settings_grid = wx.FlexGridSizer(1, 3, 10, 10)
-		comparison_button_sizer = wx.BoxSizer(wx.VERTICAL)
-		comparison_settings_sizer = wx.BoxSizer(wx.VERTICAL)
-		comparison_settings_button_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		comparison_alignment_grid = wx.FlexGridSizer(3, 2, 0, 0)
-		comparison_alignment_Dw_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		comparison_pickers_grid = wx.FlexGridSizer(1, 3, 10, 10)
-		comparison_right = wx.BoxSizer(wx.VERTICAL)
-		comparison_right_picker_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		comparison_left = wx.BoxSizer(wx.VERTICAL)
-		comparison_left_picker_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		browse_project_tab_sizer = wx.BoxSizer(wx.VERTICAL)
 		data_viewer_sizer = wx.BoxSizer(wx.VERTICAL)
 		dv_main_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -771,10 +606,8 @@ class Launcher(wx.Frame):
 		dv_reference_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		dv_reference_sizer = wx.BoxSizer(wx.VERTICAL)
 		dv_list_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		dv_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		browse_project_chromatogram_sizer = wx.BoxSizer(wx.VERTICAL)
 		chromatogram_main_sizer = wx.BoxSizer(wx.VERTICAL)
-		chrom_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		browse_project_charts_sizer = wx.BoxSizer(wx.VERTICAL)
 		open_project_body_sizer = wx.GridSizer(2, 3, 5, 5)
 		chromatogram_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -783,7 +616,7 @@ class Launcher(wx.Frame):
 		open_project_header_sizer = wx.BoxSizer(wx.VERTICAL)
 		mean_peak_area_sizer = wx.BoxSizer(wx.VERTICAL)
 		radar_chart_sizer = wx.BoxSizer(wx.VERTICAL)
-		charts_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		browse_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		new_project_tab_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		project_log_tab_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		project_log_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -815,41 +648,7 @@ class Launcher(wx.Frame):
 		import_log_sizer = wx.BoxSizer(wx.VERTICAL)
 		import_picker_sizer = wx.BoxSizer(wx.VERTICAL)
 		launcher_parent_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		launcher_right_sizer = wx.BoxSizer(wx.VERTICAL)
-		messages_sizer = wx.BoxSizer(wx.VERTICAL)
-		launcher_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		launcher_grid = wx.GridSizer(4, 3, 20, 20)
-		launcher_grid.Add(self.import_raw_button, 0, wx.ALIGN_CENTER, 64)
-		import_description_label = wx.StaticText(self.launcher_parent_panel, wx.ID_ANY, "Import PerkinElmer/Waters .RAW files and convert to JCAMP-DX format.", style=wx.ALIGN_LEFT)
-		import_description_label.Wrap(256)
-		launcher_grid.Add(import_description_label, 0, wx.ALIGN_CENTER_VERTICAL, 64)
-		launcher_grid.Add(self.import_info_button, 0, wx.ALIGN_CENTER, 1)
-		launcher_grid.Add(self.new_project_button, 0, wx.ALIGN_CENTER, 64)
-		new_project_description_label = wx.StaticText(self.launcher_parent_panel, wx.ID_ANY, "Create a new project for a set of samples, performing pre-processing before extracting spectra and generating reports.", style=wx.ALIGN_LEFT)
-		new_project_description_label.Wrap(256)
-		launcher_grid.Add(new_project_description_label, 0, wx.ALIGN_CENTER_VERTICAL, 64)
-		launcher_grid.Add(self.new_info_button, 0, wx.ALIGN_CENTER, 1)
-		launcher_grid.Add(self.open_project_button, 0, wx.ALIGN_CENTER, 64)
-		open_project_description_label = wx.StaticText(self.launcher_parent_panel, wx.ID_ANY, "Open an existing project for viewing", style=wx.ALIGN_LEFT)
-		open_project_description_label.Wrap(256)
-		launcher_grid.Add(open_project_description_label, 0, wx.ALIGN_CENTER_VERTICAL, 64)
-		launcher_grid.Add(self.open_info_button, 0, wx.ALIGN_CENTER, 0)
-		launcher_grid.Add(self.comparison_button, 0, wx.ALIGN_CENTER, 64)
-		comparison_description_label = wx.StaticText(self.launcher_parent_panel, wx.ID_ANY, "Compare two projects", style=wx.ALIGN_LEFT)
-		comparison_description_label.Wrap(256)
-		launcher_grid.Add(comparison_description_label, 0, wx.ALIGN_CENTER_VERTICAL, 64)
-		launcher_grid.Add(self.comparison_info_button, 0, wx.ALIGN_CENTER, 1)
-		launcher_sizer.Add(launcher_grid, 0, wx.ALIGN_CENTER | wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
-		self.launcher_parent_panel.SetSizer(launcher_sizer)
-		launcher_parent_sizer.Add(self.launcher_parent_panel, 3, wx.ALIGN_CENTER | wx.ALL | wx.EXPAND, 10)
-		messages_label = wx.StaticText(self.messages_panel, wx.ID_ANY, "Messages")
-		messages_label.SetFont(wx.Font(16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
-		messages_sizer.Add(messages_label, 0, wx.ALL, 5)
-		messages_sizer.Add(self.messages, 1, wx.EXPAND, 0)
-		self.messages_panel.SetSizer(messages_sizer)
-		launcher_right_sizer.Add(self.messages_panel, 1, wx.ALL | wx.EXPAND, 5)
-		self.launcher_right_panel.SetSizer(launcher_right_sizer)
-		launcher_parent_sizer.Add(self.launcher_right_panel, 2, wx.BOTTOM | wx.EXPAND | wx.RIGHT | wx.TOP, 10)
+		launcher_parent_sizer.Add(self.launcher_tab, 1, wx.EXPAND, 0)
 		self.Launcher.SetSizer(launcher_parent_sizer)
 		import_picker_label = wx.StaticText(self.import_picker_panel, wx.ID_ANY, ".RAW Files to Import")
 		import_picker_sizer.Add(import_picker_label, 0, wx.BOTTOM, 18)
@@ -1019,14 +818,38 @@ class Launcher(wx.Frame):
 		self.new_project_notebook.AddPage(self.new_project_log, "Log")
 		new_project_tab_sizer.Add(self.new_project_notebook, 1, wx.EXPAND, 0)
 		self.New_Project.SetSizer(new_project_tab_sizer)
-		charts_toolbar_sizer.Add(self.charts_focus_thief, 0, 0, 0)
-		charts_toolbar_sizer.Add(self.charts_CloseProject, 0, 0, 0)
-		chrom_toolbar_spacer_3 = wx.StaticLine(self.charts_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
-		charts_toolbar_sizer.Add(chrom_toolbar_spacer_3, 0, wx.EXPAND, 0)
-		charts_toolbar_sizer.Add((0, 0), 0, 0, 0)
-		charts_toolbar_sizer.Add((0, 0), 0, 0, 0)
-		self.charts_toolbar.SetSizer(charts_toolbar_sizer)
-		browse_project_charts_sizer.Add(self.charts_toolbar, 1, wx.EXPAND, 0)
+		browse_toolbar_sizer.Add(self.focus_thief, 0, 0, 0)
+		browse_toolbar_sizer.Add(self.CloseProject, 0, 0, 0)
+		browse_toolbar_sizer.Add(self.OpenSample, 0, 0, 0)
+		browse_toolbar_spacer_1 = wx.StaticLine(self.browse_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		browse_toolbar_sizer.Add(browse_toolbar_spacer_1, 0, wx.EXPAND, 0)
+		browse_toolbar_sizer.Add(self.ViewPeakList, 0, 0, 0)
+		browse_toolbar_sizer.Add(self.PreviousSample, 0, 0, 0)
+		browse_toolbar_sizer.Add(self.NextSample, 0, 0, 0)
+		browse_toolbar_spacer_2 = wx.StaticLine(self.browse_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		browse_toolbar_sizer.Add(browse_toolbar_spacer_2, 0, wx.EXPAND, 0)
+		browse_toolbar_sizer.Add(self.ResetView, 0, 0, 0)
+		browse_toolbar_sizer.Add(self.PreviousView, 0, 0, 0)
+		browse_toolbar_sizer.Add(self.Zoom_Btn, 0, 0, 0)
+		browse_toolbar_sizer.Add(self.Pan_Btn, 0, 0, 0)
+		browse_toolbar_sizer.Add(self.ViewSpectrum_Btn, 0, 0, 0)
+		browse_toolbar_spacer_4 = wx.StaticLine(self.browse_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		browse_toolbar_sizer.Add(browse_toolbar_spacer_4, 0, wx.EXPAND, 0)
+		browse_toolbar_sizer.Add(self.config_borders_button, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT, 5)
+		browse_toolbar_spacer_5 = wx.StaticLine(self.browse_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
+		browse_toolbar_sizer.Add(browse_toolbar_spacer_5, 0, wx.EXPAND, 0)
+		save_label = wx.StaticText(self.browse_toolbar, wx.ID_ANY, "Save: ")
+		browse_toolbar_sizer.Add(save_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+		browse_toolbar_sizer.Add(self.png_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		browse_toolbar_sizer.Add(self.svg_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		browse_toolbar_sizer.Add(self.pdf_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		browse_toolbar_sizer.Add(self.save_btn, 0, 0, 0)
+		browse_toolbar_sizer.Add((0, 0), 0, 0, 0)
+		browse_toolbar_sizer.Add((0, 0), 0, 0, 0)
+		browse_toolbar_sizer.Add((0, 0), 0, 0, 0)
+		self.browse_toolbar.SetSizer(browse_toolbar_sizer)
+		browse_project_tab_sizer.Add(self.browse_toolbar, 1, wx.EXPAND, 0)
+		browse_project_charts_sizer.Add((0, 0), 0, 0, 0)
 		radar_chart_label = wx.StaticText(self.open_project_body_panel, wx.ID_ANY, "Radar Chart", style=wx.ALIGN_CENTER)
 		radar_chart_sizer.Add(radar_chart_label, 0, wx.ALIGN_CENTER_HORIZONTAL, 25)
 		radar_chart_sizer.Add(self.radar_chart_button, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
@@ -1054,50 +877,12 @@ class Launcher(wx.Frame):
 		self.open_project_body_panel.SetSizer(open_project_body_sizer)
 		browse_project_charts_sizer.Add(self.open_project_body_panel, 7, wx.EXPAND, 10)
 		self.browse_project_charts.SetSizer(browse_project_charts_sizer)
-		chrom_toolbar_sizer.Add(self.focus_thief, 0, 0, 0)
-		chrom_toolbar_sizer.Add(self.CloseProject, 0, 0, 0)
-		chrom_toolbar_sizer.Add(self.OpenSample, 0, 0, 0)
-		chrom_toolbar_spacer_1 = wx.StaticLine(self.chromatogram_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
-		chrom_toolbar_sizer.Add(chrom_toolbar_spacer_1, 0, wx.EXPAND, 0)
-		chrom_toolbar_sizer.Add(self.ViewPeakList, 0, 0, 0)
-		chrom_toolbar_sizer.Add(self.PreviousSample, 0, 0, 0)
-		chrom_toolbar_sizer.Add(self.NextSample, 0, 0, 0)
-		chrom_toolbar_spacer_2 = wx.StaticLine(self.chromatogram_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
-		chrom_toolbar_sizer.Add(chrom_toolbar_spacer_2, 0, wx.EXPAND, 0)
-		chrom_toolbar_sizer.Add(self.chrom_ResetView, 0, 0, 0)
-		chrom_toolbar_sizer.Add(self.chrom_PreviousView, 0, 0, 0)
-		chrom_toolbar_sizer.Add(self.chrom_Zoom_Btn, 0, 0, 0)
-		chrom_toolbar_sizer.Add(self.chrom_Pan_Btn, 0, 0, 0)
-		chrom_toolbar_sizer.Add(self.ViewSpectrum_Btn, 0, 0, 0)
-		chrom_toolbar_spacer_4 = wx.StaticLine(self.chromatogram_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
-		chrom_toolbar_sizer.Add(chrom_toolbar_spacer_4, 0, wx.EXPAND, 0)
-		chrom_toolbar_sizer.Add(self.config_borders_button, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT, 5)
-		chrom_toolbar_spacer_5 = wx.StaticLine(self.chromatogram_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
-		chrom_toolbar_sizer.Add(chrom_toolbar_spacer_5, 0, wx.EXPAND, 0)
-		chrom_save_label = wx.StaticText(self.chromatogram_toolbar, wx.ID_ANY, "Save: ")
-		chrom_toolbar_sizer.Add(chrom_save_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
-		chrom_toolbar_sizer.Add(self.chrom_png_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		chrom_toolbar_sizer.Add(self.chrom_svg_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		chrom_toolbar_sizer.Add(self.chrom_pdf_button, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		chrom_toolbar_sizer.Add(self.chrom_save_btn, 0, 0, 0)
-		chrom_toolbar_sizer.Add((0, 0), 0, 0, 0)
-		chrom_toolbar_sizer.Add((0, 0), 0, 0, 0)
-		chrom_toolbar_sizer.Add((0, 0), 0, 0, 0)
-		self.chromatogram_toolbar.SetSizer(chrom_toolbar_sizer)
-		browse_project_chromatogram_sizer.Add(self.chromatogram_toolbar, 1, wx.EXPAND, 0)
+		browse_project_chromatogram_sizer.Add((0, 0), 0, 0, 0)
 		chromatogram_main_sizer.Add(self.chromatogram_canvas, 1, wx.EXPAND, 0)
 		self.chromatogram_parent_panel.SetSizer(chromatogram_main_sizer)
 		browse_project_chromatogram_sizer.Add(self.chromatogram_parent_panel, 1, wx.EXPAND, 10)
 		self.browse_project_chromatogram.SetSizer(browse_project_chromatogram_sizer)
-		dv_toolbar_sizer.Add(self.dv_focus_thief, 0, 0, 0)
-		dv_toolbar_sizer.Add(self.dv_CloseProject, 0, 0, 0)
-		dv_toolbar_spacer_1 = wx.StaticLine(self.dv_toolbar, wx.ID_ANY, style=wx.LI_VERTICAL)
-		dv_toolbar_spacer_1.SetMinSize((-1, 38))
-		dv_toolbar_sizer.Add(dv_toolbar_spacer_1, 0, wx.BOTTOM | wx.EXPAND, 5)
-		dv_toolbar_sizer.Add((0, 0), 0, 0, 0)
-		dv_toolbar_sizer.Add((0, 0), 0, 0, 0)
-		self.dv_toolbar.SetSizer(dv_toolbar_sizer)
-		data_viewer_sizer.Add(self.dv_toolbar, 1, wx.EXPAND, 0)
+		data_viewer_sizer.Add((0, 0), 0, 0, 0)
 		dv_list_sizer.Add(self.data_viewer_list, 1, wx.EXPAND | wx.LEFT | wx.TOP, 5)
 		dv_list_line = wx.StaticLine(self.dv_list_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
 		dv_list_sizer.Add(dv_list_line, 0, wx.EXPAND, 0)
@@ -1178,104 +963,15 @@ class Launcher(wx.Frame):
 		self.browse_project_data.SetSizer(data_viewer_sizer)
 		self.browse_project_notebook.AddPage(self.browse_project_charts, "Charts")
 		self.browse_project_notebook.AddPage(self.browse_project_chromatogram, "Chromatogram")
-		self.browse_project_notebook.AddPage(self.browse_project_data, "Data")
 		self.browse_project_notebook.AddPage(self.browse_project_comparison, "Compare")
+		self.browse_project_notebook.AddPage(self.browse_project_data, "Data")
 		browse_project_tab_sizer.Add(self.browse_project_notebook, 1, wx.EXPAND, 0)
 		browse_project_tab_sizer.Add((0, 0), 0, 0, 0)
 		browse_project_tab_sizer.Add((0, 0), 0, 0, 0)
 		self.Browse_Project.SetSizer(browse_project_tab_sizer)
-		comparison_left_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Compare these Samples...", style=wx.ALIGN_LEFT)
-		comparison_left.Add(comparison_left_label, 0, 0, 25)
-		comparison_left_picker_sizer.Add(self.comparison_left_picker, 0, 0, 0)
-		comparison_left_picker_sizer.Add(self.comparison_left_browse_btn, 0, 0, 0)
-		comparison_left.Add(comparison_left_picker_sizer, 0, wx.BOTTOM | wx.TOP, 5)
-		comparison_left.Add(self.comparison_left_header, 0, wx.EXPAND, 5)
-		comparison_pickers_grid.Add(comparison_left, 1, wx.EXPAND, 0)
-		comparison_picker_v_line = wx.StaticLine(self.comparison_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
-		comparison_pickers_grid.Add(comparison_picker_v_line, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-		comparison_right_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "... To These Samples", style=wx.ALIGN_LEFT)
-		comparison_right.Add(comparison_right_label, 0, 0, 25)
-		comparison_right_picker_sizer.Add(self.comparison_right_picker, 0, 0, 0)
-		comparison_right_picker_sizer.Add(self.comparison_right_browse_btn, 0, 0, 0)
-		comparison_right.Add(comparison_right_picker_sizer, 0, wx.BOTTOM | wx.TOP, 5)
-		comparison_right.Add(self.comparison_right_header, 0, wx.EXPAND, 5)
-		comparison_pickers_grid.Add(comparison_right, 1, wx.EXPAND, 0)
-		comparison_option_sizer.Add(comparison_pickers_grid, 1, wx.EXPAND, 10)
-		static_line_3 = wx.StaticLine(self.comparison_panel, wx.ID_ANY)
-		comparison_option_sizer.Add(static_line_3, 0, wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
-		comparison_settings_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Settings")
-		comparison_settings_label.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
-		comparison_settings_sizer.Add(comparison_settings_label, 0, 0, 0)
-		comparison_alignment_top_text = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Dynamic Peak Alignment")
-		comparison_alignment_top_text.SetToolTip("Settings for PyMS Dynamic Peak Alignment")
-		comparison_settings_sizer.Add(comparison_alignment_top_text, 0, wx.TOP, 5)
-		comparison_alignment_Dw_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "RT Modulation: ")
-		comparison_alignment_grid.Add(comparison_alignment_Dw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		comparison_alignment_Dw_sizer.Add(self.comparison_alignment_Dw_value, 0, 0, 0)
-		comparison_alignment_Dw_label_2 = wx.StaticText(self.comparison_panel, wx.ID_ANY, " s", style=wx.ALIGN_LEFT)
-		comparison_alignment_Dw_sizer.Add(comparison_alignment_Dw_label_2, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		comparison_alignment_grid.Add(comparison_alignment_Dw_sizer, 1, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
-		comparison_alignment_Gw_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Gap Penalty: ")
-		comparison_alignment_grid.Add(comparison_alignment_Gw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		comparison_alignment_grid.Add(self.comparison_alignment_Gw_value, 0, 0, 0)
-		comparison_alignment_min_peaks_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Min Peaks: ")
-		comparison_alignment_grid.Add(comparison_alignment_min_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		comparison_alignment_grid.Add(self.comparison_alignment_min_peaks_value, 0, 0, 0)
-		comparison_settings_sizer.Add(comparison_alignment_grid, 1, wx.ALL | wx.EXPAND, 5)
-		significance_level_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, u"Significance Level (α): ")
-		comparison_settings_sizer.Add(significance_level_label, 0, wx.BOTTOM | wx.TOP, 5)
-		comparison_settings_sizer.Add(self.significance_level_value, 0, 0, 0)
-		comparison_line_4 = wx.StaticLine(self.comparison_panel, wx.ID_ANY)
-		comparison_settings_sizer.Add(comparison_line_4, 0, wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
-		comparison_settings_button_sizer.Add(self.comparison_apply_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
-		comparison_settings_button_sizer.Add(self.comparison_default_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
-		comparison_settings_button_sizer.Add(self.comparison_reset_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
-		comparison_settings_sizer.Add(comparison_settings_button_sizer, 1, wx.ALIGN_RIGHT, 20)
-		comparison_settings_grid.Add(comparison_settings_sizer, 1, wx.EXPAND, 0)
-		static_line_8 = wx.StaticLine(self.comparison_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
-		comparison_settings_grid.Add(static_line_8, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-		comparison_button_sizer.Add(self.run_comparison_button, 0, 0, 0)
-		static_line_2 = wx.StaticLine(self.comparison_panel, wx.ID_ANY)
-		comparison_button_sizer.Add(static_line_2, 0, wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
-		comparison_charts_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Charts")
-		comparison_charts_label.SetFont(wx.Font(14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, ""))
-		comparison_button_sizer.Add(comparison_charts_label, 0, wx.BOTTOM, 5)
-		comparison_button_sizer.Add(self.comparison_radar_button, 0, wx.BOTTOM | wx.LEFT, 3)
-		comparison_button_sizer.Add(self.comparison_mean_pa_button, 0, wx.BOTTOM | wx.LEFT, 3)
-		comparison_button_sizer.Add(self.comparison_box_whisker_btn, 0, wx.BOTTOM | wx.LEFT, 3)
-		comparison_button_sizer.Add(self.comparison_pca_btn, 0, wx.BOTTOM | wx.LEFT, 3)
-		comparison_settings_grid.Add(comparison_button_sizer, 1, wx.EXPAND, 0)
-		comparison_option_sizer.Add(comparison_settings_grid, 2, wx.EXPAND | wx.LEFT, 10)
-		comparison_sizer.Add(comparison_option_sizer, 1, wx.EXPAND | wx.RIGHT, 10)
-		comparison_log_line = wx.StaticLine(self.comparison_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
-		comparison_sizer.Add(comparison_log_line, 0, wx.EXPAND, 0)
-		comparison_log_label = wx.StaticText(self.comparison_panel, wx.ID_ANY, "Log:")
-		comparison_log_sizer.Add(comparison_log_label, 0, wx.BOTTOM, 5)
-		comparison_log_sizer.Add(self.comparison_log_text_control, 4, wx.EXPAND | wx.RIGHT, 10)
-		comparison_sizer.Add(comparison_log_sizer, 3, wx.ALL | wx.EXPAND, 10)
-		self.comparison_panel.SetSizer(comparison_sizer)
-		comparison_parent_sizer.Add(self.comparison_panel, 7, wx.ALL | wx.EXPAND, 10)
+		comparison_parent_sizer.Add(self.compare_tab, 1, wx.EXPAND, 0)
 		self.Compare_Projects.SetSizer(comparison_parent_sizer)
-		help_toolbar_sizer.Add(self.help_focus_thief, 0, 0, 0)
-		help_toolbar_sizer.Add(self.help_back_btn, 0, 0, 0)
-		help_toolbar_sizer.Add(self.help_forward_btn, 0, 0, 0)
-		help_toolbar_sizer.Add(self.help_home_btn, 0, 0, 0)
-		help_toolbar_spacer_1 = wx.StaticLine(self.help_toolbar_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
-		help_toolbar_sizer.Add(help_toolbar_spacer_1, 0, wx.EXPAND, 0)
-		help_toolbar_sizer.Add(self.help_url_text_ctrl, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
-		help_toolbar_sizer.Add(self.help_go_btn, 0, 0, 0)
-		help_toolbar_spacer_2 = wx.StaticLine(self.help_toolbar_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
-		help_toolbar_sizer.Add(help_toolbar_spacer_2, 0, wx.EXPAND, 0)
-		help_toolbar_sizer.Add(self.help_readme_btn, 0, 0, 0)
-		help_toolbar_sizer.Add(self.help_github_btn, 0, 0, 0)
-		help_toolbar_spacer_3 = wx.StaticLine(self.help_toolbar_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
-		help_toolbar_sizer.Add(help_toolbar_spacer_3, 0, wx.EXPAND, 0)
-		help_toolbar_sizer.Add(self.help_open_browser_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
-		self.help_toolbar_panel.SetSizer(help_toolbar_sizer)
-		help_parent_sizer.Add(self.help_toolbar_panel, 1, wx.EXPAND, 0)
-		help_main_sizer.Add(self.help_browser, 1, wx.EXPAND, 0)
-		self.help_parent_panel.SetSizer(help_main_sizer)
-		help_parent_sizer.Add(self.help_parent_panel, 1, wx.EXPAND, 10)
+		help_parent_sizer.Add(self.help_tab, 1, wx.EXPAND, 0)
 		self.Help.SetSizer(help_parent_sizer)
 		self.notebook_1.AddPage(self.Launcher, "Launcher")
 		self.notebook_1.AddPage(self.Import, "Import")
@@ -1298,7 +994,7 @@ class Launcher(wx.Frame):
 		# Thanks Ray
 		
 		self.Bind(wx.EVT_CLOSE, self.on_close)
-		
+	
 	def size_change(self, event):
 		# code to run whenever window resized
 		self.chromatogram_canvas.draw()
@@ -1307,9 +1003,7 @@ class Launcher(wx.Frame):
 			event.Skip()
 	
 	def refresh_launcher(self, event):
-		self.launcher_parent_panel.Layout()
-		self.launcher_parent_panel.Update()
-		self.launcher_parent_panel.Refresh()
+		self.launcher_tab.refresh_launcher()
 	
 	def notebook_1_handler(self, event):  # wxGlade: Launcher.<event_handler>
 		# New Project Disable
@@ -1515,8 +1209,8 @@ class Launcher(wx.Frame):
 		# Save Internal Settings
 		internal_config.set("MAIN", "position", "{},{}".format(*screen_pos))
 		
-		internal_config.set("last_comparison", "left", str(self.comparison_left_project))
-		internal_config.set("last_comparison", "right", str(self.comparison_right_project))
+		internal_config.set("last_comparison", "left", str(self.compare_tab.comparison_left_project))
+		internal_config.set("last_comparison", "right", str(self.compare_tab.comparison_right_project))
 		
 		with open("lib/gsmatch.ini", "w") as configfile:
 			configfile.write("#GunShotMatch Internal Configuration File.\n#Do not edit this file\n")
@@ -1558,42 +1252,7 @@ class Launcher(wx.Frame):
 	def on_exit(self, event):
 		self.worker._stop()
 	
-	"""Launcher Tab Buttons"""
-	
-	def on_import(self, event):  # wxGlade: Launcher.<event_handler>
-		self.notebook_1.SetSelection(1)
-	
-	def on_new_project(self, event):  # wxGlade: Launcher.<event_handler>
-		self.notebook_1.SetSelection(2)
-	
-	def on_open_project(self, *args):  # wxGlade: Launcher.<event_handler>
-		selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
-									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-									   #defaultDir=self.Config.get("main", "resultspath"))
-									   defaultDir=self.Config.RESULTS_DIRECTORY)
-		if selected_project != None:
-			self.setup_project_browser(selected_project)
-			self.notebook_1.SetSelection(3)
-	
-	def on_open_comparison(self, event):  # wxGlade: Launcher.<event_handler>
-		self.notebook_1.SetSelection(4)
-	
-	def do_import_info(self, event):  # wxGlade: Launcher.<event_handler>
-		coming_soon()
-		event.Skip()
-	
-	def do_new_info(self, event):  # wxGlade: Launcher.<event_handler>
-		coming_soon()
-		event.Skip()
-	
-	def do_open_info(self, event):  # wxGlade: Launcher.<event_handler>
-		coming_soon()
-		event.Skip()
-	
-	def do_comparison_info(self, event):  # wxGlade: Launcher.<event_handler>
-		coming_soon()
-		event.Skip()
-	
+
 	"""Import Tab Buttons"""
 	
 	def do_import(self, event):  # wxGlade: Launcher.<event_handler>
@@ -1986,6 +1645,7 @@ class Launcher(wx.Frame):
 	
 	"""Browse Project Tab"""
 	
+	
 	def on_close_project(self, event):  # wxGlade: Launcher.<event_handler>
 		self.current_project_name = None
 		self.notebook_1.ChangeSelection(0)
@@ -2001,9 +1661,9 @@ class Launcher(wx.Frame):
 		self.open_project_header_browser.LoadURL("about:blank")
 		
 		# Load Chart Data
-		self.comparison_chart_data = None
+		#self.comparison_chart_data = None
 		
-		self.comparison_prefixList = []
+		#self.comparison_prefixList = []
 		
 		self.browser_peak_data = []
 		
@@ -2038,8 +1698,6 @@ class Launcher(wx.Frame):
 		
 		self.populate_data_viewer()
 
-		
-		
 	
 	"""Browse Project > Charts Tab Buttons"""
 	
@@ -2095,15 +1753,24 @@ class Launcher(wx.Frame):
 	
 	"""Browse Project > Chromatogram Tab"""
 	
+	def browse_get_tab(self):
+		return self.browse_project_notebook.GetSelection()
+	
 	# Toolbar Buttons
 	def on_open_sample(self, event):  # wxGlade: Launcher.<event_handler>
+		#print(event.GetEventObject() == self.OpenSample) # to handle multiple buttons calling same event
 		self.focus_thief.SetFocus()
-		dlg = list_dialog.list_dialog(self, title="Choose Sample", label="Choose a sample: ", choices=self.browser_sample_list)
+		
+		dlg = list_dialog.list_dialog(self, title="Choose Sample", label="Choose a sample: ",
+									  choices=self.browser_sample_list)
 		res = dlg.ShowModal()
 		if res == wx.ID_OK:
-			#print(dlg.list_box.GetSelection())
-			#print(dlg.list_box.GetString(dlg.list_box.GetSelection()))
-			self.display_chromatogram(dlg.list_box.GetString(dlg.list_box.GetSelection()))
+			if self.browse_get_tab() == 1:
+				#print(dlg.list_box.GetSelection())
+				#print(dlg.list_box.GetString(dlg.list_box.GetSelection()))
+				self.display_chromatogram(dlg.list_box.GetString(dlg.list_box.GetSelection()))
+			elif self.browse_get_tab() == 2:
+				coming_soon()
 		
 		dlg.Destroy()
 		event.Skip()
@@ -2114,56 +1781,82 @@ class Launcher(wx.Frame):
 		event.Skip()
 	
 	def on_previous_sample(self, event):  # wxGlade: Launcher.<event_handler>
-		self.browser_sample_idx -= 1
-		if self.browser_sample_idx < 0:
-			self.browser_sample_idx = len(self.browser_sample_list)-1
-
-		self.display_chromatogram(self.browser_sample_list[self.browser_sample_idx])
-		
 		self.focus_thief.SetFocus()
+
+		if self.browse_get_tab() == 1:
+			self.browser_sample_idx -= 1
+			if self.browser_sample_idx < 0:
+				self.browser_sample_idx = len(self.browser_sample_list)-1
+	
+			self.display_chromatogram(self.browser_sample_list[self.browser_sample_idx])
+		elif self.browse_get_tab() == 2:
+			coming_soon()
+		
 		event.Skip()
 	
 	def on_next_sample(self, event):  # wxGlade: Launcher.<event_handler>
-		self.browser_sample_idx += 1
-		if self.browser_sample_idx > len(self.browser_sample_list)-1:
-			self.browser_sample_idx = 0
-
-		self.display_chromatogram(self.browser_sample_list[self.browser_sample_idx])
-		
 		self.focus_thief.SetFocus()
+		
+		if self.browse_get_tab() == 1:
+			self.browser_sample_idx += 1
+			if self.browser_sample_idx > len(self.browser_sample_list)-1:
+				self.browser_sample_idx = 0
+	
+			self.display_chromatogram(self.browser_sample_list[self.browser_sample_idx])
+		elif self.browse_get_tab() == 2:
+			coming_soon()
+			
 		event.Skip()
 	
 	def on_chromatogram_reset_view(self, event):  # wxGlade: Launcher.<event_handler>
-		self.chromatogram_canvas.toolbar.home()
 		self.focus_thief.SetFocus()
+		
+		if self.browse_get_tab() == 1:
+			self.chromatogram_canvas.toolbar.home()
+		elif self.browse_get_tab() == 2:
+			coming_soon()
 		event.Skip()
 	
 	def on_chromatogram_previous_view(self, event):  # wxGlade: Launcher.<event_handler>
-		self.chromatogram_canvas.toolbar.back()
 		self.focus_thief.SetFocus()
+		
+		if self.browse_get_tab() == 1:
+			self.chromatogram_canvas.toolbar.back()
+		elif self.browse_get_tab() == 1:
+			coming_soon()
+			
 		event.Skip()
 	
 	def on_chromatogram_zoom(self, event):  # wxGlade: Launcher.<event_handler>
-		self.chrom_Pan_Btn.Enable()
-		self.ViewSpectrum_Btn.Enable()
-		self.chromatogram_canvas.toolbar.zoom()
 		self.focus_thief.SetFocus()
-		self.chrom_Zoom_Btn.Disable()
+		
+		if self.browse_get_tab() == 1:
+			self.Pan_Btn.Enable()
+			self.ViewSpectrum_Btn.Enable()
+			self.chromatogram_canvas.toolbar.zoom()
+			self.Zoom_Btn.Disable()
+		if self.browse_get_tab() == 2:
+			coming_soon()
 		event.Skip()
 	
 	def on_chromatogram_pan(self, event):  # wxGlade: Launcher.<event_handler>
-		self.chrom_Zoom_Btn.Enable()
-		self.ViewSpectrum_Btn.Enable()
-		self.chromatogram_canvas.toolbar.pan()
 		self.focus_thief.SetFocus()
-		self.chrom_Pan_Btn.Disable()
+		
+		if self.browse_get_tab() == 1:
+			self.Zoom_Btn.Enable()
+			self.ViewSpectrum_Btn.Enable()
+			self.chromatogram_canvas.toolbar.pan()
+			self.Pan_Btn.Disable()
+		elif self.browse_get_tab() == 2:
+			coming_soon()
+		
 		event.Skip()
 	
 	def on_view_spectrum(self, event):  # wxGlade: Launcher.<event_handler>
-		self.chrom_Pan_Btn.Enable()
-		self.chrom_Zoom_Btn.Enable()
-		coming_soon()
 		self.focus_thief.SetFocus()
+		self.Pan_Btn.Enable()
+		self.Zoom_Btn.Enable()
+		coming_soon()
 		self.ViewSpectrum_Btn.Disable()
 		event.Skip()
 	
@@ -2176,11 +1869,11 @@ class Launcher(wx.Frame):
 		self.focus_thief.SetFocus()
 		
 		filetypes = []
-		if self.chrom_png_button.GetValue():
+		if self.png_button.GetValue():
 			filetypes.append("png")
-		if self.chrom_svg_button.GetValue():
+		if selfsvg_button.GetValue():
 			filetypes.append("svg")
-		if self.chrom_pdf_button.GetValue():
+		if selfpdf_button.GetValue():
 			filetypes.append("pdf")
 		
 		if len(filetypes) == 0:
@@ -2221,9 +1914,9 @@ class Launcher(wx.Frame):
 		self.toolbar = NavigationToolbar(self.chromatogram_canvas)
 		self.toolbar.Hide()
 		
-		self.chrom_zoom = True
-		self.chrom_pan = False
-		self.chrom_spec = False
+		self.browse_zoom = True
+		self.browse_pan = False
+		self.browse_spec = False
 		
 		# Constrain zoom to x axis only
 		# From https://stackoverflow.com/questions/16705452/matplotlib-forcing-pan-zoom-to-constrain-to-x-axes
@@ -2283,8 +1976,8 @@ class Launcher(wx.Frame):
 		def update_ylim(*args):
 			#	print(*args)
 			#	print(str(*args).startswith("MPL MouseEvent")) # Pan
-			if (str(*args).startswith("My_AxesSubplot") and not self.chrom_Zoom_Btn.IsEnabled()) or (
-					str(*args).startswith("MPL MouseEvent") and not self.chrom_Pan_Btn.IsEnabled()):  # Zoom, Pan
+			if (str(*args).startswith("My_AxesSubplot") and not self.Zoom_Btn.IsEnabled()) or (
+					str(*args).startswith("MPL MouseEvent") and not self.Pan_Btn.IsEnabled()):  # Zoom, Pan
 				#	print("updated xlims: ", axes.get_xlim())
 				min_x_index = (numpy.abs(x - self.chromatogram_axes.get_xlim()[0])).argmin()
 				max_x_index = (numpy.abs(x - self.chromatogram_axes.get_xlim()[1])).argmin()
@@ -2315,185 +2008,11 @@ class Launcher(wx.Frame):
 	# move forward in the view lim stack.
 	# print(axes.get_ylim())
 	
-	"""Help Tab Buttons"""
-	
-	def on_help_back(self, event):  # wxGlade: Launcher.<event_handler>
-		self.help_browser.GoBack()
-		self.help_focus_thief.SetFocus()
-		event.Skip()
-	
-	def on_help_forward(self, event):  # wxGlade: Launcher.<event_handler>
-		self.help_browser.GoForward()
-		self.help_focus_thief.SetFocus()
-		event.Skip()
-	
-	def on_help_home(self, event):  # wxGlade: Launcher.<event_handler>
-		self.help_browser.LoadURL(self.help_home)
-		self.help_focus_thief.SetFocus()
-		event.Skip()
-	
-	def on_help_go(self, event):  # wxGlade: Launcher.<event_handler>
-		print(self.help_url_text_ctrl.GetValue())
-		url = self.help_url_text_ctrl.GetValue()
-		if not url.startswith('http'):
-			url = "http://" + url
-		self.help_browser.LoadURL(url)
-		self.help_focus_thief.SetFocus()
-	
-	# event.Skip()
-	
-	def on_help_readme(self, event):  # wxGlade: Launcher.<event_handler>
-		self.help_browser.LoadURL("file://{}".format(os.path.join(os.getcwd(), "README.txt")))
-		self.help_focus_thief.SetFocus()
-		event.Skip()
-	
-	def on_help_github(self, event):  # wxGlade: Launcher.<event_handler>
-		self.help_browser.LoadURL("http://github.com/domdfcoding/GunShotMatch")
-		self.help_focus_thief.SetFocus()
-		event.Skip()
-	
-	def on_help_browser(self, event):  # wxGlade: Launcher.<event_handler>
-		webbrowser.open(self.help_url_text_ctrl.GetValue(), 2)
-		self.help_focus_thief.SetFocus()
-		event.Skip()
-	
-	def help_update_url(self, event):
-		self.help_url_text_ctrl.SetValue(event.GetURL())
-	
 
-	"""Comparison Tab"""
-	
-	def on_left_comparison_browse(self, event):  # wxGlade: Launcher.<event_handler>
-		selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
-									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-									   #defaultDir=self.Config.get("main", "resultspath"))
-									   defaultDir=self.Config.RESULTS_DIRECTORY)
-		if selected_project == None:
-			return
-		
-		if pretty_name_from_info(selected_project) == self.comparison_right_project_name:
-			wx.MessageBox("You cannot compare a project to itself!\nPlease choose a different project.", "Error",
-						  wx.ICON_ERROR | wx.OK)
-			return
 
-		self.comparison_left_project = selected_project
-		self.comparison_left_project_name = pretty_name_from_info(self.comparison_left_project)
-		
-		self.comparison_left_picker.SetValue(self.comparison_left_project_name)
-		self.comparison_left_header.LoadURL("file://{}".format(self.comparison_left_project))
-		
-		self.comparison_check_enable()
-		
-	def on_right_comparison_browse(self, event):  # wxGlade: Launcher.<event_handler>
-		selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
-									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-									   #defaultDir=self.Config.get("main", "resultspath"))
-									   defaultDir=self.Config.RESULTS_DIRECTORY)
-		if selected_project == None:
-			return
-		
-		if pretty_name_from_info(selected_project) == self.comparison_left_project_name:
-			wx.MessageBox("You cannot compare a project to itself!\nPlease choose a different project.", "Error",
-						  wx.ICON_ERROR | wx.OK)
-			return
-		
-		self.comparison_right_project = selected_project
-		self.comparison_right_project_name = pretty_name_from_info(self.comparison_right_project)
-		
-		self.comparison_right_picker.SetValue(self.comparison_right_project_name)
-		self.comparison_right_header.LoadURL("file://{}".format(self.comparison_right_project))
-		
-		self.comparison_check_enable()
-		
-	def comparison_check_enable(self):
-		if self.comparison_right_project and self.comparison_left_project:
-			self.run_comparison_button.Enable()
-			self.comparison_box_whisker_btn.Enable()
-			self.comparison_pca_btn.Enable()
-			self.comparison_mean_pa_button.Enable()
-			self.comparison_radar_button.Enable()
-	
-	def comparison_run(self, event):  # wxGlade: Launcher.<event_handler>
-		a_value = self.significance_level_value.GetValue()
-		
-		self.comparison = ComparisonThread(self,
-										   self.comparison_left_project,
-										   self.comparison_right_project,
-										   self.Config,
-										   a_value)
-		self.comparison.start()
 
-	def do_comparison_apply(self, event):  # wxGlade: Launcher.<event_handler>
-		# Save the settings
-		self.Config.comparison_a = self.significance_level_value.GetValue()
-		self.Config.comparison_rt_modulation = self.comparison_alignment_Dw_value.GetValue()
-		self.Config.comparison_gap_penalty = self.comparison_alignment_Gw_value.GetValue()
-		self.Config.comparison_min_peaks = int(self.comparison_alignment_min_peaks_value.GetValue())
-		
-		print("Event handler 'do_comparison_apply' not implemented!")
-		event.Skip()
-	
-	def do_comparison_default(self, event):  # wxGlade: Launcher.<event_handler>
-		# Read settings
-		self.significance_level_value.SetValue(str(self.Config.comparison_a))
-		self.comparison_alignment_Dw_value.SetValue(str(self.Config.comparison_rt_modulation))
-		self.comparison_alignment_Gw_value.SetValue(str(self.Config.comparison_gap_penalty))
-		self.comparison_alignment_min_peaks_value.SetValue(str(self.Config.comparison_min_peaks))
-		
-		print("Event handler 'do_comparison_default' not implemented!")
-		event.Skip()
-		
-	def do_comparison_reset(self, *args):  # wxGlade: Launcher.<event_handler>
-		# Reset to default Settings
-		Config = ConfigParser.ConfigParser()
-		Config.read("lib/default.ini")
-		
-		self.significance_level_value.SetValue(Config.get("comparison", "a"))
-		self.comparison_alignment_Dw_value.SetValue(Config.get("comparison", "rt_modulation"))
-		self.comparison_alignment_Gw_value.SetValue(Config.get("comparison", "gap_penalty"))
-		self.comparison_alignment_min_peaks_value.SetValue(Config.get("comparison", "min_peaks"))
-	
-	def comparison_show_box_whisker(self, event):
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="box_whisker",
-												   initial_samples=[self.comparison_left_project,
-																	self.comparison_right_project],
-												  )
-		self.ChartViewer.Show()
-		self.ChartViewer.Raise()
-		event.Skip()
-	
-	def comparison_show_pca(self, event):
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="pca",
-												   initial_samples=[self.comparison_left_project,
-																	self.comparison_right_project],
-												  )
-		self.ChartViewer.Show()
-		self.ChartViewer.Raise()
-		event.Skip()
-	
-	def comparison_show_radar(self, event):  # wxGlade: Launcher.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="radar",
-												   initial_samples=[self.comparison_left_project,
-																	self.comparison_right_project],
-												   )
-		self.ChartViewer.Show()
-		self.ChartViewer.Raise()
-		event.Skip()
-	
-	def comparison_show_mean_peak_area(self, event):  # wxGlade: Launcher.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="mean_peak_area",
-												   initial_samples=[self.comparison_left_project,
-																	self.comparison_right_project],
-												   )
-		self.ChartViewer.Show()
-		self.ChartViewer.Raise()
-		event.Skip()
-	
 	def OnComparisonDone(self, event):
 		self.status("Comparison Complete", 5)
-	
-	def OnComparisonLog(self, evt):
-		self.comparison_log_text_control.AppendText(evt.log_text)
 	
 	
 	"""Data Viewer"""
@@ -2561,6 +2080,21 @@ class Launcher(wx.Frame):
 			print("The file should now be deleted")
 		event.Skip()
 
+	def on_browse_tab_change(self, event):  # wxGlade: Launcher.<event_handler>
+		print(event.GetSelection())
+		controls = [self.OpenSample, self.PreviousSample, self.NextSample, self.ResetView, self.PreviousView, self.Zoom_Btn, self.Pan_Btn, self.config_borders_button, self.save_btn]
+		if event.GetSelection() in [1, 2]:
+			for control in controls:
+				control.Enable()
+			if event.GetSelection() == 1:
+				self.ViewSpectrum_Btn.Enable()
+		else:
+			for control in controls + [self.ViewSpectrum_Btn]:
+				control.Enable(False)
+		
+				
+		print("Event handler 'on_browse_tab_change' not implemented!")
+		event.Skip()
 # end of class Launcher
 
 

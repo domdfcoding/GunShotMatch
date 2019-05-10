@@ -173,3 +173,4 @@ __all__ = ["charts",
 		   "uibar",
 		   "wxTools",
 		   ]
+

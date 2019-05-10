@@ -23,7 +23,7 @@ import os
 import wx
 import traceback
 
-from gsm_gui.utils import collapse_label
+from gsm_gui.utils import collapse_label, get_toolbar_icon
 
 from utils.wxTools import file_dialog, toggle, file_dialog_multiple
 from utils.charts import box_whisker, peak_area, mean_peak_area, radar_chart, PrincipalComponentAnalysis, bw_default_colours, bw_default_styles, default_colours, default_filetypes
@@ -79,10 +79,10 @@ class ChartViewer(wx.Frame):
 		self.settings_scroller = wx.ScrolledWindow(self.ChartViewer_Settings_Panel, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
 		self.samples_header = wx.Button(self.settings_scroller, wx.ID_ANY, "Samples", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.samples_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
-		self.up_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/up_16.png", wx.BITMAP_TYPE_ANY))
-		self.down_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/down_16.png", wx.BITMAP_TYPE_ANY))
-		self.add_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/add_16.png", wx.BITMAP_TYPE_ANY))
-		self.remove_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, wx.Bitmap("./lib/icons/delete_16.png", wx.BITMAP_TYPE_ANY))
+		self.up_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, get_toolbar_icon("ART_GO_UP", 16))
+		self.down_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, get_toolbar_icon("ART_GO_DOWN", 16))
+		self.add_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, get_toolbar_icon("ART_ADD_BOOKMARK", 16))
+		self.remove_btn = wx.BitmapButton(self.samples_panel, wx.ID_ANY, get_toolbar_icon("ART_DELETE", 16))
 		self.sample_list_viewer = wx.ListBox(self.samples_panel, wx.ID_ANY, choices=[])
 		self.general_header = wx.Button(self.settings_scroller, wx.ID_ANY, "General", style=wx.BORDER_NONE | wx.BU_LEFT)
 		self.general_panel = wx.Panel(self.settings_scroller, wx.ID_ANY)
@@ -141,7 +141,7 @@ class ChartViewer(wx.Frame):
 		self.svg_checkbox = wx.CheckBox(self.filetypes_panel, wx.ID_ANY, "")
 		self.pdf_checkbox = wx.CheckBox(self.filetypes_panel, wx.ID_ANY, "")
 		self.reset_button = wx.Button(self.ChartViewer_Settings_Panel, wx.ID_ANY, "&Reset")
-		self.load_button = wx.Button(self.ChartViewer_Settings_Panel, wx.ID_ANY, "Load")
+		self.load_button = wx.Button(self.ChartViewer_Settings_Panel, wx.ID_OPEN, "Load")
 		self.save_settings_button = wx.Button(self.ChartViewer_Settings_Panel, wx.ID_ANY, "&Save")
 		self.save_button = wx.Button(self.ChartViewer_Settings_Panel, wx.ID_ANY, "&Save Chart")
 		self.close_btn = wx.Button(self.ChartViewer_Settings_Panel, wx.ID_ANY, "Close")
@@ -377,6 +377,7 @@ class ChartViewer(wx.Frame):
 		self.settings_scroller.SetScrollRate(10, 10)
 		self.reset_button.SetMinSize((85, -1))
 		self.load_button.SetMinSize((85, -1))
+		self.load_button.SetBitmap(get_toolbar_icon("ART_FILE_OPEN",16))
 		self.save_settings_button.SetMinSize((85, -1))
 		self.save_button.SetMinSize((178, -1))
 		self.close_btn.SetMinSize((85, -1))
