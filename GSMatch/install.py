@@ -4,6 +4,10 @@
 #  install.py
 #  
 #  Copyright 2019 dom13 <dom13@DOM-XPS>
+"""
+This file is a work in progress.
+Proceed with Caution.
+"""
 #  
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -57,21 +61,21 @@ def install():
 			current_version = 0
 		
 		if required_version > current_version:
-			print"{} > {} is required, but {}".format(module, required_version, 'it is not installed.' if current_version==0 else '{} is installed.'.format(current_version))
+			print("{} > {} is required, but {}".format(module, required_version, 'it is not installed.' if current_version==0 else '{} is installed.'.format(current_version)))
 			missing_modules.append(module)
 		
 	if missing_modules == []:
-		print "All modules are up to date."
+		print("All modules are up to date.")
 	else:	
-		print """\nThe following modules are going to be installed:
-{}""".format(' '.join(missing_modules))
+		print("""\nThe following modules are going to be installed:
+{}""".format(' '.join(missing_modules)))
 		result = raw_input("Do you want to continue? [Y/n] ").lower()
 		if result.startswith('y') or len(result) == 0:
 			for module in missing_modules:
 				pip.main(['install', '{}>={}'.format(module, dependencies[module])])
 
 		else:
-			print "Abort."
+			print("Abort.")
 	
 	# wxPython
 	
@@ -79,16 +83,16 @@ def install():
 		
 	try:
 		import wx
-		print int(wx.version()[0])<4
+		print(int(wx.version()[0])<4)
 		if int(wx.version()[0]) < 4:
 			need_install = True
-		print "wxPython Version 4 or greater is required, but {} is installed.".format(wx.version()[:5]) 
+		print("wxPython Version 4 or greater is required, but {} is installed.".format(wx.version()[:5]))
 	except:
 		need_install = True
-		print "wxPython Version 4 or greater is required, but it is not installed."
+		print("wxPython Version 4 or greater is required, but it is not installed.")
 		
 	if need_install:
-		print "Installing wxPython. Please wait..."
+		print("Installing wxPython. Please wait...")
 		 
 		import platform, os
 		if platform.system() == "Linux":
@@ -107,14 +111,14 @@ def install():
 	#print opxl_path
 	
 	if not os.path.isfile(os.path.join(opxl_path,"GSM_Patch.txt")):
-		print "Patching openpyxl. Please wait..."
+		print("Patching openpyxl. Please wait...")
 		
 		import shutil
 		
 		for directory in os.listdir("lib/openpyxl-patch"):
-			print directory
+			print(directory)
 			for filename in os.listdir(os.path.join("lib/openpyxl-patch",directory)):
-				print filename
+				print(filename)
 				original_file = os.path.join(opxl_path,directory,filename) # original file
 				backup_file = os.path.join(opxl_path,directory,(filename+".bak")) # backup of original file
 				patched_file = os.path.join("lib/openpyxl-patch",directory,filename) # patched file
@@ -126,7 +130,7 @@ def install():
 			f.write("GunShotMatch patch for openpyxl installed. The original versions have been preserved with .py.bak extensions.")
 	
 	else:
-		print "openpyxl is already patched."
+		print("openpyxl is already patched.")
 
 if __name__ == '__main__':
 	import sys
