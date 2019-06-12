@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 #
 #  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
@@ -17,3 +16,10 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #
+#
+
+import os
+
+help_home_url = "http://domdfcoding.github.com/GunShotMatch"
+github_url = "http://github.com/domdfcoding/GunShotMatch"
+readme_path = os.path.join(os.getcwd(), "README.rst")

@@ -4,14 +4,17 @@
 #
 
 import wx
+import wx.stc
 import wx.html2
-from utils.wxTools import file_dialog
-from gsm_core import pretty_name_from_info
-from gsm_gui.threads import ComparisonThread, EVT_COMPARISON, EVT_COMPARISON_LOG
+from domdf_wxpython_tools.dialogs import file_dialog
+from .__init__ import pretty_name_from_info
+from .threads import ComparisonThread, EVT_COMPARISON, EVT_COMPARISON_LOG
 import configparser as ConfigParser
-from gsm_gui import ChartViewer
-from gsm_gui.utils import get_toolbar_icon
+from . import ChartViewer
+from domdf_wxpython_tools.icons import get_toolbar_icon
 
+
+from .LogCtrl import Log
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -48,7 +51,7 @@ class compare_tab(wx.Panel):
 		self.comparison_mean_pa_button = wx.Button(self.comparison_panel, wx.ID_ANY, "Mean Peak Area")
 		self.comparison_box_whisker_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "Box Whisker Plot")
 		self.comparison_pca_btn = wx.Button(self.comparison_panel, wx.ID_ANY, "")
-		self.comparison_log_text_control = wx.TextCtrl(self.comparison_panel, wx.ID_ANY, "", style=wx.TE_CHARWRAP | wx.TE_MULTILINE | wx.TE_READONLY)
+		self.comparison_log_text_control = Log(self.comparison_panel, wx.ID_ANY)
 
 		self.__set_properties()
 		self.__do_layout()
@@ -68,16 +71,21 @@ class compare_tab(wx.Panel):
 		
 		#self.Bind(EVT_COMPARISON, self.OnComparisonDone)
 		self.Bind(EVT_COMPARISON_LOG, self.OnComparisonLog)
+		#self.comparison_log_text_control.Bind(wx.EVT_KEY_DOWN, self.onKeyPress)
+
 		
 		self.comparison_right_project = None
 		self.comparison_right_project_name = None
 		self.comparison_left_project = None
 		self.comparison_left_project_name = None
 		
-		log_font = wx.Font(12, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "FreeMono")
-		self.comparison_log_text_control.SetFont(log_font)
+		#log_font = wx.Font(12, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "FreeMono")
+		#self.comparison_log_text_control.SetFont(log_font)
 		
 		self.do_comparison_reset()
+
+	def onKeyPress(self, event):
+		pass
 
 	def __set_properties(self):
 		# begin wxGlade: compare_tab.__set_properties
@@ -246,6 +254,8 @@ class compare_tab(wx.Panel):
 			self.comparison_radar_button.Enable()
 	
 	def comparison_run(self, event):  # wxGlade: compare_tab.<event_handler>
+		self.comparison_log_text_control.ClearAll()
+		
 		a_value = self.significance_level_value.GetValue()
 		
 		self.comparison = ComparisonThread(self,

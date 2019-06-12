@@ -38,16 +38,16 @@ import os
 import sys
 import time
 
-from utils.terminal import clear, br
+from domdf_python_tools.terminal import clear, br
 from utils.charts import default_colours, default_filetypes, bw_default_colours, bw_default_styles
 
 
 class GSMCompare(object):
 	def __init__(self, left_sample, right_sample, Config = None):
-		from utils.paths import maybe_make
+		from domdf_python_tools.paths import maybe_make
 
 		if Config == None:
-			from gsm_core import GSMConfig
+			from .GSMatch_Core import GSMConfig
 			self.Config = GSMConfig("config.ini")
 		else:
 			self.Config = Config # GSMConfig object
@@ -71,7 +71,7 @@ class GSMCompare(object):
 		
 	def setup_data(self):
 		import pandas
-		from utils.mathematical import df_count
+		from mathematical.data_frames import df_count
 		
 		"""Chart Data"""
 		chart_data = pandas.concat(
@@ -167,10 +167,11 @@ class GSMCompare(object):
 		import operator
 		from pprint import pprint, pformat
 		
-		from utils.spreadsheet import append_to_xlsx
-		from utils.mathematical import df_mean, rounders
+		from domdf_spreadsheet_tools import append_to_xlsx
+		from mathematical.utils import rounders
+		from mathematical.data_frames import df_mean
 		
-		from gsm_core import get_ms_alignment, get_peak_alignment
+		from .GSMatch_Core.PeakAlignment import get_ms_alignment, get_peak_alignment
 		
 		from pyms.Experiment.IO import store_expr, load_expr
 		from pyms.Peak.List.DPA.Class import PairwiseAlignment
@@ -604,7 +605,7 @@ def write_peak(outputCSV, name, CAS, left_rt_mean='', left_rt_stdev='', left_rt_
 def comparisonFormat(inputFile):  # Formatting for Final Output
 	from openpyxl import load_workbook
 	from openpyxl.utils import get_column_letter
-	from utils.spreadsheet import format_header, format_sheet, make_column_property_list
+	from domdf_spreadsheet_tools import format_header, format_sheet, make_column_property_list
 	
 	print('\nGenerating XLSX Output...')
 
@@ -745,7 +746,7 @@ def multiple_project_charts(projectList, show_outliers=True, show_raw_data=False
 	return
 	
 	import pandas
-	from utils.mathematical import df_count
+	from mathematical.data_frames import df_count
 	from utils.charts import radar_chart, box_whisker
 	
 	"""Chart Data"""
@@ -803,7 +804,7 @@ if __name__ == '__main__':
 
 	import platform
 	from utils import timing
-	from utils.paths import maybe_make
+	from domdf_python_tools.paths import maybe_make
 
 	
 	clear()  # clear the display
@@ -816,7 +817,7 @@ Copyright {copyright} Dominic Davis-Foster.
 	print(startup_string)
 	
 	# Load Configuration
-	from gsm_core import GSMConfig
+	from .GSMatch_Core import GSMConfig
 	
 	config = GSMConfig("config.ini")
 	

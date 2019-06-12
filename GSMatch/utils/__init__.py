@@ -51,21 +51,6 @@ utils.DirectoryHash:
     Available under the MIT License
 -----
 
-utils.helper:
-
-check_dependencies based on https://stackoverflow.com/a/29044693/3092681
-    Copyright 2015 TehTechGuy
-    Licensed under CC-BY-SA
-
-as_text from https://stackoverflow.com/a/40935194
-    Copyright 2016 User3759685
-    Available under the MIT License
-
- chunks from https://stackoverflow.com/a/312464/3092681
-    Copytight 2008 Ned Batchelder
-    Licensed under CC-BY-SA
------
-
 utils.jcamp:
     Copyright (c) 2013 Nathan Hagen <and.the.light.shattered@gmail.com>
     Available under the MIT License
@@ -79,31 +64,9 @@ utils.MassSpectraPlot
 -----
 
 utils.mathematical:
-    df_mean, df_stdev, df_percentage and df_log based on http://jonathansoma.com/lede/foundations/classes/pandas%20columns%20and%20functions/apply-a-function-to-every-row-in-a-pandas-dataframe/
-        Copyright 2016 Jonathan Soma
-
     RepresentsInt from https://stackoverflow.com/questions/1265665/python-check-if-a-string-represents-an-int-without-using-try-except
         Copyright 2009 Triptych
         Licensed Under CC-BY-SA
------
-
-utils.outliers:
-    mad_outliers based on https://eurekastatistics.com/using-the-median-absolute-deviation-to-find-outliers/
-        Copyright 2013 Peter Rosenmai
-
-    quartile_outliers based on
-        http://www.itl.nist.gov/div898/handbook/prc/section1/prc16.htm
-        Copyright 2012 NIST
-
-    spss_outliers based on
-        http://www.unige.ch/ses/sococ/cl/spss/concepts/outliers.html
-        Copyright 2018 Eugene Horber, U. of Geneva
------
-
-utils.paths:
-    copytree based on https://stackoverflow.com/a/12514470/3092681
-        Copyright 2012 atzz
-        Licensed under CC-BY-SA
 -----
 
 utils.progbar:
@@ -135,13 +98,6 @@ utils.spreadsheet:
         Copyright 2014 Tim Kacprowski
 -----
 
-utils.terminal:
-    get_terminal_size, _get_terminal_size_windows,
-        _get_terminal_size_tput and _get_terminal_size_linux from
-        https://gist.github.com/jtriley/1108174
-        Copyright 2011 jtriley
------
-
 utils.timing:
     Copyright 2009 PaulMcG
     From http://stackoverflow.com/a/1557906/6009280
@@ -149,28 +105,18 @@ utils.timing:
     Adapted 2018 by Dominic Davis-Foster
 -----
 
-utils.wxBitmap
-    Functions Copyright 2005 Antoine Pitrou
-    From https://sourceforge.net/p/wxglade/mailman/message/6475744/
------
 """
 
 __all__ = ["charts",
-		   "ChromatogramDisplay",
 		   "DirectoryHash",
-		   "helper",
 		   "jcamp",
 		   "MassSpectraPlot",
 		   "mathematical",
-		   "outliers",
-		   "paths",
 		   "progbar",
 		   "pynist",
 		   "SpectrumSimilarity",
-		   "spreadsheet",
-		   "terminal",
+		   "utils",
 		   "timing",
 		   "uibar",
-		   "wxTools",
 		   ]
 

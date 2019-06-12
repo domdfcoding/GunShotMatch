@@ -51,10 +51,7 @@ import time
 import io
 
 from subprocess import Popen, PIPE
-try:
-	from paths import parent_path
-except ModuleNotFoundError:
-	from utils.paths import parent_path
+from domdf_python_tools.paths import parent_path
 
 """Generates the INI file for NIST MS Search and copies it in place of 
 the current config."""

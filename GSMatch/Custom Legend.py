@@ -54,9 +54,10 @@ show_raw_data = False
 leg_cols = 2 # Number of columns for legend
 
 from GSMatch.utils import timing # Times the program
-import sys, os
+import sys
 
-from GSMatch.utils import clear, check_dependencies
+from domdf_python_tools import check_dependencies
+from domdf_python_tools.terminal import clear
 clear()		#clear the display
 
 missing_modules = check_dependencies(["progressbar", "matplotlib"], prt=False)
@@ -78,15 +79,12 @@ if "-h" not in str(sys.argv):
 	import warnings	; time.sleep(0.1); bar.update(2)
 	import datetime	; time.sleep(0.1); bar.update(3)
 	
-	from GSMatch.utils import entry, mean_none, std_none, copytree
 	time.sleep(0.1); bar.update(4)
-	from GSMatch.utils import load_config, within1min, outliers
 	
 	import matplotlib; matplotlib.use("TkAgg")
 	time.sleep(0.1); bar.update(5)
 	
 	import matplotlib.pyplot as plt	; time.sleep(0.1); bar.update(6)
-	import matplotlib.ticker as ticker; time.sleep(0.1); bar.update(7)
 	
 	from matplotlib.lines import Line2D; time.sleep(0.1); bar.update(8)
 else:

@@ -147,7 +147,9 @@ class box_whisker(chart):
 		self.all_values = []
 	
 	def setup_data(self, peak_areas, sample_list, outlier_mode="2stdev"):
-		from utils.mathematical import df_data_points, df_count, df_mean, df_stdev, df_median, df_outliers, remove_zero
+		from mathematical.data_frames import df_mean, df_median, df_stdev, df_data_points, df_count, df_outliers, MAD, QUARTILES, STDEV2
+		from mathematical.utils import remove_zero
+
 		#print(f"###{sample_list}###")
 		# determine order of compounds on graph
 		for compound in peak_areas.index.values:
@@ -169,9 +171,17 @@ class box_whisker(chart):
 			self.all_values.append(max(data_points))
 			self.all_values.append(min(remove_zero(data_points)))
 			
+			tmp_outlier_mode = MAD
+			if outlier_mode == "mad":
+				tmp_outlier_mode = MAD
+			elif outlier_mode == "quartiles":
+				tmp_outlier_mode = QUARTILES
+			elif outlier_mode == "2stdev":
+				tmp_outlier_mode = STDEV2
+			
 			# Determine Outliers
 			# Based on https://stackoverflow.com/a/52564783/3092681
-			outlier_data = peak_areas.apply(lambda row: df_outliers(row[f"{sample[0]} Data Points"], outlier_mode),axis=1)
+			outlier_data = peak_areas.apply(lambda row: df_outliers(row[f"{sample[0]} Data Points"], tmp_outlier_mode),axis=1)
 			peak_areas[f"{sample[0]} Outliers"] = outlier_data[0]
 			peak_areas[f"{sample[0]} Data Excluding Outliers"] = outlier_data[1]
 
@@ -218,7 +228,7 @@ class box_whisker(chart):
 		from itertools import cycle
 		import matplotlib.ticker as ticker
 		import matplotlib.transforms as transforms
-		from utils.mathematical import magnitude
+		from mathematical.utils import magnitude
 		
 		self.ax.set_yscale('log')  # logarithmic scale on y-axis
 		y_max = max(self.all_values) + (10 ** magnitude(max(self.all_values)))
@@ -431,15 +441,15 @@ class box_whisker(chart):
 
 class mean_peak_area(chart):
 	def setup_data(self, peak_areas, sample_list):
-		from utils.mathematical import df_percentage, df_data_points
+		from mathematical.data_frames import df_percentage
 		
 		
 		# From raw value to percentage
 		for sample_idx, sample in enumerate(sample_list):
 			peak_areas["{} Percentage Peak Area".format(sample)] = peak_areas.apply(df_percentage,
-				args=((peak_areas["{} Peak Area".format(sample)].sum()), "{} Peak Area".format(sample)),axis=1)
+				args=("{} Peak Area".format(sample), (peak_areas["{} Peak Area".format(sample)].sum())),axis=1)
 			peak_areas["{} Percentage Standard Deviation".format(sample)] = peak_areas.apply(
-				df_percentage,args=((peak_areas["{} Standard Deviation".format(sample)].sum()), "{} Standard Deviation".format(sample)),axis=1)
+				df_percentage,args=("{} Standard Deviation".format(sample), (peak_areas["{} Standard Deviation".format(sample)].sum())),axis=1)
 				
 		self.peak_areas = peak_areas
 		self.sample_list = sample_list
@@ -522,19 +532,19 @@ class mean_peak_area(chart):
 class peak_area(chart):
 	def setup_data(self, peak_areas, lot_name, prefixList, use_log=False):
 
-		from utils.mathematical import df_percentage, df_log
+		from mathematical.data_frames import df_percentage, df_log
 		
 		if not prefixList:
 			prefixList = list(peak_areas.columns.values)[1:]
 		
 		for prefix in prefixList:
 			peak_areas["Percentage {}".format(prefix)] = peak_areas.apply(df_percentage,
-																		  args=((peak_areas[prefix].sum()), prefix),
+																		  args=(prefix, (peak_areas[prefix].sum())),
 																		  axis=1)
 			if use_log:
-				peak_areas["Log {}".format(prefix)] = peak_areas.apply(df_log, args=(use_log, prefix), axis=1)
+				peak_areas["Log {}".format(prefix)] = peak_areas.apply(df_log, args=(prefix, use_log), axis=1)
 				peak_areas["Log Percentage {}".format(prefix)] = peak_areas.apply(df_percentage, args=(
-					(peak_areas["Log {}".format(prefix)].sum()), "Log {}".format(prefix)), axis=1)
+					"Log {}".format(prefix), (peak_areas["Log {}".format(prefix)].sum())), axis=1)
 		
 		self.peak_areas = peak_areas
 		self.prefixList = prefixList

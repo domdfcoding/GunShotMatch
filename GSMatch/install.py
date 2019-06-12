@@ -7,6 +7,8 @@
 """
 This file is a work in progress.
 Proceed with Caution.
+
+GunShotMatch post-install script
 """
 #  
 #  This program is free software; you can redistribute it and/or modify
@@ -26,59 +28,12 @@ Proceed with Caution.
 #  
 #  
 
-import pip
-
-
-# Required Modules and Versions
-dependencies = {
-	'matplotlib':"2.2.3",
-	'numpy':'1.16.0',
-	'openpyxl':'2.5.12',
-	'pandas':'0.23.4', 
-#	'pillow':'5.1.0',
-	'progressbar2':'3.39.2',
-	'scipy':'1.2.0',
-}
-
-def install():
-	# get list of currently installed packages
-	installed_packages = pip.get_installed_distributions()
-	installed_packages_list = sorted(["%s==%s" % (i.key, i.version)
-		 for i in installed_packages])
-	
-	installed_versions = {}
-	missing_modules = []
-	
-	for i in installed_packages:
-		installed_versions[i.key] = i.version
-	
-		
-	for module in dependencies:
-		required_version = dependencies[module]
-		if module in installed_versions:
-			current_version = installed_versions[module]
-		else:
-			current_version = 0
-		
-		if required_version > current_version:
-			print("{} > {} is required, but {}".format(module, required_version, 'it is not installed.' if current_version==0 else '{} is installed.'.format(current_version)))
-			missing_modules.append(module)
-		
-	if missing_modules == []:
-		print("All modules are up to date.")
-	else:	
-		print("""\nThe following modules are going to be installed:
-{}""".format(' '.join(missing_modules)))
-		result = raw_input("Do you want to continue? [Y/n] ").lower()
-		if result.startswith('y') or len(result) == 0:
-			for module in missing_modules:
-				pip.main(['install', '{}>={}'.format(module, dependencies[module])])
-
-		else:
-			print("Abort.")
-	
+def test_wx():
 	# wxPython
-	
+	import platform, os
+	if platform.system() != "Linux":
+		return 0
+		
 	need_install = False
 		
 	try:
@@ -90,20 +45,56 @@ def install():
 	except:
 		need_install = True
 		print("wxPython Version 4 or greater is required, but it is not installed.")
-		
-	if need_install:
-		print("Installing wxPython. Please wait...")
-		 
-		import platform, os
-		if platform.system() == "Linux":
-			os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-16.04 wxPython")		
-		
-			os.system("wget -q -O /tmp/libpng12.deb http://mirrors.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1_amd64.deb && dpkg -i /tmp/libpng12.deb && rm /tmp/libpng12.deb")
-
-		else:
-			os.system("python pip install -U wxPython")
 	
+	if not need_install:
+		return 0
+	
+	import webbrowser
+	
+	print("""There are some prebuilt wheels available. If you have a Linux similar enough to those used to build the wheels you can use them and not need to build the wheels yourself.""")
+	print("Do you want to view the [w]heels, view the [s]ource code, or abort (x)? ")
+	result = input("Alternatively, type then name of your Linux distribution and we'll do our best to sort you out")
+	if result[0] == "w":
+		webbrowser.open("https://extras.wxpython.org/wxPython4/extras/linux/", 2)
+	elif result[0] == "s":
+		webbrowser.open("https://github.com/wxWidgets/Phoenix", 2)
+	elif result.lower().replace(".",'').replace(' ','') == "ubuntu1804":
+		os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-18.04 wxPython")
+		os.system(
+			"wget -q -O /tmp/libpng12.deb http://mirrors.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1_amd64.deb && dpkg -i /tmp/libpng12.deb && rm /tmp/libpng12.deb")
+	elif result.lower().replace(".",'').replace(' ','') == "ubuntu1604":
+		os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-16.04 wxPython")
+		os.system(
+			"wget -q -O /tmp/libpng12.deb http://mirrors.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1_amd64.deb && dpkg -i /tmp/libpng12.deb && rm /tmp/libpng12.deb")
+	elif result.lower().replace(".",'').replace(' ','') == "ubuntu1404":
+		os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-14.04 wxPython")
+
+	elif result.lower().replace(".",'').replace(' ','') == "debian9":
+		os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/debian-9 wxPython")
+	elif result.lower().replace(".",'').replace(' ','') == "debian8":
+		os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/debian-8 wxPython")
+	elif result.lower().replace(".",'').replace(' ','') == "debian8":
+		os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/debian-8 wxPython")
+	
+	elif result.lower().replace(".",'').replace(' ','') == "fedora23":
+		os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/fedora-23 wxPython")
+	elif result.lower().replace(".",'').replace(' ','') == "fedora26":
+			os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/fedora-26 wxPython")
+	elif result.lower().replace(".",'').replace(' ','') == "fedora27":
+			os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/fedora-27 wxPython")
+	elif result.lower().replace(".",'').replace(' ','') == "fedora28":
+			os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/fedora-28 wxPython")
+	elif result.lower().replace(".",'').replace(' ','') == "fedora24":
+			os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/fedora-24 wxPython")
+	
+	elif result.lower().replace(".",'').replace(' ','') == "centos7":
+			os.system("pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/centos-7 wxPython")
+
+	else:
+		return 1
 		
+	
+def patch_openpyxl():
 	# Patch openpyxl
 	import openpyxl
 	import os.path
@@ -133,5 +124,6 @@ def install():
 		print("openpyxl is already patched.")
 
 if __name__ == '__main__':
-	import sys
-	sys.exit(install())
+	test_wx()
+	patch_openpyxl()
+	

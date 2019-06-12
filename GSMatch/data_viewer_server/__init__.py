@@ -8,8 +8,8 @@ import hashlib
 from flask import Flask, request, jsonify, render_template
 
 from utils import pubchempy as pcp
-from utils.paths import maybe_make
-from utils.mathematical import rounders
+from domdf_python_tools.paths import maybe_make
+from mathematical.utils import rounders
 
 sys.stderr = sys.stdout
 

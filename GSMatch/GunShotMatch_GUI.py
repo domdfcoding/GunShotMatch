@@ -39,10 +39,10 @@ import traceback
 import threading
 import subprocess
 
-from gsm_core import EventBoilerplate as ProjectEvent
-from gsm_core import EventBoilerplate as ConversionEvent
-from gsm_core import LogEventBoilerplate as ProjectLogEvent
-from gsm_core import LogEventBoilerplate as ConversionLogEvent
+from GSMatch_Core.thread_boilerplates import EventBoilerplate as ProjectEvent
+from GSMatch_Core.thread_boilerplates import EventBoilerplate as ConversionEvent
+from GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ProjectLogEvent
+from GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ConversionLogEvent
 
 import wx.html2
 import wx.richtext
@@ -50,7 +50,7 @@ from wx.adv import NotificationMessage
 
 import matplotlib
 
-from gsm_gui import Launcher
+from GSMatch_Core import Launcher
 
 
 # begin wxGlade: dependencies
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 		myappid = "GunShotMatchGUI"
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 		
-	GunShotMatch = GSM_App(0)
+	GunShotMatch = GSM_App(False)
 	GunShotMatch.MainLoop()
 
 print("Goodbye :)")

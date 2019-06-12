@@ -23,22 +23,24 @@ import os
 import wx
 import traceback
 
-from gsm_gui.utils import collapse_label, get_toolbar_icon
+from domdf_wxpython_tools.utils import collapse_label
+from domdf_wxpython_tools.icons import get_toolbar_icon
 
-from utils.wxTools import file_dialog, toggle, file_dialog_multiple
+from domdf_wxpython_tools.utils import toggle
+from domdf_wxpython_tools.dialogs import file_dialog, file_dialog_multiple
 from utils.charts import box_whisker, peak_area, mean_peak_area, radar_chart, PrincipalComponentAnalysis, bw_default_colours, bw_default_styles, default_colours, default_filetypes
 
 import wx.html2
 import wx.richtext
 
-from gsm_gui.style_picker import style_picker, colour_picker
+from .style_picker import style_picker, colour_picker
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
 import pandas
-from utils.mathematical import df_count
+from mathematical.data_frames import df_count
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -46,7 +48,7 @@ from utils.mathematical import df_count
 # begin wxGlade: extracode
 # end wxGlade
 
-from utils.wxTools import coming_soon
+from domdf_wxpython_tools.utils import coming_soon
 
 class ChartViewer(wx.Frame):
 	def __init__(self, parent, chart_type, initial_samples=[], *args, **kwds):

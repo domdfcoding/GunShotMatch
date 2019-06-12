@@ -1,1 +1,1 @@
-__all__ = ["utils", "gsm_gui", "data_viewer_server"]
+__all__ = ["utils", "GSMatch_Core", "data_viewer_server"]

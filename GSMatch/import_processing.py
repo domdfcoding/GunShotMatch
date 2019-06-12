@@ -31,28 +31,24 @@ from __future__ import print_function
 	
 import sys
 import os
-import itertools
 import operator
-from GSMatch.utils import rounders
+from mathematical.utils import rounders
 import time
 from GSMatch.utils import pynist
 import traceback
-import numpy
-	
+
 sys.path.append("..")
 
 nist_path = "../MSSEARCH"
 
 import pyms
 from pyms.GCMS.IO.JCAMP.Function import JCAMP_reader
-from pyms.GCMS.Function import build_intensity_matrix, build_intensity_matrix_i
-from pyms.Noise.Window import window_smooth, window_smooth_im
-from pyms.Noise.SavitzkyGolay import savitzky_golay, savitzky_golay_im
-from pyms.Baseline.TopHat import tophat, tophat_im
-from pyms.Utils.IO import dump_object
-from pyms.Deconvolution.BillerBiemann.Function import BillerBiemann, rel_threshold, num_ions_threshold
+from pyms.GCMS.Function import build_intensity_matrix_i
+from pyms.Noise.SavitzkyGolay import savitzky_golay
+from pyms.Baseline.TopHat import tophat
+from pyms.Deconvolution.BillerBiemann.Function import BillerBiemann, num_ions_threshold
 from pyms.Noise.Analysis import window_analyzer
-from pyms.Peak.Function import peak_sum_area, peak_pt_bounds
+from pyms.Peak.Function import peak_sum_area
 from pyms.Peak.IO import store_peaks
 from pyms.Experiment.Class import Experiment
 from pyms.Experiment.IO import store_expr

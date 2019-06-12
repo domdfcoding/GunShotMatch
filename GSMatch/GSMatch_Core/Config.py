@@ -1,11 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# -*- coding: UTF-8 -*-
 #
-#  gsm_core.py
-"""Core Functions For GunShotMatch"""
-#
-#  Copyright 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
-#
+#  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 3 of the License, or
@@ -21,32 +16,11 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #
+#
 
-__author__ = "Dominic Davis-Foster"
-__copyright__ = "Copyright 2017-2019 Dominic Davis-Foster"
-
-__license__ = "GPL"
-__version__ = "1.0.0"
-__email__ = "dominic@davis-foster.co.uk"
-
-import wx
 import os
-from domdf_python_tools.paths import maybe_make, relpath
 
-def infer_samples(csvpath):
-	import os
-	
-	inferred_samples = []
-	directory_listing = os.listdir(csvpath)
-	for filename in directory_listing:
-		# if filename.lower().endswith(".csv"):
-		if filename.endswith("GC_80.CSV"):
-			# print filename[:-9]+'MS_80.CSV'
-			if os.path.isfile(os.path.join(csvpath, filename[:-9] + 'MS_80.CSV')):
-				inferred_samples.append(filename[:-10])
-	
-	inferred_samples.sort()
-	return (inferred_samples)
+from domdf_python_tools.paths import maybe_make, relpath
 
 
 class GSMConfig(object):
@@ -148,7 +122,6 @@ class GSMConfig(object):
 		parent.comparison_rt_modulation = float(Config.get("comparison", "rt_modulation"))
 		parent.comparison_gap_penalty = float(Config.get("comparison", "gap_penalty"))
 		parent.comparison_min_peaks = int(Config.get("comparison", "min_peaks"))
-		
 	
 	def save_config(self, configfile=None, parent=None):
 		# Gets configuration from parent if set, if not from self
@@ -160,7 +133,7 @@ class GSMConfig(object):
 		
 		import platform
 		import configparser as ConfigParser
-		from domdf_python_tools import list2str, tuple2str
+		from domdf_python_tools import list2str
 		
 		"""Configuration -----"""
 		Config = ConfigParser.ConfigParser()
@@ -207,162 +180,13 @@ class GSMConfig(object):
 		Config.set("comparison", "gap_penalty", str(parent.comparison_gap_penalty))
 		Config.set("comparison", "min_peaks", str(parent.comparison_min_peaks))
 		
-		
 		with open(configfile, "w") as f:
 			Config.write(f)
-
-
-def read_peaks_json(jsonfile):
-	import json
-	return [json.loads(x) for x in open(jsonfile, "r").readlines()]
-
-
-# GUI Thread Boilerplates
-class EventBoilerplate(wx.PyCommandEvent):
-	"""Event to signal that a the conversion is complete"""
-	
-	def __init__(self, etype, eid):
-		"""Creates the event object"""
-		wx.PyCommandEvent.__init__(self, etype, eid)
-
-
-class LogEventBoilerplate(wx.PyCommandEvent):
-	"""Event to signal that a the conversion is complete"""
-	
-	def __init__(self, etype, eid, log_text):
-		"""Creates the event object"""
-		wx.PyCommandEvent.__init__(self, etype, eid)
-		self.log_text = log_text
-	
-	def GetValue(self):
-		"""Returns the value from the event.
-		@return: the value of this event
-
-		"""
-		return self.log_text
-
-
-"""Peak Alignment"""
-
-
-def get_peak_alignment(A, minutes=True):
-	"""
-	Based on code from PyMS
-	@summary: Get dictionary of aligned retention times
-
-	@param A: Alignment object to extract data from
-	@param minutes: An optional indicator whether to return retention times
-		in minutes. If False, retention time will be returned in seconds
-	@type minutes: BooleanType
-
-	@author: Woon Wai Keen
-	@author: Andrew Isaac
-	@author: Vladimir Likic
-	@author: Dominic Davis-Foster
-	"""
-	
-	import pandas
-	
-	# create header
-	# print(A.expr_code)
-	
-	rt_table = []
-	
-	# for each alignment position write alignment's RT
-	for peak_idx in range(len(A.peakpos[0])):
 		
-		rts = []
-		countrt = 0
-		
-		for align_idx in range(len(A.peakpos)):
-			
-			peak = A.peakpos[align_idx][peak_idx]
-			
-			if peak is not None:
-				
-				if minutes:
-					rt = peak.get_rt() / 60.0
-				else:
-					rt = peak.get_rt()
-				
-				rts.append(rt)
-				
-				countrt = countrt + 1
-			else:
-				rts.append(None)
-		
-		if countrt == len(A.expr_code):
-			rt_table.append(rts)
 
-	rt_alignment = pandas.DataFrame(rt_table, columns=A.expr_code)
-	rt_alignment = rt_alignment.reindex(sorted(rt_alignment.columns), axis=1)
-	
-	return rt_alignment
+# End of Class GSMConfig
 
 
-def get_ms_alignment(A):
-	"""
-	Based on code from PyMS
-	@summary: Get dictionary of mass spectra for the aligned peaks
-
-	@param A: Alignment object to extract data from
-
-	@author: Woon Wai Keen
-	@author: Andrew Isaac
-	@author: Vladimir Likic
-	@author: Dominic Davis-Foster
-	"""
-	
-	import pandas
-	
-	ms_table = []
-	
-	# for each alignment position write alignment's ms
-	for peak_idx in range(len(A.peakpos[0])):
-		
-		specs = []
-		countms = 0
-		
-		for align_idx in range(len(A.peakpos)):
-			
-			peak = A.peakpos[align_idx][peak_idx]
-			
-			if peak is not None:
-				
-				ms = peak.get_mass_spectrum()
-				specs.append(ms)
-				countms = countms + 1
-			else:
-				specs.append(None)
-		
-		if countms == len(A.expr_code):
-			ms_table.append(specs)
-	
-	ms_alignment = pandas.DataFrame(ms_table, columns=A.expr_code)
-	ms_alignment = ms_alignment.reindex(sorted(ms_alignment.columns), axis=1)
-	
-	return ms_alignment
-
-
-def infer_samples(csvpath):
-	import os
-	
-	inferred_samples = []
-	directory_listing = os.listdir(csvpath)
-	for filename in directory_listing:
-		# if filename.lower().endswith(".csv"):
-		if filename.endswith("GC_80.CSV"):
-			# print filename[:-9]+'MS_80.CSV'
-			if os.path.isfile(csvpath + filename[:-9] + 'MS_80.CSV'):
-				inferred_samples.append(filename[:-10])
-	
-	inferred_samples.sort()
-	return (inferred_samples)
-
-def pretty_name_from_info(infofile):
-	import os
-	return os.path.splitext(os.path.split(infofile)[-1])[0]
-
-
-if __name__ == '__main__':
-	print(infer_samples("./Results/CSV/"))
+if __name__ == "__main__":
+	import sys
+	sys.exit(1)

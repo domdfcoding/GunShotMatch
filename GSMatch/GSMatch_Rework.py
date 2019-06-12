@@ -74,15 +74,16 @@ from collections import Counter
 from multiprocessing import Pool
 from itertools import chain, permutations
 
-from gsm_core import GSMConfig, get_ms_alignment, get_peak_alignment
+from .GSMatch_Core import GSMConfig
+from .GSMatch_Core.PeakAlignment import get_ms_alignment, get_peak_alignment
 from utils.charts import PlotSpectrum, box_whisker_wrapper, radar_chart_wrapper, mean_peak_area_wrapper, peak_area_wrapper
 from utils.pynist import *
 from utils import DirectoryHash, pynist, SpectrumSimilarity
-from utils.mathematical import rounders
-from utils.terminal import clear, br
-from utils.paths import maybe_make
-from utils.helper import as_text
-from utils.spreadsheet import format_header, format_sheet, make_column_property_list, append_to_xlsx
+from mathematical.utils import rounders
+from domdf_python_tools.terminal import clear, br
+from domdf_python_tools.paths import maybe_make
+from domdf_python_tools import as_text
+from domdf_spreadsheet_tools import format_header, format_sheet, make_column_property_list, append_to_xlsx
 
 from pyms.GCMS.Class import IonChromatogram
 from pyms.GCMS.IO.JCAMP.Function import JCAMP_reader

@@ -28,13 +28,13 @@ import threading
 import subprocess
 import requests
 
-from gsm_core import EventBoilerplate as ProjectEvent
-from gsm_core import EventBoilerplate as ConversionEvent
-from gsm_core import EventBoilerplate as ComparisonEvent
-from gsm_core import EventBoilerplate as DataViewerEvent
-from gsm_core import LogEventBoilerplate as ProjectLogEvent
-from gsm_core import LogEventBoilerplate as ConversionLogEvent
-from gsm_core import LogEventBoilerplate as ComparisonLogEvent
+from .thread_boilerplates import EventBoilerplate as ProjectEvent
+from .thread_boilerplates import EventBoilerplate as ConversionEvent
+from .thread_boilerplates import EventBoilerplate as ComparisonEvent
+from .thread_boilerplates import EventBoilerplate as DataViewerEvent
+from .thread_boilerplates import LogEventBoilerplate as ProjectLogEvent
+from .thread_boilerplates import LogEventBoilerplate as ConversionLogEvent
+from .thread_boilerplates import LogEventBoilerplate as ComparisonLogEvent
 
 import wx.html2
 import wx.richtext
