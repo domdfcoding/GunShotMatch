@@ -1,9 +1,12 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#  !/usr/bin/env python
+#   -*- coding: utf-8 -*-
 #
-#  Charts.py
-#  
-#  Copyright 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  charts.py
+#
+#  This file is part of GunShotMatch
+#
+#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#
 #
 #  mean_peak_area, mean_peak_area_multiple and peak_area adapted from
 #  		https://python-graph-gallery.com/13-percent-stacked-barplot/
@@ -24,26 +27,23 @@
 #	box_whisker based on https://stackoverflow.com/a/48192246/3092681
 #		Copyright 2018 DavidG
 #		Available under the MIT License
-#  
-#  This program is free software; you can redistribute it and/or modify
+#
+#
+#  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 3 of the License, or
 #  (at your option) any later version.
-#  
-#  This program is distributed in the hope that it will be useful,
+#
+#  GunShotMatch is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
-#  
 #
-# adapted from
-# https://matplotlib.org/tutorials/intermediate/legend_guide.html
-# https://matplotlib.org/devdocs/gallery/text_labels_and_annotations/custom_legends.html
 #
 
 __author__ = "Dominic Davis-Foster"
@@ -57,6 +57,7 @@ __email__ = "dominic@davis-foster.co.uk"
 
 import matplotlib
 from matplotlib import pyplot as plt
+
 
 default_colours = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 default_filetypes = ["png", "pdf", "svg"]
@@ -121,21 +122,28 @@ class chart():
 	def __init__(self):
 		pass
 	
-	def save_chart(self, filepath, filetypes=default_filetypes):
+	def save_chart(self, filepath, filetypes=None):
+		
+		if filetypes is None:
+			filetypes = default_filetypes
+			
 		matplotlib.use("Agg")
+		
 		for filetype in filetypes:
 			#plt.savefig(filepath + ".{}".format(filetype))
 			self.fig.savefig(filepath + ".{}".format(filetype))
 		plt.close()
 	
 	def show_chart(self):
+		
 		matplotlib.use("TkAgg")
-		#plt.show()
+		
 		self.fig.show()
 		plt.close()
 
 
 class box_whisker(chart):
+	
 	def __init__(self):
 		"""\
 		err_bar options: range, stdev
@@ -200,13 +208,20 @@ class box_whisker(chart):
 		self.outlier_mode = outlier_mode
 	
 	def setup_subplots(self, figsize=None):
-		if figsize == None:
+		if not figsize:
 			figsize = (1 + (3 * len(self.sample_list)), 9)
 		
 		self.fig, self.ax = plt.subplots(figsize=figsize)
 	
-	def setup_datapoints(self, column_width=4, styles=bw_default_styles, colours=bw_default_colours):
+	def setup_datapoints(self, column_width=4, styles=None, colours=None):
 		import numpy as np
+		
+		if styles is None:
+			styles = bw_default_styles
+		
+		if colours is None:
+			colours = bw_default_colours
+		
 		#print(f"######{column_width}#####")
 		self.datapoint_spacing = column_width / (len(self.peak_areas) + 1)
 		
@@ -422,19 +437,26 @@ class box_whisker(chart):
 		return legend
 		# TODO: Switch to figure legend and change where the legend is deleted
 	
-	def save_chart(self, filepath, filetypes=default_filetypes):
+	def save_chart(self, filepath, filetypes=None):
+		
+		if filetypes is None:
+			filetypes = default_filetypes
+		
 		matplotlib.use("Agg")
-		#plt.tight_layout()
+		
 		self.fig.tight_layout()
 		for filetype in filetypes:
-			#plt.savefig(f"{filepath}_CHART.{filetype}")
 			self.fig.savefig(f"{filepath}_CHART.{filetype}")
 		plt.close()
 	
-	def save_legend(self, filepath, filetypes=default_filetypes):
+	def save_legend(self, filepath, filetypes=None):
+		
+		if filetypes is None:
+			filetypes = default_filetypes
+		
 		matplotlib.use("Agg")
+		
 		for filetype in filetypes:
-			#plt.savefig(f"{filepath}_LEGEND.{filetype}")
 			self.fig.savefig(f"{filepath}_LEGEND.{filetype}")
 		plt.close()
 	
@@ -455,14 +477,18 @@ class mean_peak_area(chart):
 		self.sample_list = sample_list
 		
 	def setup_subplots(self, figsize=None):
-		if figsize == None:
+		if not figsize:
 			figsize = (1 + (3 * len(self.sample_list)), 9)
 		self.fig, self.ax = plt.subplots(figsize=figsize)
 
-	def create_chart(self, barWidth=2, percentage=False, colours=default_colours, err_bar="stdev"):
+	def create_chart(self, barWidth=2, percentage=False, colours=None, err_bar="stdev"):
 		import numpy as np
 		import pandas as pd
 		from itertools import cycle
+		
+		if colours is None:
+			colours = default_colours
+		
 		# plot settings
 		err_bar_spacing = barWidth / (len(self.peak_areas) + 1)
 		#print(err_bar_spacing)
@@ -554,9 +580,12 @@ class peak_area(chart):
 	def setup_subplots(self, figsize=(12,6)):
 		self.fig, self.ax = plt.subplots(figsize=figsize)
 	
-	def create_chart(self, barWidth=2, percentage=False, colours=default_colours):
+	def create_chart(self, barWidth=2, percentage=False, colours=None):
 		from operator import add
 		from itertools import cycle
+		
+		if colours is None:
+			colours = default_colours
 		
 		colour_cycle = cycle(colours)
 		x_vals = [x for x in range(len(self.prefixList))]
@@ -604,11 +633,7 @@ class peak_area(chart):
 					Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
 			#print(legend)
 			return self.fig.legend(handles=legend_elements[::-1], bbox_to_anchor=legend, ncol=1)
-			
-			
 
-		
-		# plt.legend(loc='upper left', bbox_to_anchor=(1,1), ncol=1)
 
 
 class radar_chart(chart):
@@ -621,9 +646,12 @@ class radar_chart(chart):
 		self.fig = plt.figure(figsize=figsize)
 		self.ax = self.fig.add_subplot(111, polar=True)
 	
-	def create_chart(self, use_log=False, legend=True, colours=default_colours):
+	def create_chart(self, use_log=False, legend=True, colours=None):
 		from itertools import cycle
 		from math import pi, log
+		
+		if colours is None:
+			colours = default_colours
 		
 		colour_cycle = cycle(colours)
 		
@@ -690,7 +718,7 @@ class radar_chart(chart):
 
 
 
-
+#TODO: mutable default arguments
 def PlotSpectrum(spec, label=None, xlim=(50, 1200), mode="display", color="red", filetypes=default_filetypes):
 	"""
 	Parameters:
@@ -865,7 +893,7 @@ class PrincipalComponentAnalysis(chart):
 		return pca.explained_variance_ratio_
 		
 	def setup_subplots(self, figsize=None):
-		if figsize == None:
+		if not figsize:
 			figsize = (8,8)
 		
 		self.fig, self.ax = plt.subplots(figsize=figsize)

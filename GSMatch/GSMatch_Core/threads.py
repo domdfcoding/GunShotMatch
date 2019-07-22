@@ -1,12 +1,19 @@
-# -*- coding: UTF-8 -*-
+#  !/usr/bin/env python
+#   -*- coding: utf-8 -*-
+#
+#  threads.py
+"""Functions for executing code in separate threads"""
+#
+#  This file is part of GunShotMatch
 #
 #  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
-#  This program is free software; you can redistribute it and/or modify
+#
+#  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 3 of the License, or
 #  (at your option) any later version.
 #
-#  This program is distributed in the hope that it will be useful,
+#  GunShotMatch is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
@@ -17,16 +24,17 @@
 #  MA 02110-1301, USA.
 #
 
-import sys
-sys.path.append("..")
-
-import re
 import os
+import re
+import sys
 import time
 import traceback
 import threading
 import subprocess
+
 import requests
+
+#sys.path.append("..")
 
 from .thread_boilerplates import EventBoilerplate as ProjectEvent
 from .thread_boilerplates import EventBoilerplate as ConversionEvent
@@ -39,14 +47,14 @@ from .thread_boilerplates import LogEventBoilerplate as ComparisonLogEvent
 import wx.html2
 import wx.richtext
 from wx.adv import NotificationMessage
-#import multiprocessing
-#from multiprocessing.queues import Queue
+
 
 # Based on https://wiki.wxpython.org/Non-Blocking%20Gui
 
 myEVT_STATUS = wx.NewEventType()
 EVT_STATUS = wx.PyEventBinder(myEVT_STATUS, 1)
 kill_status_thread = False
+
 
 class StatusEvent(wx.PyCommandEvent):
 	"""Event to signal that a new status is ready to be displayed"""
@@ -62,6 +70,7 @@ class StatusEvent(wx.PyCommandEvent):
 
 		"""
 		return self._value
+
 
 class StatusThread(threading.Thread):
 	# Includes code from https://gist.github.com/samarthbhargav/5a515a399f7113137331
@@ -101,6 +110,7 @@ myEVT_CONVERSION_LOG = wx.NewEventType()
 EVT_CONVERSION = wx.PyEventBinder(myEVT_CONVERSION, 1)
 EVT_CONVERSION_LOG = wx.PyEventBinder(myEVT_CONVERSION_LOG, 1)
 conversion_thread_running = False
+
 
 class ConversionThread(threading.Thread):
 	def __init__(self, parent, file_list):
@@ -161,6 +171,7 @@ class ConversionThread(threading.Thread):
 myEVT_DATA_VIEWER = wx.NewEventType()
 EVT_DATA_VIEWER = wx.PyEventBinder(myEVT_DATA_VIEWER, 1)
 
+
 class Flask_Thread(threading.Thread):
 	def __init__(self, parent, url):
 		"""
@@ -187,6 +198,7 @@ myEVT_COMPARISON_LOG = wx.NewEventType()
 EVT_COMPARISON = wx.PyEventBinder(myEVT_COMPARISON, 1)
 EVT_COMPARISON_LOG = wx.PyEventBinder(myEVT_COMPARISON_LOG, 1)
 comparison_thread_running = False
+
 
 class ComparisonThread(threading.Thread):
 	def __init__(self, parent, left_sample, right_sample, Config, a_value):
@@ -273,6 +285,7 @@ class ComparisonThread(threading.Thread):
 			comparison_thread_running = False
 	# a runtime error was being raised when the main window closed
 	
+	#TODO: Make this a static method
 	def comparison_wrapper(self, left_sample, right_sample, Config, a_value):
 		from GSMatch_Comparison import GSMCompare
 		
@@ -304,11 +317,12 @@ EVT_PROJECT = wx.PyEventBinder(myEVT_PROJECT, 1)
 EVT_PROJECT_LOG = wx.PyEventBinder(myEVT_PROJECT_LOG, 1)
 project_thread_running = False
 
+
 class ProjectThread(threading.Thread):
 	def __init__(self, parent, file_list, pretty_name):
 		"""
-		@param parent: The gui object that should recieve the value
-		@param value: value to 'calculate' to
+		:param parent: The gui object that should recieve the value
+		:param value: value to 'calculate' to
 		"""
 		threading.Thread.__init__(self)
 		self._parent = parent
@@ -385,10 +399,11 @@ myEVT_QUEUE = wx.NewEventType()
 EVT_QUEUE = wx.PyEventBinder(myEVT_QUEUE, 1)
 queue_thread_running = False
 
+
 class QueueThread(threading.Thread):
 	def __init__(self, parent):
 		"""
-		@param parent: The gui object
+		:param parent: The gui object
 		"""
 		threading.Thread.__init__(self)
 		self.parent = parent
@@ -479,6 +494,7 @@ class QueueThread(threading.Thread):
 # a runtime error was being raised when the main window closed
 
 #################################
+
 
 class StdoutLog(object):
 	def __init__(self, filename):

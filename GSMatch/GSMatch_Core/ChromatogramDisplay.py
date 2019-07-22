@@ -1,36 +1,37 @@
-"""
-Class to Display Ion Chromatograms and TIC
-"""
-# Adapted from PyMS in 2019 by Dominic Davis-Foster
+#  !/usr/bin/env python
+#   -*- coding: utf-8 -*-
+#
+#  ChromatogramDisplay.py
+"""Class to Display Ion Chromatograms and TIC"""
+#
+#  This file is part of GunShotMatch
+#
+#  Copyright (c) 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#
+#  Adapted from PyMS
+#  Copyright (C) 2005-2012 Vladimir Likic
+#
+#  GunShotMatch is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  GunShotMatch is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#
 
-#############################################################################
-#                                                                           #
-#    PyMS software for processing of metabolomic mass-spectrometry data     #
-#    Copyright (C) 2005-2012 Vladimir Likic                                 #
-#                                                                           #
-#    This program is free software; you can redistribute it and/or modify   #
-#    it under the terms of the GNU General Public License version 2 as      #
-#    published by the Free Software Foundation.                             #
-#                                                                           #
-#    This program is distributed in the hope that it will be useful,        #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of         #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
-#    GNU General Public License for more details.                           #
-#                                                                           #
-#    You should have received a copy of the GNU General Public License      #
-#    along with this program; if not, write to the Free Software            #
-#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.              #
-#                                                                           #
-#############################################################################
 
-import matplotlib.pyplot as plt
-import numpy
-import sys
-sys.path.append('/x/PyMS/')
-
-from pyms.GCMS.Class import IonChromatogram 
+from pyms.GCMS.Class import IonChromatogram
 from pyms.Utils.Error import error
 from pyms.Display.Class import Display as StockDisplay
+
 
 class Display(StockDisplay):
 	"""
@@ -62,7 +63,6 @@ class Display(StockDisplay):
 		#Plotting Variables
 		self.__fig = figure
 		self.__ax = axes
-
 
 	def plot_ics(self, ics, labels = None):
 		
@@ -173,3 +173,8 @@ class Display(StockDisplay):
 			
 		self.__tic_ic_plots.append(self.__ax.plot(time_list, height_list, 'o',\
 			label = label))
+
+
+if __name__ == "__main__":
+	import sys
+	sys.exit(1)
