@@ -118,10 +118,12 @@ class border_config(wx.Dialog):
 		# end wxGlade
 	
 	def update_borders(self, event):  # wxGlade: border_config.<event_handler>
-		self.chromatogram_figure.subplots_adjust(self.left_border_value.GetValue(),
-												 self.bottom_border_value.GetValue(),
-												 self.right_border_value.GetValue(),
-												 self.top_border_value.GetValue())
+		self.chromatogram_figure.subplots_adjust(
+			self.left_border_value.GetValue(),
+			self.bottom_border_value.GetValue(),
+			self.right_border_value.GetValue(),
+			self.top_border_value.GetValue()
+		)
 		self.chromatogram_figure.canvas.draw_idle()
 	
 	def apply_tight_layout(self, event):  # wxGlade: border_config.<event_handler>

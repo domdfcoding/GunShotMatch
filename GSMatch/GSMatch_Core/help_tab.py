@@ -25,14 +25,17 @@
 #
 #
 
+# stdlib
 import webbrowser
 
+# 3rd party
 import wx
 import wx.html2
 
 from domdf_wxpython_tools.icons import get_toolbar_icon
 
-from .constants import help_home_url, github_url, readme_path
+# this package
+from GSMatch.GSMatch_Core.constants import help_home_url, github_url, readme_path
 
 
 # begin wxGlade: dependencies
@@ -127,8 +130,6 @@ class help_tab(wx.Panel):
 		help_parent_sizer.Fit(self)
 		self.Layout()
 		# end wxGlade
-
-	
 
 	def on_help_back(self, event):  # wxGlade: help_tab.<event_handler>
 		self.help_browser.GoBack()

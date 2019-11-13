@@ -917,7 +917,7 @@ class Compound(object):
 				style = "i"
 			# handle Other formats
 			
-			if style == None:
+			if style is None:
 				print(markup)
 				continue
 			

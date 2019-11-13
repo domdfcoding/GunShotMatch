@@ -24,9 +24,11 @@
 #  MA 02110-1301, USA.
 #
 
+# stdlib
 import os
 import traceback
 
+# 3rd party
 import wx
 
 import pandas
@@ -34,9 +36,6 @@ import pandas
 from domdf_wxpython_tools.icons import get_toolbar_icon
 from domdf_wxpython_tools.utils import toggle, collapse_label, coming_soon
 from domdf_wxpython_tools.dialogs import file_dialog, file_dialog_multiple
-
-from utils.charts import box_whisker, peak_area, mean_peak_area, radar_chart, PrincipalComponentAnalysis, bw_default_colours, bw_default_styles, default_colours, default_filetypes
-
 from domdf_wxpython_tools.style_picker import style_picker, colour_picker
 
 from matplotlib.figure import Figure
@@ -44,6 +43,20 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
 from mathematical.data_frames import df_count
+
+# this package
+from GSMatch.GSMatch_Core.charts import (
+	box_whisker,
+	peak_area,
+	mean_peak_area,
+	radar_chart,
+	PrincipalComponentAnalysis,
+	bw_default_colours,
+	bw_default_styles,
+	default_colours,
+	default_filetypes
+)
+
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -53,15 +66,17 @@ from mathematical.data_frames import df_count
 
 
 class ChartViewer(wx.Frame):
-	def __init__(self, parent, chart_type, initial_samples=[], *args, **kwds):
-		import pandas
+	def __init__(self, parent, chart_type, initial_samples=None, *args, **kwds):
+		if initial_samples is None:
+			initial_samples = []
+		
 		self.chart_type = chart_type.lower()
-		#print(type(args))
+		# print(type(args))
 		args = (parent,) + args
 		self.parent = parent
-		#self.chart_data = chart_data
-		#self.projects = projects
-		#self.sample_lists = sample_lists
+		# self.chart_data = chart_data
+		# self.projects = projects
+		# self.sample_lists = sample_lists
 		# begin wxGlade: ChartViewer.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 		wx.Frame.__init__(self, *args, **kwds)
@@ -249,7 +264,6 @@ class ChartViewer(wx.Frame):
 		self.log_header.SetLabel(collapse_label("Logarithmic", False))
 		self.samples_header.SetLabel(collapse_label("Samples", False))
 
-		
 		# Setup Keyboard Shortcuts
 		ctrl_p_id = wx.NewId()
 		ctrl_g_id = wx.NewId()
@@ -291,22 +305,17 @@ class ChartViewer(wx.Frame):
 		self.index_files = {}
 		self.chart_data = pandas.DataFrame()
 		
-		#self.sample_list_viewer.Append(self.projects)
+		# self.sample_list_viewer.Append(self.projects)
 		if initial_samples:
 			for sample in initial_samples:
 				self.add_sample(sample)
 
 			self.compound_order()
 
-		
 		# self.do_update_chart()
 		self.prepare_chart()
 		self.recalculate_data()
 		self.replot_chart()
-		
-		
-
-		
 		
 	def __set_properties(self):
 		# begin wxGlade: ChartViewer.__set_properties
@@ -619,50 +628,52 @@ class ChartViewer(wx.Frame):
 		self.x_ax_max_label = x_ax_max_label
 		self.x_ax_min_label = x_ax_min_label
 		
-		enable_options = {width_label: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.width_value: ["mean_peak_area", "peak_area", "box_whisker"],
-						  percentage_label: ["mean_peak_area", "peak_area"],
-						  self.percentage_checkbox: ["mean_peak_area", "peak_area"],
-						  err_bar_label: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.error_bar_choice: ["mean_peak_area", "peak_area", "box_whisker"],
-						  self.y_ax_max_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
-						  self.y_ax_max_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
-						  self.y_ax_min_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
-						  self.y_ax_min_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
-						  self.x_ax_max_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
-						  self.x_ax_max_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
-						  self.x_ax_min_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
-						  self.x_ax_min_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
-						  use_log_label: ["peak_area", "radar"],
-						  self.use_log_checkbox: ["peak_area", "radar"],
-						  show_outliers_label: ["box_whisker"],
-						  self.show_outliers_checkbox: ["box_whisker"],
-						  show_raw_data_label: ["box_whisker"],
-						  self.show_raw_data_checkbox: ["box_whisker"],
-						  self.outlier_mode_label: ["box_whisker"],
-						  self.outlier_mode_choice: ["box_whisker"],
-						  styles_label: ["box_whisker"],
-						  self.styles_button: ["box_whisker"],
-						  groups_label: ["box_whisker"],
-						  self.groups_checkbox: ["box_whisker"],
-						 }
+		enable_options = {
+			width_label: ["mean_peak_area", "peak_area", "box_whisker"],
+			self.width_value: ["mean_peak_area", "peak_area", "box_whisker"],
+			percentage_label: ["mean_peak_area", "peak_area"],
+			self.percentage_checkbox: ["mean_peak_area", "peak_area"],
+			err_bar_label: ["mean_peak_area", "peak_area", "box_whisker"],
+			self.error_bar_choice: ["mean_peak_area", "peak_area", "box_whisker"],
+			self.y_ax_max_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+			self.y_ax_max_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+			self.y_ax_min_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+			self.y_ax_min_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+			self.x_ax_max_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+			self.x_ax_max_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+			self.x_ax_min_label: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+			self.x_ax_min_value: ["mean_peak_area", "peak_area", "box_whisker", "pca"],
+			use_log_label: ["peak_area", "radar"],
+			self.use_log_checkbox: ["peak_area", "radar"],
+			show_outliers_label: ["box_whisker"],
+			self.show_outliers_checkbox: ["box_whisker"],
+			show_raw_data_label: ["box_whisker"],
+			self.show_raw_data_checkbox: ["box_whisker"],
+			self.outlier_mode_label: ["box_whisker"],
+			self.outlier_mode_choice: ["box_whisker"],
+			styles_label: ["box_whisker"],
+			self.styles_button: ["box_whisker"],
+			groups_label: ["box_whisker"],
+			self.groups_checkbox: ["box_whisker"],
+		}
 		
-		hide_options = {self.ylim_header: ["radar"],
-						self.ylim_panel: ["radar"],
-						ylim_line: ["radar"],
-						self.xlim_header: ["radar"],
-						self.xlim_panel: ["radar"],
-						xlim_line: ["radar"],
-						self.data_header: ["radar", "pca"],
-						self.data_panel: ["radar", "pca"],
-						data_line: ["radar", "pca"],
-						self.samples_header: ["peak_area"],
-						self.samples_panel: ["peak_area"],
-						samples_line: ["peak_area"],
-						self.log_header: ["mean_peak_area", "box_whisker", "pca"],
-						self.log_panel: ["mean_peak_area", "box_whisker", "pca"],
-						log_line: ["mean_peak_area", "box_whisker", "pca"],
-						}
+		hide_options = {
+			self.ylim_header: ["radar"],
+			self.ylim_panel: ["radar"],
+			ylim_line: ["radar"],
+			self.xlim_header: ["radar"],
+			self.xlim_panel: ["radar"],
+			xlim_line: ["radar"],
+			self.data_header: ["radar", "pca", "peak_area"],
+			self.data_panel: ["radar", "pca", "peak_area"],
+			data_line: ["radar", "pca", "peak_area"],
+			self.samples_header: ["peak_area"],
+			self.samples_panel: ["peak_area"],
+			samples_line: ["peak_area"],
+			self.log_header: ["mean_peak_area", "box_whisker", "pca"],
+			self.log_panel: ["mean_peak_area", "box_whisker", "pca"],
+			log_line: ["mean_peak_area", "box_whisker", "pca"],
+		}
 		
 		# TODO: keep disabled while no samples selected
 		for item, charts in enable_options.items():
@@ -780,11 +791,16 @@ class ChartViewer(wx.Frame):
 		if self.legend_checkbox.GetValue():
 			
 			# Add legend to Chart
-			self.legend = self.chart.create_legend((self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()), leg_cols=self.leg_cols_value.GetValue())
+			if self.chart_type in ["box_whisker", "pca"]:
+				self.legend = self.chart.create_legend(
+					(self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()),
+					leg_cols=self.leg_cols_value.GetValue()
+				)
+			
+			else:
+				self.legend = self.chart.create_legend((self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()))
 
 		self.chart_figure.canvas.draw_idle()
-		
-
 		
 		"""if self.legend_checkbox.GetValue():
 
@@ -861,10 +877,12 @@ class ChartViewer(wx.Frame):
 			self.replot_chart()"""
 	
 	def update_borders(self, *args):  # wxGlade: ChartViewer.<event_handler>
-		self.chart_figure.subplots_adjust(self.left_border_value.GetValue(),
-										  self.bottom_border_value.GetValue(),
-										  self.right_border_value.GetValue(),
-										  self.top_border_value.GetValue())
+		self.chart_figure.subplots_adjust(
+			self.left_border_value.GetValue(),
+			self.bottom_border_value.GetValue(),
+			self.right_border_value.GetValue(),
+			self.top_border_value.GetValue()
+		)
 		self.chart_figure.canvas.draw_idle()
 	
 	def apply_tight_layout(self, *args):  # wxGlade: ChartViewer.<event_handler>
@@ -886,7 +904,10 @@ class ChartViewer(wx.Frame):
 		outlier_mode = self.outlier_mode_choice.GetString(self.outlier_mode_choice.GetSelection()).lower()
 		
 		if self.chart_type == "box_whisker":
-			self.chart.setup_data(self.chart_data, [(name, self.sample_lists[name]) for name in self.projects], outlier_mode)
+			self.chart.setup_data(
+				self.chart_data,
+				[(name, self.sample_lists[name]) for name in self.projects],
+				outlier_mode)
 		elif self.chart_type == "pca":
 			pca_data = {"target": []}
 			targets = []
@@ -912,9 +933,13 @@ class ChartViewer(wx.Frame):
 		elif self.chart_type in ["mean_peak_area", "radar"]:
 			self.chart.setup_data(self.chart_data, self.projects)
 		elif self.chart_type == "peak_area":
-			self.chart.setup_data(self.chart_data, self.projects[0], self.sample_lists[self.projects[0]], self.use_log)
+			self.chart.setup_data(
+				self.chart_data,
+				self.projects[0],
+				self.sample_lists[self.projects[0]],
+				self.use_log)
 		
-		#print(outlier_mode)
+		# print(outlier_mode)
 		self.replot_chart()
 	
 	def replot_chart(self, *args):  # wxGlade: ChartViewer.<event_handler>
@@ -929,7 +954,7 @@ class ChartViewer(wx.Frame):
 		if self.projects == []:
 			return
 		
-		#print(self.chart_type)
+		# print(self.chart_type)
 		
 		show_outliers = self.show_outliers_checkbox.GetValue()
 		show_raw_data = self.show_raw_data_checkbox.GetValue()
@@ -949,7 +974,7 @@ class ChartViewer(wx.Frame):
 			self.chart.setup_datapoints(self.colours)
 			self.chart.create_chart()
 		elif self.chart_type == "mean_peak_area":
-			self.chart.create_chart(barWidth=column_width, percentage=percentage, err_bar=err_bar, colours=self.colours)
+			self.chart.create_chart(bar_width=column_width, percentage=percentage, err_bar=err_bar, colours=self.colours)
 		elif self.chart_type == "peak_area":
 			self.chart.create_chart(column_width, percentage=percentage, colours=self.colours)
 		elif self.chart_type == "radar":
@@ -986,7 +1011,7 @@ class ChartViewer(wx.Frame):
 	def update_ylim(self, event):  # wxGlade: ChartViewer.<event_handler>
 		self.chart.ax.set_ylim(self.y_ax_min_value.GetValue(), self.y_ax_max_value.GetValue())
 		self.chart_figure.canvas.draw_idle()
-		#TODO: Respect setting when switching to percentage, log etc.
+		# TODO: Respect setting when switching to percentage, log etc.
 	
 	def update_xlim(self, event):  # wxGlade: ChartViewer.<event_handler>
 		self.chart.ax.set_xlim(self.x_ax_min_value.GetValue(), self.x_ax_max_value.GetValue())
@@ -1047,7 +1072,7 @@ class ChartViewer(wx.Frame):
 		
 		pathname = file_dialog(self, "*", "Save Chart", "", defaultDir=self.parent.Config.RESULTS_DIRECTORY)
 		
-		if pathname == None:
+		if pathname is None:
 			return
 		
 		try:
@@ -1062,10 +1087,12 @@ class ChartViewer(wx.Frame):
 				for filetype in filetypes:
 					# Do any of the files already exist?
 					if os.path.isfile(f"{pathname}.{filetype}"):
-						alert = wx.MessageDialog(self,
-												 f'A file named "{pathname}.{filetype}" already exists.\nDo you want to replace it?',
-												 "Overwrite File?",
-												 wx.ICON_QUESTION | wx.OK | wx.CANCEL)
+						alert = wx.MessageDialog(
+							self,
+							f'A file named "{pathname}.{filetype}" already exists.\nDo you want to replace it?',
+							"Overwrite File?",
+							wx.ICON_QUESTION | wx.OK | wx.CANCEL
+						)
 						alert.SetOKLabel("Replace")
 						if alert.ShowModal() != wx.ID_OK:
 							return
@@ -1073,7 +1100,7 @@ class ChartViewer(wx.Frame):
 					self.chart.fig.savefig(f"{pathname}.{filetype}")
 					
 					# NotificationMessage("GunShotMatch", message='Chart Saved Successfully',
-					#					parent=None, flags=wx.ICON_INFORMATION).Show()
+					# 					parent=None, flags=wx.ICON_INFORMATION).Show()
 				
 			with open(f"{pathname}.settings", 'w') as file:
 				self.save_settings(file)
@@ -1178,11 +1205,13 @@ class ChartViewer(wx.Frame):
 				self.x_ax_min_value.SetValue(float(row[1]))
 	
 	def do_load(self, event):  # wxGlade: ChartViewer.<event_handler>
-		pathname = file_dialog(self, "settings", "Load Settings", "Settings",
-							   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-							   defaultDir=self.parent.Config.RESULTS_DIRECTORY
-							  )
-		if pathname == None:
+		pathname = file_dialog(
+			self, "settings", "Load Settings", "Settings",
+			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+			defaultDir=self.parent.Config.RESULTS_DIRECTORY
+		)
+		
+		if pathname is None:
 			return
 		
 		with open(pathname, 'r') as file:
@@ -1214,7 +1243,6 @@ class ChartViewer(wx.Frame):
 			self.styles = dlg.style_list
 			dlg.Destroy()
 			self.replot_chart()
-		
 		
 	"""Collapse Functions"""
 	
@@ -1335,8 +1363,8 @@ class ChartViewer(wx.Frame):
 	def on_sample_add(self, event):  # wxGlade: ChartViewer.<event_handler>
 		selected_projects = file_dialog_multiple(self, "info", "Choose a Project to Open", "info files",
 									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE,
-									   defaultDir=self.parent.Config.RESULTS_DIRECTORY)
-		if selected_projects == None:
+									   defaultDir=self.parent._parent.Config.RESULTS_DIRECTORY)
+		if selected_projects is None:
 			return
 		
 		for project in selected_projects:
@@ -1346,12 +1374,11 @@ class ChartViewer(wx.Frame):
 		self.recalculate_data()
 		self.replot_chart()
 		
-	
 	def add_sample(self, selected_project):
 		
 		pretty_name = os.path.splitext(os.path.split(selected_project)[-1])[0]
 		
-		if pretty_name in self.projects or pretty_name == None:
+		if pretty_name in self.projects or pretty_name is None:
 			# Sample is already on the chart or None; ignore
 			return
 	
@@ -1362,11 +1389,16 @@ class ChartViewer(wx.Frame):
 	def load_data(self, selected_project, pretty_name):
 
 		# Load Chart Data
-		self.chart_data = pandas.concat(
-			[self.chart_data,
-			 pandas.read_csv(f"Results/CSV/{pretty_name}_CHART_DATA.csv", sep=";",
-							 index_col=0)
-			 ], axis=1, sort=False)
+		self.chart_data = pandas.concat([
+			self.chart_data,
+			pandas.read_csv(
+				f"Results/CSV/{pretty_name}_CHART_DATA.csv",
+				sep=";",
+				index_col=0
+				)],
+			axis=1,
+			sort=False
+		)
 		
 		with open(selected_project, "r") as f:
 			self.sample_lists[pretty_name] = [x.rstrip("\r\n") for x in f.readlines()]
@@ -1387,9 +1419,6 @@ class ChartViewer(wx.Frame):
 		self.chart_data = self.chart_data.sort_values(['Count', 'Compound Names'])
 		self.chart_data.fillna(0, inplace=True)
 		
-
-
-		
 	def on_sample_remove(self, event):  # wxGlade: ChartViewer.<event_handler>
 		selection = self.sample_list_viewer.GetSelection()
 		if selection == -1:
@@ -1402,7 +1431,7 @@ class ChartViewer(wx.Frame):
 		self.sample_list_viewer.Delete(self.sample_list_viewer.GetSelection())
 		
 		self.projects = [self.sample_list_viewer.GetString(item) for item in
-							 range(self.sample_list_viewer.GetCount())]
+							range(self.sample_list_viewer.GetCount())]
 		
 		# Reload Chart Data
 		self.chart_data = pandas.DataFrame()
@@ -1415,11 +1444,13 @@ class ChartViewer(wx.Frame):
 		
 		event.Skip()
 		
-
 	def do_save_settings(self, event):  # wxGlade: ChartViewer.<event_handler>
-		pathname = file_dialog(self, "settings", "Save Settings", "Settings",
-							   defaultDir=self.parent.Config.RESULTS_DIRECTORY)
-		if pathname == None:
+		pathname = file_dialog(
+			self, "settings", "Save Settings", "Settings",
+			defaultDir=self.parent.Config.RESULTS_DIRECTORY
+		)
+		
+		if pathname is None:
 			return
 		
 		try:

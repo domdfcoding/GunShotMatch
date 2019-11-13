@@ -24,19 +24,21 @@
 #  MA 02110-1301, USA.
 #
 
+# stdlib
+import configparser as ConfigParser
+
+# 3rd party
 import wx
 import wx.html2
 
 from domdf_wxpython_tools.dialogs import file_dialog
 from domdf_wxpython_tools.icons import get_toolbar_icon
-
-from . import ChartViewer
-
 from domdf_wxpython_tools.LogCtrl import Log
-from .__init__ import pretty_name_from_info
-from .threads import ComparisonThread, EVT_COMPARISON, EVT_COMPARISON_LOG
 
-import configparser as ConfigParser
+# this package
+from GSMatch.GSMatch_Core import ChartViewer
+from GSMatch.GSMatch_Core import pretty_name_from_info
+from GSMatch.GSMatch_Core.threads import ComparisonThread, EVT_COMPARISON_LOG
 
 
 # begin wxGlade: dependencies
@@ -96,7 +98,6 @@ class compare_tab(wx.Panel):
 		self.Bind(EVT_COMPARISON_LOG, self.OnComparisonLog)
 		#self.comparison_log_text_control.Bind(wx.EVT_KEY_DOWN, self.onKeyPress)
 
-		
 		self.comparison_right_project = None
 		self.comparison_right_project_name = None
 		self.comparison_left_project = None
@@ -227,16 +228,23 @@ class compare_tab(wx.Panel):
 
 	
 	def on_left_comparison_browse(self, event):  # wxGlade: compare_tab.<event_handler>
-		selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
-									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-									   # defaultDir=self.Config.get("main", "resultspath"))
-									   defaultDir=self._parent.Config.RESULTS_DIRECTORY)
-		if selected_project == None:
+		selected_project = file_dialog(
+			self, "info", "Choose a Project to Open", "info files",
+			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+			# defaultDir=self.Config.get("main", "resultspath"))
+			defaultDir=self._parent.Config.RESULTS_DIRECTORY
+		)
+		
+		if selected_project is None:
 			return
 		
 		if pretty_name_from_info(selected_project) == self.comparison_right_project_name:
-			wx.MessageBox("You cannot compare a project to itself!\nPlease choose a different project.", "Error",
-						  wx.ICON_ERROR | wx.OK)
+			wx.MessageBox(
+				"""You cannot compare a project to itself!
+Please choose a different project.""",
+				"Error",
+				wx.ICON_ERROR | wx.OK
+			)
 			return
 		
 		self.comparison_left_project = selected_project
@@ -248,16 +256,23 @@ class compare_tab(wx.Panel):
 		self.comparison_check_enable()
 	
 	def on_right_comparison_browse(self, event):  # wxGlade: compare_tab.<event_handler>
-		selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
-									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-									   # defaultDir=self.Config.get("main", "resultspath"))
-									   defaultDir=self._parent.Config.RESULTS_DIRECTORY)
-		if selected_project == None:
+		selected_project = file_dialog(
+			self, "info", "Choose a Project to Open", "info files",
+			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+			# defaultDir=self.Config.get("main", "resultspath"))
+			defaultDir=self._parent.Config.RESULTS_DIRECTORY
+		)
+		
+		if selected_project is None:
 			return
 		
 		if pretty_name_from_info(selected_project) == self.comparison_left_project_name:
-			wx.MessageBox("You cannot compare a project to itself!\nPlease choose a different project.", "Error",
-						  wx.ICON_ERROR | wx.OK)
+			wx.MessageBox(
+				"""You cannot compare a project to itself!
+Please choose a different project.""",
+				"Error",
+				wx.ICON_ERROR | wx.OK
+			)
 			return
 		
 		self.comparison_right_project = selected_project
@@ -281,11 +296,13 @@ class compare_tab(wx.Panel):
 		
 		a_value = self.significance_level_value.GetValue()
 		
-		self.comparison = ComparisonThread(self,
-										   self.comparison_left_project,
-										   self.comparison_right_project,
-										   self._parent.Config,
-										   a_value)
+		self.comparison = ComparisonThread(
+			self,
+			self.comparison_left_project,
+			self.comparison_right_project,
+			self._parent.Config,
+			a_value
+		)
 		self.comparison.start()
 	
 	def do_comparison_apply(self, event):  # wxGlade: Launcher.<event_handler>
@@ -295,7 +312,6 @@ class compare_tab(wx.Panel):
 		self._parent.Config.comparison_gap_penalty = self.comparison_alignment_Gw_value.GetValue()
 		self._parent.Config.comparison_min_peaks = int(self.comparison_alignment_min_peaks_value.GetValue())
 		
-		print("Event handler 'do_comparison_apply' not implemented!")
 		event.Skip()
 	
 	def do_comparison_default(self, event):  # wxGlade: Launcher.<event_handler>
@@ -305,7 +321,6 @@ class compare_tab(wx.Panel):
 		self.comparison_alignment_Gw_value.SetValue(str(self._parent.Config.comparison_gap_penalty))
 		self.comparison_alignment_min_peaks_value.SetValue(str(self._parent.Config.comparison_min_peaks))
 		
-		print("Event handler 'do_comparison_default' not implemented!")
 		event.Skip()
 	
 	def do_comparison_reset(self, *args):  # wxGlade: Launcher.<event_handler>
@@ -319,37 +334,49 @@ class compare_tab(wx.Panel):
 		self.comparison_alignment_min_peaks_value.SetValue(Config.get("comparison", "min_peaks"))
 	
 	def comparison_show_box_whisker(self, event):
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="box_whisker",
-												   initial_samples=[self.comparison_left_project,
-																	self.comparison_right_project],
-												   )
+		self.ChartViewer = ChartViewer.ChartViewer(
+			self,
+			chart_type="box_whisker",
+			initial_samples=[
+				self.comparison_left_project,
+				self.comparison_right_project],
+		)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def comparison_show_pca(self, event):
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="pca",
-												   initial_samples=[self.comparison_left_project,
-																	self.comparison_right_project],
-												   )
+		self.ChartViewer = ChartViewer.ChartViewer(
+			self,
+			chart_type="pca",
+			initial_samples=[
+				self.comparison_left_project,
+				self.comparison_right_project],
+			)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def comparison_show_radar(self, event):  # wxGlade: Launcher.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="radar",
-												   initial_samples=[self.comparison_left_project,
-																	self.comparison_right_project],
-												   )
+		self.ChartViewer = ChartViewer.ChartViewer(
+			self,
+			chart_type="radar",
+			initial_samples=[
+				self.comparison_left_project,
+				self.comparison_right_project],
+		)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def comparison_show_mean_peak_area(self, event):  # wxGlade: Launcher.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="mean_peak_area",
-												   initial_samples=[self.comparison_left_project,
-																	self.comparison_right_project],
-												   )
+		self.ChartViewer = ChartViewer.ChartViewer(
+			self,
+			chart_type="mean_peak_area",
+			initial_samples=[
+				self.comparison_left_project,
+				self.comparison_right_project],
+		)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()

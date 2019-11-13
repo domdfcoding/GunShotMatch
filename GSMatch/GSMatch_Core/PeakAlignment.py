@@ -32,7 +32,7 @@ import pandas
 
 def get_peak_alignment(A, minutes=True):
 	"""
-	:summary: Get dictionary of aligned retention times
+	Get dictionary of aligned retention times
 
 	:param A: Alignment object to extract data from
 	:param minutes: An optional indicator whether to return retention times
@@ -81,7 +81,7 @@ def get_peak_alignment(A, minutes=True):
 
 def get_ms_alignment(A):
 	"""
-	:summary: Get dictionary of mass spectra for the aligned peaks
+	Get dictionary of mass spectra for the aligned peaks
 
 	:param A: Alignment object to extract data from
 

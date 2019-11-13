@@ -42,16 +42,16 @@ sys.path.append("..")
 nist_path = "../MSSEARCH"
 
 import pyms
-from pyms.GCMS.IO.JCAMP.Function import JCAMP_reader
-from pyms.GCMS.Function import build_intensity_matrix_i
+from pyms.GCMS.IO.JCAMP import JCAMP_reader
+from pyms.IntensityMatrix import build_intensity_matrix_i
 from pyms.Noise.SavitzkyGolay import savitzky_golay
-from pyms.Baseline.TopHat import tophat
-from pyms.Deconvolution.BillerBiemann.Function import BillerBiemann, num_ions_threshold
+from pyms.TopHat import tophat
+from pyms.BillerBiemann import BillerBiemann, num_ions_threshold
 from pyms.Noise.Analysis import window_analyzer
 from pyms.Peak.Function import peak_sum_area
-from pyms.Peak.IO import store_peaks
-from pyms.Experiment.Class import Experiment
-from pyms.Experiment.IO import store_expr
+from pyms.Peak.List.IO import store_peaks
+from pyms.Experiment import Experiment
+from pyms.Experiment import store_expr
 
 def import_processing(jcamp_file, spectrum_csv_file, report_csv_file, combined_csv_file, bb_points = 9, bb_scans = 2, noise_thresh = 2, target_range = (0,120), tophat_struct="1.5m", nistpath = "../MSSEARCH", base_peak_filter = ['73'], ExprDir = "."):		
 	global nist_path

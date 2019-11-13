@@ -24,12 +24,14 @@
 #  MA 02110-1301, USA.
 #
 
+# stdlib
 import os
 import csv
 import json
 import types
 import traceback
 
+# 3rd party
 import numpy
 
 import wx
@@ -45,16 +47,16 @@ from domdf_wxpython_tools.icons import get_toolbar_icon
 from domdf_wxpython_tools.utils import coming_soon
 from domdf_wxpython_tools.dialogs import file_dialog
 
-from . import border_config, ChartViewer, threads
-
-from .My_Axes import My_Axes
-
-from .ChromatogramDisplay import Display
-
 from mathematical.utils import rounders
 
-from pyms.Peak.IO import load_peaks
+from pyms.Display import Display
+from pyms.Peak.List.IO import load_peaks
 from pyms.GCMS.Class import IonChromatogram
+
+# this package
+from GSMatch.GSMatch_Core import border_config, ChartViewer, threads
+from GSMatch.GSMatch_Core.My_Axes import My_Axes
+#from GSMatch.GSMatch_Core.ChromatogramDisplay import Display
 
 
 # begin wxGlade: dependencies
@@ -64,6 +66,7 @@ from pyms.GCMS.Class import IonChromatogram
 # end wxGlade
 
 matplotlib.projections.register_projection(My_Axes)
+
 
 class browse_tab(wx.Panel):
 	def __init__(self, parent, *args, **kwds):
@@ -141,7 +144,6 @@ class browse_tab(wx.Panel):
 		self.dv_samples_spec_figure = Figure()
 		self.dv_samples_spec_axes = self.dv_samples_spec_figure.add_subplot(111, projection="My_Axes")  # 1x1 grid, first subplot
 		
-		
 		self.dv_samples_spec_canvas = FigureCanvas(self.dv_samples_panel, wx.ID_ANY, self.dv_samples_spec_figure)
 		self.dv_samples_toolbar = wx.Panel(self.data_viewer_samples, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 		self.dv_samples_toolbar.SetMaxSize((-1,40))
@@ -205,10 +207,11 @@ class browse_tab(wx.Panel):
 		self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_browse_tab_change, self.browse_project_notebook)
 		# end wxGlade
 		
-		self.Bind(threads.EVT_DATA_VIEWER, self.Data_Viewer_Ready)
+		threads.myEVT_DATA_VIEWER2.set_receiver(self)
+		threads.myEVT_DATA_VIEWER2.Bind(self.Data_Viewer_Ready)
+		#self.Bind(threads.EVT_DATA_VIEWER, self.Data_Viewer_Ready)
 	
 		self.display_chromatogram()
-	
 	
 		self.pdf_button.SetValue(True)
 		self.png_button.SetValue(True)
@@ -218,7 +221,6 @@ class browse_tab(wx.Panel):
 		
 		self.current_project = None
 		self.current_project_name = None
-
 
 	def __set_properties(self):
 		# begin wxGlade: browse_tab.__set_properties
@@ -511,8 +513,6 @@ class browse_tab(wx.Panel):
 		
 		event.Skip()
 	
-
-	
 	"""Browse Project > Charts Tab Buttons"""
 	
 	def show_radar_chart(self, event):  # wxGlade: browse_tab.<event_handler>
@@ -593,7 +593,6 @@ class browse_tab(wx.Panel):
 		print("Event handler 'dv_do_save_head2tail' not implemented!")
 		event.Skip()
 
-	
 	def browse_get_tab(self):
 		return self.browse_project_notebook.GetSelection()
 	
@@ -721,18 +720,22 @@ class browse_tab(wx.Panel):
 			wx.MessageBox("Please choose one or more filetypes", "Error", wx.ICON_ERROR | wx.OK)
 			return
 		
-		pathname = os.path.splitext(file_dialog(self, "*", "Save Chart", "",
-												# defaultDir=self.Config.get("main", "resultspath")))[0]
-												defaultDir=self._parent.Config.RESULTS_DIRECTORY))[0]
+		pathname = os.path.splitext(file_dialog(
+			self, "*", "Save Chart", "",
+			# defaultDir=self.Config.get("main", "resultspath")))[0]
+			defaultDir=self._parent.Config.RESULTS_DIRECTORY))[0]
 		
 		# Do any of the files already exist?
 		try:
 			for filetype in filetypes:
 				if os.path.isfile(f"{pathname}.{filetype}"):
-					alert = wx.MessageDialog(self,
-											 f'A file named "{pathname}.{filetype}" already exists.\nDo you want to replace it?',
-											 "Overwrite File?",
-											 wx.ICON_QUESTION | wx.OK | wx.CANCEL)
+					alert = wx.MessageDialog(
+						self,
+						f'A file named "{pathname}.{filetype}" already exists.\nDo you want to replace it?',
+						"Overwrite File?",
+						wx.ICON_QUESTION | wx.OK | wx.CANCEL
+					)
+					
 					alert.SetOKLabel("Replace")
 					if alert.ShowModal() != wx.YES:
 						return
@@ -745,7 +748,15 @@ class browse_tab(wx.Panel):
 	
 	# Display Function
 	def display_chromatogram(self, sample_name=None):
-		"""Chromatogram Diaplay"""
+		"""
+			Chromatogram Diaplay
+
+		:param sample_name:
+		:type sample_name:
+
+		:return:
+		:rtype:
+		"""
 		
 		print(sample_name)
 		
@@ -765,13 +776,16 @@ class browse_tab(wx.Panel):
 			event.key = 'x'
 			NavigationToolbar.press_zoom(self, event)
 		
-		self.chromatogram_figure.canvas.toolbar.press_zoom = types.MethodType(press_zoom,
-																			  self.chromatogram_figure.canvas.toolbar)
+		self.chromatogram_figure.canvas.toolbar.press_zoom = types.MethodType(
+			press_zoom,
+			self.chromatogram_figure.canvas.toolbar
+		)
 		
 		time_list = []
 		intensity_list = []
 		
 		display = Display(self.chromatogram_figure, self.chromatogram_axes)
+		print(display.ax)
 		
 		if sample_name:
 			self.chromatogram_axes.clear()
@@ -790,7 +804,7 @@ class browse_tab(wx.Panel):
 			
 			peak_list = load_peaks(os.path.join(ExprDir, "{}_peaks.dat".format(sample_name)))
 			
-			display.plot_tic(tic, sample_name, minutes=True)
+			display.plot_tic(tic, label=sample_name, minutes=True)
 			# display.plot_peaks(filtered_peak_list, "Peaks")
 			# display.do_plotting('TIC and PyMS Detected Peaks')
 			# display.do_plotting(f'{sample_name} TIC')
@@ -802,8 +816,14 @@ class browse_tab(wx.Panel):
 			self.chromatogram_axes.set_xlim(left=0, right=max(x))
 		
 		else:
-			self.chromatogram_axes.text(0.5, 0.5, "Please select a Project", horizontalalignment="center",
-										fontsize='32', transform=self.chromatogram_axes.transAxes)
+			self.chromatogram_axes.text(
+				0.5,
+				0.5,
+				"Please select a Project",
+				horizontalalignment="center",
+				fontsize='32',
+				transform=self.chromatogram_axes.transAxes
+			)
 		
 		self.chromatogram_axes.set_ylim(bottom=0)
 		self.chromatogram_axes.set_xlabel("Retention Time")
@@ -815,20 +835,20 @@ class browse_tab(wx.Panel):
 		
 		# def on_xlims_change(ax):
 		def update_ylim(*args):
-			#	print(*args)
-			#	print(str(*args).startswith("MPL MouseEvent")) # Pan
+				# print(*args)
+				# print(str(*args).startswith("MPL MouseEvent")) # Pan
 			if (str(*args).startswith("My_AxesSubplot") and not self.Zoom_Btn.IsEnabled()) or (
 					str(*args).startswith("MPL MouseEvent") and not self.Pan_Btn.IsEnabled()):  # Zoom, Pan
-				#	print("updated xlims: ", axes.get_xlim())
+					# print("updated xlims: ", axes.get_xlim())
 				min_x_index = (numpy.abs(x - self.chromatogram_axes.get_xlim()[0])).argmin()
 				max_x_index = (numpy.abs(x - self.chromatogram_axes.get_xlim()[1])).argmin()
-				#	print(min_x_index, max_x_index)
+					# print(min_x_index, max_x_index)
 				
 				y_vals_for_range = numpy.take(y, [idx for idx in range(min_x_index, max_x_index)])
-				#	print(max(y_vals_for_range))
+					# print(max(y_vals_for_range))
 				self.chromatogram_axes.set_ylim(bottom=0, top=max(y_vals_for_range) * 1.1)
 				self.chromatogram_figure.canvas.draw()
-				#	print("x-val: {}, y-val:{}
+					# print("x-val: {}, y-val:{}
 				self.size_change(0)
 		
 		self.chromatogram_axes.callbacks.connect('xlim_changed', update_ylim)
@@ -867,15 +887,19 @@ class browse_tab(wx.Panel):
 		
 		CAS = self.dv_selection_data["hits"][0]["CAS"]
 		
-		data_path = os.path.join(self._parent.Config.CSV_DIRECTORY,
-								 "{}_peak_data.json".format(self.current_project_name)).replace("&", "%26")
+		data_path = os.path.join(
+				self._parent.Config.CSV_DIRECTORY,
+				"{}_peak_data.json".format(
+					self.current_project_name)
+			).replace("&", "%26")
+		
 		samples = "/".join(self.browser_sample_list)
 		self.dv_url = f"http://localhost:5000/{samples}?filename={data_path}&index={dv_selection}"
 		
 		if os.path.isfile(os.path.join("cache", CAS)):
 			self.Data_Viewer_Ready()
 		else:
-			data_getter = threads.Flask_Thread(self, self.dv_url)
+			data_getter = threads.FlaskThread(self, self.dv_url)
 			data_getter.start()
 			# self.dv_html.LoadURL("http://webkit.org/blog-files/bounce.html")
 			# self.dv_html.LoadURL(f"http://localhost:5000/loader?url={self.dv_url}")
@@ -929,8 +953,11 @@ class browse_tab(wx.Panel):
 		# Show chromatogram for first sample
 		self.display_chromatogram(self.browser_sample_list[self.browser_sample_idx])
 		
-		with open(os.path.join(self._parent.Config.CSV_DIRECTORY,
-							   "{}_peak_data.json".format(self.current_project_name)), "r") as jsonfile:
+		with open(os.path.join(
+					self._parent.Config.CSV_DIRECTORY,
+					"{}_peak_data.json".format(
+						self.current_project_name)
+				), "r") as jsonfile:
 			for peak in jsonfile.readlines():
 				self.browser_peak_data.append(json.loads(peak))
 		

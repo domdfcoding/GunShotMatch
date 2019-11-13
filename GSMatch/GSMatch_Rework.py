@@ -37,7 +37,7 @@ The files must be in the subdirectory CSV and called
 __author__ = "Dominic Davis-Foster"
 __copyright__ = "Copyright 2017-2019 Dominic Davis-Foster"
 
-__license__ = "GPL"
+__license__ = "GPLv3"
 __version__ = "1.0.0 Rework"
 __email__ = "dominic@davis-foster.co.uk"
 
@@ -74,9 +74,9 @@ from collections import Counter
 from multiprocessing import Pool
 from itertools import chain, permutations
 
-from .GSMatch_Core import GSMConfig
-from .GSMatch_Core.PeakAlignment import get_ms_alignment, get_peak_alignment
-from utils.charts import PlotSpectrum, box_whisker_wrapper, radar_chart_wrapper, mean_peak_area_wrapper, peak_area_wrapper
+from GSMatch.GSMatch_Core.Config import GSMConfig
+from GSMatch.GSMatch_Core.PeakAlignment import get_ms_alignment, get_peak_alignment
+from GSMatch.GSMatch_Core.charts import PlotSpectrum, box_whisker_wrapper, radar_chart_wrapper, mean_peak_area_wrapper, peak_area_wrapper
 from utils.pynist import *
 from utils import DirectoryHash, pynist, SpectrumSimilarity
 from mathematical.utils import rounders
@@ -86,20 +86,20 @@ from domdf_python_tools import as_text
 from domdf_spreadsheet_tools import format_header, format_sheet, make_column_property_list, append_to_xlsx
 
 from pyms.GCMS.Class import IonChromatogram
-from pyms.GCMS.IO.JCAMP.Function import JCAMP_reader
-from pyms.GCMS.Function import build_intensity_matrix, build_intensity_matrix_i
+from pyms.GCMS.IO.JCAMP import JCAMP_reader
+from pyms.IntensityMatrix import build_intensity_matrix, build_intensity_matrix_i
 from pyms.Noise.Window import window_smooth, window_smooth_im
 from pyms.Noise.Analysis import window_analyzer
 from pyms.Noise.SavitzkyGolay import savitzky_golay, savitzky_golay_im
 from pyms.Utils.IO import dump_object
-from pyms.Baseline.TopHat import tophat, tophat_im
-from pyms.Deconvolution.BillerBiemann.Function import BillerBiemann, rel_threshold, num_ions_threshold
-from pyms.Peak.IO import store_peaks, load_peaks
+from pyms.TopHat import tophat, tophat_im
+from pyms.BillerBiemann import BillerBiemann, rel_threshold, num_ions_threshold
+from pyms.Peak.List.IO import store_peaks, load_peaks
 from pyms.Peak.Function import peak_sum_area, peak_pt_bounds
-from pyms.Peak.List.DPA.Class import PairwiseAlignment
-from pyms.Peak.List.DPA.Function import align_with_tree, exprl2alignment
-from pyms.Experiment.IO import store_expr, load_expr
-from pyms.Experiment.Class import Experiment
+from pyms.DPA.PairwiseAlignment import PairwiseAlignment, align_with_tree
+from pyms.DPA.Alignment import exprl2alignment
+from pyms.Experiment import store_expr, load_expr
+from pyms.Experiment import Experiment
 
 from openpyxl import Workbook, worksheet, load_workbook		# https://openpyxl.readthedocs.io/en/default/
 from openpyxl.styles import Font, Alignment
@@ -804,7 +804,7 @@ def GenerateSpectrumImage(sample, rt_data, ms_data, path):
 		ms = ms_data.iloc[row_idx].loc[sample]
 
 		PlotSpectrum(numpy.column_stack((ms.mass_list, ms.mass_spec)),
-					label = "{}: {}".format(sample, rounders(rt,"0.000")),
+					label = "{} {}".format(sample, rounders(rt,"0.000")),
 					xlim = (45,500),
 					mode = path)
 	
@@ -1057,7 +1057,7 @@ if __name__ == '__main__':
 			print("       Check the results for more information\n")
 		
 		else:
-			#from utils.charts import peak_area_wrapper, radar_chart_wrapper
+			#from GSMatch.GSMatch_Core.charts import peak_area_wrapper, radar_chart_wrapper
 			
 			radar_chart_wrapper(chart_data, [lot_name], use_log = 10, legend=False,
 						mode=os.path.join(CHARTS_DIRECTORY, lot_name, "radar_log10_peak_area"))

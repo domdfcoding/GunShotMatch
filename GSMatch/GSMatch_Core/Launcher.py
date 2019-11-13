@@ -47,20 +47,16 @@ import wx.richtext
 
 from . import ChartViewer, AboutDialog, paths_dialog
 
-from .Config import GSMConfig
+from GSMatch.GSMatch_Core.Config import GSMConfig
 
 from .launcher_tab import launcher_tab
 from .help_tab import help_tab
 from .compare_tab import compare_tab
 from .browse_tab import browse_tab
 
-from .threads import StatusThread, EVT_STATUS, EVT_CONVERSION, EVT_CONVERSION_LOG, EVT_PROJECT, \
-	EVT_PROJECT_LOG, EVT_COMPARISON, EVT_COMPARISON_LOG, ConversionThread, ProjectThread, QueueThread, \
-	ComparisonThread, conversion_thread_running, project_thread_running, comparison_thread_running, \
-	Flask_Thread, EVT_DATA_VIEWER
-
-from data_viewer_server import app as flaskapp
-
+from .threads import StatusThread, myEVT_STATUS2, myEVT_CONVERSION2, EVT_CONVERSION_LOG, myEVT_PROJECT, \
+	EVT_PROJECT_LOG, myEVT_COMPARISON2, ConversionThread, ProjectThread, QueueThread, \
+	conversion_thread_running, project_thread_running
 
 
 # begin wxGlade: dependencies
@@ -69,6 +65,12 @@ import wx.grid
 
 # begin wxGlade: extracode
 # end wxGlade
+
+def run_flask():
+	from data_viewer_server import app
+	app.run()
+	
+
 
 class Launcher(wx.Frame):
 	def __init__(self, *args, **kwds):
@@ -240,16 +242,25 @@ class Launcher(wx.Frame):
 		# self.Bind(EVT_QUEUE, self.OnQueueDone)
 		self.status_buffer = []
 		self.worker = StatusThread(self, 1)
-		# self.worker.daemon = True
 		self.worker.start()
-		self.Bind(EVT_STATUS, self.OnStatus)
-		self.Bind(EVT_CONVERSION, self.OnImportDone)
-		self.Bind(EVT_CONVERSION_LOG, self.OnImportLog)
-		self.Bind(EVT_PROJECT, self.OnProjectDone)
-		self.Bind(EVT_PROJECT_LOG, self.OnProjectLog)
-		self.Bind(EVT_COMPARISON, self.OnComparisonDone)
 		
-		self.flask = Process(target=flaskapp.run)
+		myEVT_STATUS2.set_receiver(self)
+		myEVT_STATUS2.Bind(self.OnStatus)
+		
+		myEVT_CONVERSION2.set_receiver(self)
+		myEVT_CONVERSION2.Bind(self.OnImportDone)
+		
+		self.Bind(EVT_CONVERSION_LOG, self.OnImportLog)
+		
+		myEVT_PROJECT.set_receiver(self)
+		myEVT_PROJECT.Bind(self.OnProjectDone)
+		
+		self.Bind(EVT_PROJECT_LOG, self.OnProjectLog)
+		
+		myEVT_COMPARISON2.set_receiver(self)
+		myEVT_COMPARISON2.Bind(self.OnComparisonDone)
+		
+		self.flask = Process(target=run_flask)
 		self.flask.start()
 
 	def __set_properties(self):
@@ -594,12 +605,12 @@ class Launcher(wx.Frame):
 	
 	def notebook_1_handler(self, event):  # wxGlade: Launcher.<event_handler>
 		# New Project Disable
-		if event.GetSelection() == 3 and self.browse_tab.current_project_name == None:
+		if event.GetSelection() == 3 and self.browse_tab.current_project_name is None:
 			selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
 										   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
 										   #defaultDir=self.Config.get("main", "resultspath"))
 										   defaultDir=self.Config.RESULTS_DIRECTORY)
-			if selected_project == None:
+			if selected_project is None:
 				event.Veto()
 			else:
 				self.browse_tab.setup_project_browser(selected_project)
@@ -620,7 +631,7 @@ class Launcher(wx.Frame):
 										   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
 										   #defaultDir=self.Config.get("main", "resultspath"))
 										   defaultDir=self.Config.RESULTS_DIRECTORY)
-			if selected_project == None:
+			if selected_project is None:
 				self.notebook_1.SetSelection(old_selection)
 			else:
 				self.browse_tab.setup_project_browser(selected_project)
@@ -861,16 +872,16 @@ class Launcher(wx.Frame):
 	
 	def do_apply(self, *args):  # wxGlade: Launcher.<event_handler>
 		# Save the settings
-		self.Config.bb_points = self.bb_points_value.GetValue()
-		self.Config.bb_scans = self.bb_scans_value.GetValue()
-		self.Config.noise_thresh = self.noise_thresh_value.GetValue()
-		self.Config.target_range = (self.target_range_min_value.GetValue(), self.target_range_max_value.GetValue())
-		self.Config.base_peak_filter = self.base_peak_filter_value.GetValue().split(",")
+		self.Config.bb_points = int(self.bb_points_value.GetValue())
+		self.Config.bb_scans = int(self.bb_scans_value.GetValue())
+		self.Config.noise_thresh = int(self.noise_thresh_value.GetValue())
+		self.Config.target_range = (float(self.target_range_min_value.GetValue()), float(self.target_range_max_value.GetValue()))
+		self.Config.base_peak_filter = [int(x) for x in self.base_peak_filter_value.GetValue().split(",")]
 		self.Config.tophat = self.tophat_struct_value.GetValue()
 		self.Config.tophat_unit = ["m", "s", "ms"][self.tophat_struct_units.GetSelection()]
-		self.Config.rt_modulation = self.alignment_Dw_value.GetValue()
-		self.Config.gap_penalty = self.alignment_Gw_value.GetValue()
-		self.Config.min_peaks = self.alignment_min_peaks_value.GetValue()
+		self.Config.rt_modulation = float(self.alignment_Dw_value.GetValue())
+		self.Config.gap_penalty = float(self.alignment_Gw_value.GetValue())
+		self.Config.min_peaks = int(self.alignment_min_peaks_value.GetValue())
 		self.Config.mass_range = str2tuple(self.mass_range_value.GetValue())
 		
 		#self.Config.set("import", "bb_points", bb_points)
@@ -893,12 +904,12 @@ class Launcher(wx.Frame):
 		#self.Config.set("analysis", "do_spectra", str(self.project_spectra.GetValue()))
 		#self.Config.set("analysis", "do_charts", str(self.project_charts.GetValue()))
 		
-		self.Config.do_quantitative = str(self.project_quantitative.GetValue())
-		self.Config.do_qualitative = str(self.project_qualitative.GetValue())
-		self.Config.do_merge =  str(self.project_merge.GetValue())
-		self.Config.do_counter = str(self.project_counter.GetValue())
-		self.Config.do_spectra = str(self.project_spectra.GetValue())
-		self.Config.do_charts = str(self.project_charts.GetValue())
+		self.Config.do_quantitative = self.project_quantitative.GetValue()
+		self.Config.do_qualitative = (self.project_qualitative.GetValue())
+		self.Config.do_merge =  (self.project_merge.GetValue())
+		self.Config.do_counter = (self.project_counter.GetValue())
+		self.Config.do_spectra = (self.project_spectra.GetValue())
+		self.Config.do_charts = (self.project_charts.GetValue())
 	
 	def do_reset(self, *args):  # wxGlade: Launcher.<event_handler>
 		# Read import settings
@@ -1119,7 +1130,7 @@ class Launcher(wx.Frame):
 		
 		# return
 		
-		self.project = ProjectThread(self, sample_list, pretty_name)
+		self.project = ProjectThread(self, sample_list, pretty_name, self.Config)
 		self.project.start()
 	
 	def on_pretty_name_clear(self, *args):  # wxGlade: Launcher.<event_handler>

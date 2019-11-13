@@ -24,7 +24,7 @@
 __author__ = "Dominic Davis-Foster"
 __copyright__ = "Copyright 2017-2019 Dominic Davis-Foster"
 
-__license__ = "GPL"
+__license__ = "GPLv3"
 __version__ = "0.2.0"
 __email__ = "dominic@davis-foster.co.uk"
 
@@ -39,10 +39,10 @@ import traceback
 import threading
 import subprocess
 
-from GSMatch_Core.thread_boilerplates import EventBoilerplate as ProjectEvent
-from GSMatch_Core.thread_boilerplates import EventBoilerplate as ConversionEvent
-from GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ProjectLogEvent
-from GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ConversionLogEvent
+from GSMatch.GSMatch_Core.thread_boilerplates import EventBoilerplate as ProjectEvent
+from GSMatch.GSMatch_Core.thread_boilerplates import EventBoilerplate as ConversionEvent
+from GSMatch.GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ProjectLogEvent
+from GSMatch.GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ConversionLogEvent
 
 import wx.html2
 import wx.richtext
@@ -50,7 +50,7 @@ from wx.adv import NotificationMessage
 
 import matplotlib
 
-from GSMatch_Core import Launcher
+from GSMatch.GSMatch_Core import Launcher
 
 
 # begin wxGlade: dependencies
@@ -58,13 +58,6 @@ from GSMatch_Core import Launcher
 
 # begin wxGlade: extracode
 # end wxGlade
-
-
-print("###")
-print(wx.Colour(wx.SYS_COLOUR_BACKGROUND))
-print(wx.Colour(240,240,240))
-print("###")
-
 
 
 class GSM_App(wx.App):
@@ -77,6 +70,11 @@ class GSM_App(wx.App):
 # end of class GSM_App
 
 if __name__ == "__main__":
+	print("###")
+	print(wx.Colour(wx.SYS_COLOUR_BACKGROUND))
+	print(wx.Colour(240, 240, 240))
+	print("###")
+	
 	if sys.platform == "win32":
 		import ctypes
 		myappid = "GunShotMatchGUI"
@@ -85,6 +83,6 @@ if __name__ == "__main__":
 	GunShotMatch = GSM_App(False)
 	GunShotMatch.MainLoop()
 
-print("Goodbye :)")
-
-sys.exit(0)
+	print("Goodbye :)")
+	
+	sys.exit(0)

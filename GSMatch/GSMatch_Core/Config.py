@@ -26,114 +26,418 @@
 
 import os
 
-from domdf_python_tools.paths import maybe_make, relpath
+import platform
+import sys
+from domdf_python_tools import str2tuple
+
+import configparser as ConfigParser
+
+from domdf_python_tools.paths import maybe_make, relpath2
+
+
+# TODO: pathlib support
 
 
 class GSMConfig(object):
 	def __init__(self, configfile):
-		self.load_config(configfile)
-	
-	def load_config(self, configfile):
 		self.configfile = configfile
 		print("\nUsing configuration file {}".format(self.configfile))
-		self.get_config(self.configfile)
-	
-	def get_config(self, configfile=None, parent=None):
-		# Returns configuration to parent if set, if not to self
-		
-		if parent is None:
-			parent = self
-		if configfile is None:
-			configfile = self.configfile
-		
-		import platform
-		import sys
-		from domdf_python_tools import str2tuple
-		
-		import configparser as ConfigParser
 		
 		"""Configuration -----"""
 		Config = ConfigParser.ConfigParser()
 		Config.read(configfile)
 		
 		if platform.system() == "Linux":
-			parent.nist_path = Config.get("main", "LinuxNistPath")
-			if len(parent.nist_path) == 0:
+			self._nist_path = Config.get("main", "LinuxNistPath")
+			if len(self._nist_path) == 0:
 				print("Error: NIST MS Search path not found in configuration file.")
 				sys.exit(1)
 		else:
-			parent.nist_path = Config.get("main", "NistPath")
-			if len(parent.nist_path) == 0:
+			self._nist_path = Config.get("main", "NistPath")
+			if len(self._nist_path) == 0:
 				print("Error: NIST MS Search path not found in configuration file.")
 				sys.exit(1)
 		
 		# PerkinElmer or Waters .RAW Files
-		parent.RAW_DIRECTORY = os.path.abspath(Config.get("main", "rawpath"))
+		self._RAW_DIRECTORY = os.path.abspath(Config.get("main", "rawpath"))
 		
 		# CSV Reports
-		parent.CSV_DIRECTORY = os.path.abspath(Config.get("main", "CSVPath"))  # Gets created if not present
-		maybe_make(parent.CSV_DIRECTORY)
+		self._CSV_DIRECTORY = os.path.abspath(Config.get("main", "CSVPath"))  # Gets created if not present
+		maybe_make(self._CSV_DIRECTORY)
 		
 		# Mass Spectra Images
-		parent.SPECTRA_DIRECTORY = os.path.abspath(Config.get("main", "SpectraPath"))  # Gets created if not present
-		maybe_make(parent.SPECTRA_DIRECTORY)
+		self._SPECTRA_DIRECTORY = os.path.abspath(Config.get("main", "SpectraPath"))  # Gets created if not present
+		maybe_make(self._SPECTRA_DIRECTORY)
 		
 		# Charts
-		parent.CHARTS_DIRECTORY = os.path.abspath(Config.get("main", "ChartsPath"))  # Gets created if not present
-		maybe_make(parent.CHARTS_DIRECTORY)
+		self._CHARTS_DIRECTORY = os.path.abspath(Config.get("main", "ChartsPath"))  # Gets created if not present
+		maybe_make(self._CHARTS_DIRECTORY)
 		
 		# MSP Files for NIST MS Search
-		parent.MSP_DIRECTORY = os.path.abspath(Config.get("main", "MSPPath"))  # Gets created if not present
-		maybe_make(parent.MSP_DIRECTORY)
+		self._MSP_DIRECTORY = os.path.abspath(Config.get("main", "MSPPath"))  # Gets created if not present
+		maybe_make(self._MSP_DIRECTORY)
 		
 		# Final Results
-		parent.RESULTS_DIRECTORY = os.path.abspath(Config.get("main", "ResultsPath"))  # Gets created if not present
-		maybe_make(parent.RESULTS_DIRECTORY)
+		self._RESULTS_DIRECTORY = os.path.abspath(Config.get("main", "ResultsPath"))  # Gets created if not present
+		maybe_make(self._RESULTS_DIRECTORY)
 		
 		# Experiments
-		parent.EXPERIMENTS_DIRECTORY = os.path.abspath(Config.get("main", "exprdir"))  # Gets created if not present
-		maybe_make(parent.EXPERIMENTS_DIRECTORY)
+		self._EXPERIMENTS_DIRECTORY = os.path.abspath(Config.get("main", "exprdir"))  # Gets created if not present
+		maybe_make(self._EXPERIMENTS_DIRECTORY)
 		
 		"""Sample Lists"""
-		parent.prefixList = Config.get("samples", "samples").replace(";", ",").replace("\t", ",").replace(" ",
-																										  "").split(",")
+		self.prefixList = Config.get("samples", "samples")
 		
 		"""Import Settings"""
-		parent.bb_points = int(Config.get("import", "bb_points"))
-		parent.bb_scans = int(Config.get("import", "bb_scans"))
-		parent.noise_thresh = int(Config.get("import", "noise_thresh"))
+		self.bb_points = Config.get("import", "bb_points")
+		self.bb_scans = Config.get("import", "bb_scans")
+		self.noise_thresh = Config.get("import", "noise_thresh")
 		min_range, max_range = tuple(Config.get("import", "target_range").split(","))
-		parent.target_range = (float(min_range), float(max_range))
-		parent.base_peak_filter = [int(x) for x in Config.get("import", "exclude_ions").split(",")]
-		parent.tophat = Config.get("import", "tophat")
-		parent.tophat_unit = Config.get("import", "tophat_unit")
-		parent.tophat_struct = "{}{}".format(parent.tophat, parent.tophat_unit)
-		parent.mass_range = str2tuple(Config.get("import", "mass_range"))
+		self._target_range = (float(min_range), float(max_range))
+		self._base_peak_filter = [int(x) for x in Config.get("import", "exclude_ions").split(",")]
+		self._tophat = Config.get("import", "tophat")
+		self._tophat_unit = Config.get("import", "tophat_unit")
+		#self._tophat_struct = "{}{}".format(self.tophat, self.tophat_unit)
+		self._mass_range = str2tuple(Config.get("import", "mass_range"))
 		
 		"""Peak Alignment Settings"""
-		parent.rt_modulation = float(Config.get("alignment", "rt_modulation"))
-		parent.gap_penalty = float(Config.get("alignment", "gap_penalty"))
-		parent.min_peaks = int(Config.get("alignment", "min_peaks"))
+		self.rt_modulation = Config.get("alignment", "rt_modulation")
+		self.gap_penalty = Config.get("alignment", "gap_penalty")
+		self.min_peaks = Config.get("alignment", "min_peaks")
 		
 		"""Analysis Settings"""
-		parent.do_quantitative = Config.getboolean("analysis", "do_quantitative")
-		parent.do_qualitative = Config.getboolean("analysis", "do_qualitative")
-		parent.do_merge = Config.getboolean("analysis", "do_merge")
-		parent.do_counter = Config.getboolean("analysis", "do_counter")
-		parent.do_spectra = Config.getboolean("analysis", "do_spectra")
-		parent.do_charts = Config.getboolean("analysis", "do_charts")
+		self._do_quantitative = Config.getboolean("analysis", "do_quantitative")
+		self._do_qualitative = Config.getboolean("analysis", "do_qualitative")
+		self._do_merge = Config.getboolean("analysis", "do_merge")
+		self._do_counter = Config.getboolean("analysis", "do_counter")
+		self._do_spectra = Config.getboolean("analysis", "do_spectra")
+		self._do_charts = Config.getboolean("analysis", "do_charts")
 		
 		"""Comparison"""
-		parent.comparison_a = float(Config.get("comparison", "a"))
-		parent.comparison_rt_modulation = float(Config.get("comparison", "rt_modulation"))
-		parent.comparison_gap_penalty = float(Config.get("comparison", "gap_penalty"))
-		parent.comparison_min_peaks = int(Config.get("comparison", "min_peaks"))
+		self.comparison_a = Config.get("comparison", "a")
+		self.comparison_rt_modulation = Config.get("comparison", "rt_modulation")
+		self.comparison_gap_penalty = Config.get("comparison", "gap_penalty")
+		self.comparison_min_peaks = Config.get("comparison", "min_peaks")
 	
-	def save_config(self, configfile=None, parent=None):
-		# Gets configuration from parent if set, if not from self
+	@property
+	def nist_path(self):
+		return self._nist_path
+	
+	@nist_path.setter
+	def nist_path(self, value):
+		self._nist_path = value
+	
+	@property
+	def RAW_DIRECTORY(self):
+		return self._RAW_DIRECTORY
+	
+	@RAW_DIRECTORY.setter
+	def RAW_DIRECTORY(self, value):
+		self._RAW_DIRECTORY = str(relpath2(value))
+	
+	@property
+	def CSV_DIRECTORY(self):
+		return self._CSV_DIRECTORY
+	
+	@CSV_DIRECTORY.setter
+	def CSV_DIRECTORY(self, value):
+		self._CSV_DIRECTORY = str(relpath2(value))
+	
+	@property
+	def SPECTRA_DIRECTORY(self):
+		return self._SPECTRA_DIRECTORY
+	
+	@SPECTRA_DIRECTORY.setter
+	def SPECTRA_DIRECTORY(self, value):
+		self._SPECTRA_DIRECTORY = str(relpath2(value))
+	
+	@property
+	def CHARTS_DIRECTORY(self):
+		return self._CHARTS_DIRECTORY
+	
+	@CHARTS_DIRECTORY.setter
+	def CHARTS_DIRECTORY(self, value):
+		self._CHARTS_DIRECTORY = str(relpath2(value))
+	
+	@property
+	def MSP_DIRECTORY(self):
+		return self._MSP_DIRECTORY
+	
+	@MSP_DIRECTORY.setter
+	def MSP_DIRECTORY(self, value):
+		self._MSP_DIRECTORY = str(relpath2(value))
+	
+	@property
+	def RESULTS_DIRECTORY(self):
+		return self._RESULTS_DIRECTORY
+	
+	@RESULTS_DIRECTORY.setter
+	def RESULTS_DIRECTORY(self, value):
+		self._RESULTS_DIRECTORY = str(relpath2(value))
+	
+	@property
+	def EXPERIMENTS_DIRECTORY(self):
+		return self._EXPERIMENTS_DIRECTORY
+	
+	@EXPERIMENTS_DIRECTORY.setter
+	def EXPERIMENTS_DIRECTORY(self, value):
+		self._EXPERIMENTS_DIRECTORY = str(relpath2(value))
+	
+	@property
+	def prefixList(self):
+		return self._prefixList
+	
+	@prefixList.setter
+	def prefixList(self, value):
+		if isinstance(value, str):
+			value = value.replace(";", ",").replace("\t", ",").replace(" ", "").split(",")
+			self._prefixList = value
+		elif isinstance(value, list):
+			self._prefixList = value
+		elif isinstance(value, tuple):
+			self._prefixList = list(value)
 		
-		if parent is None:
-			parent = self
+		else:
+			raise TypeError("'prefixList' must be a list, tuple or comma-seperated string")
+
+	@property
+	def bb_points(self):
+		return self._bb_points
+	
+	@bb_points.setter
+	def bb_points(self, value):
+		self._bb_points = int(value)
+	
+	@property
+	def bb_scans(self):
+		return self._bb_scans
+	
+	@bb_scans.setter
+	def bb_scans(self, value):
+		self._bb_scans = int(value)
+	
+	@property
+	def noise_thresh(self):
+		return self._noise_thresh
+	
+	@noise_thresh.setter
+	def noise_thresh(self, value):
+		self._noise_thresh = int(value)
+	
+	@property
+	def target_range(self):
+		return self._target_range
+	
+	@target_range.setter
+	def target_range(self, value):
+		if isinstance(value, str):
+			min_range, max_range, *_ = tuple(value.split(","))
+			self._target_range = (float(min_range), float(max_range))
+		elif isinstance(value, tuple):
+			self._target_range = value
+		elif isinstance(value, list):
+			self._target_range = tuple(value)
+		else:
+			raise TypeError("'target_range' must be a list, tuple or comma-seperated string")
+	
+	@property
+	def base_peak_filter(self):
+		return self._base_peak_filter
+	
+	@base_peak_filter.setter
+	def base_peak_filter(self, value):
+		if isinstance(value, str):
+			self._base_peak_filter = [int(x) for x in value.split(",")]
+		elif isinstance(value, list):
+			self._base_peak_filter = value
+		elif isinstance(value, tuple):
+			self._base_peak_filter = list(value)
+		else:
+			raise TypeError("'base_peak_filter' must be a list, tuple or comma-seperated string")
+	
+	@property
+	def tophat(self):
+		return self._tophat
+	
+	@tophat.setter
+	def tophat(self, value):
+		self._tophat = value
+	
+	@property
+	def tophat_unit(self):
+		return self._tophat_unit
+	
+	@tophat_unit.setter
+	def tophat_unit(self, value):
+		self._tophat_unit = value
+	
+	@property
+	def tophat_struct(self):
+		return "{}{}".format(self.tophat, self.tophat_unit)
+	
+	@tophat_struct.setter
+	def tophat_struct(self, value):
+		self._tophat_struct = value
+	
+	@property
+	def mass_range(self):
+		return self._mass_range
+	
+	@mass_range.setter
+	def mass_range(self, value):
+		if isinstance(value, str):
+			self._base_peak_filter = str2tuple(value)
+		elif isinstance(value, list):
+			self._base_peak_filter = tuple(value)
+		elif isinstance(value, tuple):
+			self._base_peak_filter = value
+		else:
+			raise TypeError("'mass_range' must be a list, tuple or comma-seperated string")
+	
+	@property
+	def rt_modulation(self):
+		return self._rt_modulation
+	
+	@rt_modulation.setter
+	def rt_modulation(self, value):
+		self._rt_modulation = float(value)
+	
+	@property
+	def gap_penalty(self):
+		return self._gap_penalty
+	
+	@gap_penalty.setter
+	def gap_penalty(self, value):
+		self._gap_penalty = float(value)
+	
+	@property
+	def min_peaks(self):
+		return self._min_peaks
+	
+	@min_peaks.setter
+	def min_peaks(self, value):
+		self._min_peaks = int(value)
+	
+	@property
+	def do_quantitative(self):
+		return self._do_quantitative
+	
+	@do_quantitative.setter
+	def do_quantitative(self, value):
+		if isinstance(value, str):
+			if value == "True":
+				self._do_quantitative = True
+			if value == "False":
+				self._do_quantitative = False
+		else:
+			self._do_quantitative = bool(value)
+	
+	@property
+	def do_qualitative(self):
+		return self._do_qualitative
+	
+	@do_qualitative.setter
+	def do_qualitative(self, value):
+		if isinstance(value, str):
+			if value == "True":
+				self._do_qualitative = True
+			if value == "False":
+				self._do_qualitative = False
+		else:
+			self._do_qualitative = bool(value)
+		
+	@property
+	def do_merge(self):
+		return self._do_merge
+	
+	@do_merge.setter
+	def do_merge(self, value):
+		if isinstance(value, str):
+			if value == "True":
+				self._do_merge = True
+			if value == "False":
+				self._do_merge = False
+		else:
+			self._do_merge = bool(value)
+	
+	@property
+	def do_counter(self):
+		return self._do_counter
+	
+	@do_counter.setter
+	def do_counter(self, value):
+		if isinstance(value, str):
+			if value == "True":
+				self._do_counter = True
+			if value == "False":
+				self._do_counter = False
+		else:
+			self._do_counter = bool(value)
+		
+	@property
+	def do_spectra(self):
+		return self._do_spectra
+	
+	@do_spectra.setter
+	def do_spectra(self, value):
+		if isinstance(value, str):
+			if value == "True":
+				self._do_spectra = True
+			if value == "False":
+				self._do_spectra = False
+		else:
+			self._do_spectra = bool(value)
+	
+	@property
+	def do_charts(self):
+		return self._do_charts
+	
+	@do_charts.setter
+	def do_charts(self, value):
+		if isinstance(value, str):
+			if value == "True":
+				self._do_charts = True
+			if value == "False":
+				self._do_charts = False
+		else:
+			self._do_charts = bool(value)
+	
+	@property
+	def comparison_a(self):
+		return self._comparison_a
+	
+	@comparison_a.setter
+	def comparison_a(self, value):
+		self._comparison_a = float(value)
+		
+	@property
+	def comparison_rt_modulation(self):
+		return self._comparison_rt_modulation
+	
+	@comparison_rt_modulation.setter
+	def comparison_rt_modulation(self, value):
+		self._comparison_rt_modulation = float(value)
+		
+	@property
+	def comparison_gap_penalty(self):
+		return self._comparison_gap_penalty
+	
+	@comparison_gap_penalty.setter
+	def comparison_gap_penalty(self, value):
+		self._comparison_gap_penalty = float(value)
+		
+	@property
+	def comparison_min_peaks(self):
+		return self._comparison_min_peaks
+	
+	@comparison_min_peaks.setter
+	def comparison_min_peaks(self, value):
+		self._comparison_min_peaks = int(value)
+	
+
+	def save_config(self, configfile=None,):
+		# Gets configuration from self if set, if not from self
+		
 		if configfile is None:
 			configfile = self.configfile
 		
@@ -146,45 +450,45 @@ class GSMConfig(object):
 		Config.read(configfile)
 		
 		if platform.system() == "Linux":
-			Config.set("main", "LinuxNistPath", parent.nist_path)
+			Config.set("main", "LinuxNistPath", self.nist_path)
 		else:
-			Config.set("main", "NistPath", parent.nist_path)
+			Config.set("main", "NistPath", self.nist_path.replace("\\", "/"))
 		
-		Config.set("main", "rawpath", relpath(parent.RAW_DIRECTORY))
-		Config.set("main", "CSVpath", relpath(parent.CSV_DIRECTORY))
-		Config.set("main", "SPECTRApath", relpath(parent.SPECTRA_DIRECTORY))
-		Config.set("main", "CHARTSpath", relpath(parent.CHARTS_DIRECTORY))
-		Config.set("main", "MSPpath", relpath(parent.MSP_DIRECTORY))
-		Config.set("main", "RESULTSpath", relpath(parent.RESULTS_DIRECTORY))
-		Config.set("main", "MSPpath", relpath(parent.MSP_DIRECTORY))
-		Config.set("main", "exprdir", relpath(parent.EXPERIMENTS_DIRECTORY))
+		Config.set("main", "rawpath", str(relpath2(self.RAW_DIRECTORY)).replace("\\", "/"))
+		Config.set("main", "CSVpath", str(relpath2(self.CSV_DIRECTORY)).replace("\\", "/"))
+		Config.set("main", "SPECTRApath", str(relpath2(self.SPECTRA_DIRECTORY)).replace("\\", "/"))
+		Config.set("main", "CHARTSpath", str(relpath2(self.CHARTS_DIRECTORY)).replace("\\", "/"))
+		Config.set("main", "MSPpath", str(relpath2(self.MSP_DIRECTORY)).replace("\\", "/"))
+		Config.set("main", "RESULTSpath", str(relpath2(self.RESULTS_DIRECTORY)).replace("\\", "/"))
+		Config.set("main", "MSPpath", str(relpath2(self.MSP_DIRECTORY)).replace("\\", "/"))
+		Config.set("main", "exprdir", str(relpath2(self.EXPERIMENTS_DIRECTORY)).replace("\\", "/"))
 		
-		Config.set("samples", "samples", ",".join(parent.prefixList))
+		Config.set("samples", "samples", ",".join(self.prefixList))
 		
-		Config.set("import", "bb_points", str(parent.bb_points))
-		Config.set("import", "bb_scans", str(parent.bb_scans))
-		Config.set("import", "noise_thresh", str(parent.noise_thresh))
-		Config.set("import", "target_range", "{},{}".format(*parent.target_range))
-		Config.set("import", "exclude_ions", list2str(parent.base_peak_filter))
-		Config.set("import", "tophat", str(parent.tophat))
-		Config.set("import", "tophat_unit", parent.tophat_unit)
-		Config.set("import", "mass_range", "{},{}".format(*parent.mass_range))
+		Config.set("import", "bb_points", str(self.bb_points))
+		Config.set("import", "bb_scans", str(self.bb_scans))
+		Config.set("import", "noise_thresh", str(self.noise_thresh))
+		Config.set("import", "target_range", "{},{}".format(*self.target_range))
+		Config.set("import", "exclude_ions", list2str(self.base_peak_filter))
+		Config.set("import", "tophat", str(self.tophat))
+		Config.set("import", "tophat_unit", self.tophat_unit)
+		Config.set("import", "mass_range", "{},{}".format(*self.mass_range))
 		
-		Config.set("alignment", "rt_modulation", str(parent.rt_modulation))
-		Config.set("alignment", "gap_penalty", str(parent.gap_penalty))
-		Config.set("alignment", "min_peaks", str(parent.min_peaks))
+		Config.set("alignment", "rt_modulation", str(self.rt_modulation))
+		Config.set("alignment", "gap_penalty", str(self.gap_penalty))
+		Config.set("alignment", "min_peaks", str(self.min_peaks))
 		
-		Config.set("analysis", "do_quantitative", str(parent.do_quantitative))
-		Config.set("analysis", "do_qualitative", str(parent.do_qualitative))
-		Config.set("analysis", "do_merge", str(parent.do_merge))
-		Config.set("analysis", "do_counter", str(parent.do_counter))
-		Config.set("analysis", "do_spectra", str(parent.do_spectra))
-		Config.set("analysis", "do_charts", str(parent.do_charts))
+		Config.set("analysis", "do_quantitative", str(self.do_quantitative))
+		Config.set("analysis", "do_qualitative", str(self.do_qualitative))
+		Config.set("analysis", "do_merge", str(self.do_merge))
+		Config.set("analysis", "do_counter", str(self.do_counter))
+		Config.set("analysis", "do_spectra", str(self.do_spectra))
+		Config.set("analysis", "do_charts", str(self.do_charts))
 		
-		Config.set("comparison", "a", str(parent.comparison_a))
-		Config.set("comparison", "rt_modulation", str(parent.comparison_rt_modulation))
-		Config.set("comparison", "gap_penalty", str(parent.comparison_gap_penalty))
-		Config.set("comparison", "min_peaks", str(parent.comparison_min_peaks))
+		Config.set("comparison", "a", str(self.comparison_a))
+		Config.set("comparison", "rt_modulation", str(self.comparison_rt_modulation))
+		Config.set("comparison", "gap_penalty", str(self.comparison_gap_penalty))
+		Config.set("comparison", "min_peaks", str(self.comparison_min_peaks))
 		
 		with open(configfile, "w") as f:
 			Config.write(f)

@@ -23,29 +23,53 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #
+#
+#
+# Copyright for other files in this module:
+#
+# utils.charts:
+#
+# mean_peak_area, mean_peak_area_multiple and peak_area adapted from
+#     https://python-graph-gallery.com/13-percent-stacked-barplot/
+#     Copyright (C) 2017 The python graph gallery
+#
+# radar_chart adapted from https://python-graph-gallery.com/391-radar-chart-with-several-individuals/
+#     Copyright (C) 2017 The python graph gallery
+#
+# PlotSpectrum adapted from SpectrumSimilarity.R
+#     Part of OrgMassSpecR
+#     Copyright Nathan Dodder <nathand@sccwrp.org>
+# -----
+#
+# utils.ChromatogramDisplay:
+#     Adapted from PyMS in 2019 by Dominic Davis-Foster
+#     Copyright (C) 2005-2012 Vladimir Likic
+#     Available under the GNU GPL Version 2
+# -----
 
 
-__all__ = ["AboutDialog",
-		   "border_config",
-		   "browse_tab",
-		   "ChartViewer",
-		   "ChromatogramDisplay",
-		   "compare_tab",
-		   "Comparison",
-		   "constants",
-		   "Config",
-		   "help_tab",
-		   "Launcher",
-		   "launcher_tab",
-		   "LogCtrl",
-		   "My_Axes",
-		   "paths_dialog",
-		   "thread_boilerplates",
-		   "threads",
-		   ]
+
+__all__ = [
+	"AboutDialog",
+	"border_config",
+	"browse_tab",
+	"ChartViewer",
+	"ChromatogramDisplay",
+	"compare_tab",
+	"Comparison",
+	"constants",
+	"Config",
+	"help_tab",
+	"Launcher",
+	"launcher_tab",
+	"My_Axes",
+	"paths_dialog",
+	"thread_boilerplates",
+	"threads",
+]
 
 
-from .Config import GSMConfig
+from GSMatch.GSMatch_Core.Config import GSMConfig
 
 from . import constants, My_Axes, PeakAlignment
 
@@ -73,7 +97,7 @@ def infer_samples(csvpath):
 				inferred_samples.append(filename[:-10])
 	
 	inferred_samples.sort()
-	return (inferred_samples)
+	return inferred_samples
 
 
 if __name__ == '__main__':

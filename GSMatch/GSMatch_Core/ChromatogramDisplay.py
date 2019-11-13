@@ -29,16 +29,13 @@
 
 
 from pyms.GCMS.Class import IonChromatogram
-from pyms.Utils.Error import error
-from pyms.Display.Class import Display as StockDisplay
+from pyms.Display import Display as StockDisplay
 
 
 class Display(StockDisplay):
 	"""
-	:summary: Class to display Ion Chromatograms and Total
-			  Ion Chromatograms from GCMS.Class.IonChromatogram
-		
-			  Uses matplotlib module pyplot to do plotting
+	Class to display Ion Chromatograms and Total Ion Chromatograms from GCMS.Class.IonChromatogram
+		Uses matplotlib module pyplot to do plotting
 
 	:author: Sean O'Callaghan
 	:author: Vladimir Likic
@@ -46,7 +43,7 @@ class Display(StockDisplay):
 	
 	def __init__(self, figure, axes):
 		"""
-		:summary: Initialises an instance of Display class
+		Initialises an instance of Display class
 		"""
 		
 		# Container to store plots
@@ -54,21 +51,20 @@ class Display(StockDisplay):
 		
 		# color dictionary for plotting of ics; blue reserved
 		# for TIC
-		self.__col_ic = {0:'r', 1:'g', 2:'k', 3:'y', 4:'m', 5:'c'}
+		self.__col_ic = {0: 'r', 1: 'g', 2: 'k', 3: 'y', 4: 'm', 5: 'c'}
 		self.__col_count = 0  # counter to keep track of colors
 		
 		# Peak list container
 		self.__peak_list = []
 		
-		#Plotting Variables
+		# Plotting Variables
 		self.__fig = figure
 		self.__ax = axes
-
-	def plot_ics(self, ics, labels = None):
+	
+	def plot_ics(self, ics, labels=None):
 		
 		"""
-		:summary: Adds an Ion Chromatogram or a
-		list of Ion Chromatograms to plot list
+		Adds an Ion Chromatogram or a list of Ion Chromatograms to plot list
 		
 		:param ics: List of Ion Chromatograms m/z channels
 			for plotting
@@ -76,34 +72,35 @@ class Display(StockDisplay):
 		
 		:param labels: Labels for plot legend
 		:type labels: list of StringType
-			"""
+		"""
 		
 		if not isinstance(ics, list):
 			if isinstance(ics, IonChromatogram):
 				ics = [ics]
 			else:
-				error("ics argument must be an IonChromatogram\
+				raise TypeError("'ics' argument must be an IonChromatogram\
 				or a list of Ion Chromatograms")
 		
-		if not isinstance(labels, list) and labels != None:
+		if not isinstance(labels, list) and labels is not None:
 			labels = [labels]
-		# TODO: take care of case where one element of ics is
-		# not an IonChromatogram
+		# TODO: take care of case where one element of ics is not an IonChromatogram
 		
-
 		intensity_list = []
 		time_list = ics[0].get_time_list()
 		
-		
 		for i in range(len(ics)):
 			intensity_list.append(ics[i].get_intensity_array())
-			
-
+		
 		# Case for labels not present
-		if labels == None:
+		if labels is None:
 			for i in range(len(ics)):
-				self.__tic_ic_plots.append(self.__ax.plot(time_list, \
-					intensity_list[i], self.__col_ic[self.__col_count]))
+				self.__tic_ic_plots.append(
+					self.__ax.plot(
+						time_list,
+						intensity_list[i],
+						self.__col_ic[self.__col_count]
+					)
+				)
 			if self.__col_count == 5:
 				self.__col_count = 0
 			else:
@@ -112,43 +109,55 @@ class Display(StockDisplay):
 		# Case for labels present
 		else:
 			for i in range(len(ics)):
-			
-				self.__tic_ic_plots.append(self.__ax.plot(time_list, \
-					intensity_list[i], self.__col_ic[self.__col_count]\
-						, label = labels[i]))
+				
+				self.__tic_ic_plots.append(
+					self.__ax.plot(
+						time_list,
+						intensity_list[i],
+						self.__col_ic[self.__col_count],
+						label=labels[i]
+					)
+				)
 				if self.__col_count == 5:
 					self.__col_count = 0
 				else:
 					self.__col_count += 1
-		
+	
 	def plot_tic(self, tic, label=None, minutes=False):
 		
 		"""
-		:summary: Adds Total Ion Chromatogram to plot list
+		Adds Total Ion Chromatogram to plot list
 		
 		:param tic: Total Ion Chromatogram
 		:type tic: pyms.GCMS.Class.IonChromatogram
 		
 		:param label: label for plot legend
 		:type label: StringType
-			"""
-			
+		
+		:param minutes:
+		:type minutes:
+		"""
+		
 		if not isinstance(tic, IonChromatogram):
-			error("TIC is not an Ion Chromatogram object")
-			
-			
+			raise TypeError("'tic' is not an Ion Chromatogram object")
+		
 		intensity_list = tic.get_intensity_array()
 		time_list = tic.get_time_list()
 		if minutes:
-			time_list = [time/60 for time in time_list]
+			time_list = [time / 60 for time in time_list]
 		
-		self.__tic_ic_plots.append(self.__ax.plot(time_list, intensity_list,\
-		label=label))
-		
-	def plot_peaks(self, peak_list, label = "Peaks"):
+		self.__tic_ic_plots.append(
+			self.__ax.plot(
+				time_list,
+				intensity_list,
+				label=label
+			)
+		)
+	
+	def plot_peaks(self, peak_list, label="Peaks"):
 		
 		"""
-		:summary: Plots the locations of peaks as found
+		Plots the locations of peaks as found
 			by PyMS.
 			
 		:param peak_list: List of peaks
@@ -157,12 +166,12 @@ class Display(StockDisplay):
 		:param label: label for plot legend
 		:type label: StringType
 			"""
-			
+		
 		if not isinstance(peak_list, list):
-			error("peak_list is not a list")
-			
+			raise TypeError("'peak_list' must be a list")
+		
 		time_list = []
-		height_list=[]
+		height_list = []
 		
 		# Copy to self.__peak_list for onclick event handling
 		self.__peak_list = peak_list
@@ -170,11 +179,18 @@ class Display(StockDisplay):
 		for peak in peak_list:
 			time_list.append(peak.get_rt())
 			height_list.append(sum(peak.get_mass_spectrum().mass_spec))
-			
-		self.__tic_ic_plots.append(self.__ax.plot(time_list, height_list, 'o',\
-			label = label))
+		
+		self.__tic_ic_plots.append(
+			self.__ax.plot(
+				time_list,
+				height_list,
+				'o',
+				label=label
+			)
+		)
 
 
 if __name__ == "__main__":
 	import sys
+	
 	sys.exit(1)

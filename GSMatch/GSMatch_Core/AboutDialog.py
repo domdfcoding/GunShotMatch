@@ -99,7 +99,7 @@ class AboutDialog(wx.Dialog):
 		self.about_info.SetMinSize((500, 200))
 		self.about_info.SetMaxSize((500, 200))
 		self.about_info.SetSize((500, 200))
-		#self.text_ctrl_2.SetBackgroundColour(self.panel_3.GetBackgroundColour())
+		# self.text_ctrl_2.SetBackgroundColour(self.panel_3.GetBackgroundColour())
 	
 	def __do_layout(self):
 		# begin wxGlade: AboutDialog.__do_layout
