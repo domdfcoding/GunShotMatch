@@ -9,4 +9,5 @@ bs4>=0.0.1
 requests>=2.21.0
 Flask>=1.0.2
 mathematical>=0.1.6
-
+chemistry_tools >= 0.1.2
+importlib_resources >= 1.0.2

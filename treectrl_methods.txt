@@ -1,0 +1,31 @@
+Not all of the methods from wx.TreeCtrl are implemented in wx.lib.agw.hypertreectrl.HyperTreeCtrl and wx.lib.agw.customtreectrl.CustomTreeCtrl. I've made a list of the missing methods.
+
+Some of them are easy to implement in HyperTreeCtrl, since they have already been implemented in CustomTreeCtrl. These methods are:
+
+	SetItemData
+	GetItemData
+	IsVisible
+
+These can be implemented in HyperTreeCtrl by adding them to the `_method` list in hypertreectrl.py.
+
+The rest need to be implemented in CustomTreeCtrl first. These are:
+
+	CollapseAll
+	CollapseAllChildren
+
+	GetItemState
+	SetItemState
+
+	ClearFocusedItem
+	GetFocusedItem
+	SetFocusedItem
+
+	EnableBellOnNoMatch
+	EndEditLabel
+	IsEmpty
+	SelectChildren
+	UnselectItem
+
+I've made a start by implementing CollapseAll and CollapseAllChildren, based on the existing ExpandAll and ExpandAllChildren methods, and these seem to work as expected.
+
+

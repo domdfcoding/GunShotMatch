@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css" crossorigin="anonymous">
+
+	<style>
+		body {
+			background: #fafafa;
+			color: #333333;
+			margin-top: 5rem;
+		}
+		
+		h1, h2, h3, h4, h5, h6 {
+			color: #444444;
+		}
+		
+		.bg-steel {
+			background-color: #5f788a;
+		}
+		
+		.site-header .navbar-nav .nav-link {
+			color: #cbd5db;
+		}
+		
+		.site-header .navbar-nav .nav-link:hover {
+			color: #ffffff;
+		}
+		
+		.site-header .navbar-nav .nav-link.active {
+			font-weight: 500;
+		}
+		
+		.content-section {
+			background: #ffffff;
+			padding: 10px 20px;
+			border: 1px solid #dddddd;
+			border-radius: 3px;
+			margin-bottom: 20px;
+		}
+		
+		.article-title {
+			color: #444444;
+		}
+		
+		.row {
+			margin-left: -15px;
+			margin-right: -15px
+		}
+		
+		.getting-started {
+			padding-bottom: 35px;
+		}
+		
+	</style>
+	
+	<title>Welcome to GunShotMatch</title>
+	
+</head>
+
+<body>
+<header class="site-header">
+	<nav class="navbar navbar-expand-md navbar-dark bg-steel fixed-top">
+		<div class="container">
+			<h1 class="navbar-brand mr-4">Welcome to GunShotMatch</h1>
+		</div>
+	</nav>
+</header>
+
+<main role="main" class="container">
+	<div class="row">
+		<div class="col-sm getting-started">
+			<h4>Getting Started</h4>
+			<ul>
+				<li><p>To create a new project, click the <img src="data:image/png;base64,{{ new_project_icon }}"> button in the toolbar above.</p></li>
+				<li><p>To open an existing project, click the <img src="data:image/png;base64,{{ open_icon }}"> button. You can open a recent project by clicking the arrow to the right of the icon.</p></li>
+				<li><p>To create a new experiment for use in a project, click the <img src="data:image/png;base64,{{ new_expr_icon }}"> button in the toolbar above.</p></li>
+				<li>
+					<p>Once you have opened a project, the different files within the project can be browsed using either the tabs along the top of the Project window or the 'Project Navigator' widget to the left.</p>
+					<p><img src="data:image/png;base64,{{ project_navigator_image }}"></p>
+					<small class="text-muted">The 'Project Navigator' widget and the tabs at the top of the Project window</small>
+					<p></p>
+				</li>
+				<li>
+					<p>The 'View' toolbar can be used to manipulate the view of a chromatogram, spectrum or chart.</p>
+					<div style="background-color: {{toolbar_background_colour}}; height: 32px; max-width: 300px">
+						<img src="data:image/png;base64,{{ reset_view_icon }}" style="margin: 5px">
+						<img src="data:image/png;base64,{{ previous_view_icon }}" style="margin: 5px">
+						<img src="data:image/png;base64,{{ select_icon }}" style="margin: 5px">
+						<img src="data:image/png;base64,{{ zoom_icon }}" style="margin: 5px">
+						<img src="data:image/png;base64,{{ pan_icon }}" style="margin: 5px">
+						<img src="data:image/png;base64,{{ spectrum_click_icon }}" style="margin: 5px">
+						<img src="data:image/png;base64,{{ spectrum_id_icon }}" style="margin: 5px">
+						<img src="data:image/png;base64,{{ spectrum_rt_icon }}" style="margin: 5px">
+					</div>
+					<small class="text-muted">The 'View' toolbar</small>
+					<br>
+					<br>
+					The buttons perform the following functions:
+					<ul style="list-style-type:none;">
+						<li><img src="data:image/png;base64,{{ reset_view_icon }}" style="margin: 5px"> Resets the view</li>
+						<li><img src="data:image/png;base64,{{ previous_view_icon }}" style="margin: 5px"> Goes to the previous view</li>
+						<li><img src="data:image/png;base64,{{ select_icon }}" style="margin: 5px"> Enables the "Select" tool</li>
+						<li><img src="data:image/png;base64,{{ zoom_icon }}" style="margin: 5px"> Enables the "Zoom" tool for zooming the chart</li>
+						<li><img src="data:image/png;base64,{{ pan_icon }}" style="margin: 5px"> Enables the "Pan" tool for panning the chart</li>
+						<li><img src="data:image/png;base64,{{ spectrum_click_icon }}" style="margin: 5px"> Enables the "View Spectrum" tool for viewing a spectrum by clicking the chromatogram</li>
+						<li><img src="data:image/png;base64,{{ spectrum_id_icon }}" style="margin: 5px"> Opens the "View Spectrum by Scan Number" tool for viewing a spectrum at the given scan number</li>
+						<li><img src="data:image/png;base64,{{ spectrum_rt_icon }}" style="margin: 5px"> Opens the "View Spectrum by RT" tool for viewing a spectrum at the given retention time</li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+		<div class="content-section col-sm">
+				<h3>News</h3>
+				{% for news_item in news %}
+				<article class="media content-section">
+					<div class="media-body">
+						<h4><a class="article-title" href="{{ news_item['url'] }}">{{ news_item['title'] }}</a></h4>
+						<div class="article-metadata">
+							<small class="text-muted">{{ news_item["date"].strftime('%Y-%m-%d') }}</small>
+						</div>
+						<p class="article-content">{{ news_item['content'] }}</p>
+					</div>
+				</article>
+				{% endfor %}
+		</div>
+	</div>
+</main>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+</html>

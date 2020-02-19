@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys
 import os
 import re
+import sys
+
 
 sys.path.append(os.path.abspath('.'))
 sys.path.append(os.path.abspath('..'))
@@ -13,7 +14,7 @@ from sphinx.locale import _
 
 __version__ = "1.0.0"
 
-project = "GunShotMatch"
+project = "LC-MS User Guide"
 slug = re.sub(r'\W+', '-', project.lower())
 version = __version__
 release = __version__
