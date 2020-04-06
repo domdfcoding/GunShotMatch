@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,28 +23,31 @@
 #  MA 02110-1301, USA.
 #
 
+
 # 3rd party
 import wx
 import wx.aui
 import wx.html2
+from pubsub import pub
 
 # this package
 from GuiV2.GSMatch2_Core import Experiment, Project
 from GuiV2.GSMatch2_Core.GUI.events import (
-	EVT_REMOVE_PROJECT, EVT_SWITCH_EXPR_CONTENT_REQ, EVT_SWITCH_PROJ_CONTENT_REQ, EVT_SWITCH_PROJ_REQ,
-	EVT_TOGGLE_EXPR_TOOLS, EVT_TOGGLE_VIEW_TOOLS,
+	EVT_REMOVE_PROJECT, EVT_SWITCH_COMPOUNDS_CONTENT_REQ, EVT_SWITCH_EXPR_CONTENT_REQ, EVT_SWITCH_PROJ_CONTENT_REQ,
+	EVT_SWITCH_PROJ_REQ,
 	)
 from GuiV2.GSMatch2_Core.GUI.welcome_page import render_welcome_page
 
-use_cefpython = False
-
-if "gtk2" in wx.version():
-	use_cefpython = False
-
-if use_cefpython:
-	from GuiV2.GSMatch2_Core.GUI.CefBrowser import init_cefpython, BrowserPanel
-	
-	cef = init_cefpython
+#
+# use_cefpython = False
+#
+# if "gtk2" in wx.version():
+# 	use_cefpython = False
+#
+# if use_cefpython:
+# 	from GuiV2.GSMatch2_Core.GUI.CefBrowser import init_cefpython, BrowserPanel
+#
+# 	cef = init_cefpython
 
 
 class Notebook(wx.aui.AuiNotebook):
@@ -69,20 +72,21 @@ class Notebook(wx.aui.AuiNotebook):
 		
 		EVT_SWITCH_EXPR_CONTENT_REQ.set_receiver(self)
 		EVT_SWITCH_EXPR_CONTENT_REQ.Bind(self.on_request_switch_experiment)
-
 		
+		EVT_SWITCH_COMPOUNDS_CONTENT_REQ.set_receiver(self)
+		EVT_SWITCH_COMPOUNDS_CONTENT_REQ.Bind(self.on_request_switch_compounds)
+
 		# Welcome Page
-		if use_cefpython:
-			page = BrowserPanel(f"file://{render_welcome_page()}", self, style=wx.WANTS_CHARS)
-			wx.CallLater(100, page.embed_browser)
-		else:
-			page = wx.html2.WebView.New(self, wx.ID_ANY, size=(400, 300))
-			page.LoadURL(f"file://{render_welcome_page()}")
+		# if use_cefpython:
+		# 	page = BrowserPanel(f"file://{render_welcome_page()}", self, style=wx.WANTS_CHARS)
+		# 	wx.CallLater(100, page.embed_browser)
+		# else:
+		page = wx.html2.WebView.New(self, wx.ID_ANY, size=(400, 300))
+		page.LoadURL(f"file://{render_welcome_page()}")
 		
 		self.AddPage(page, "Welcome")
 		
 		wx.CallAfter(self.SendSizeEvent)
-		
 	
 	def on_request_switch_project(self, event):
 		self.switch_to_project(event.GetValue())
@@ -92,6 +96,9 @@ class Notebook(wx.aui.AuiNotebook):
 		
 	def on_request_switch_experiment(self, event):
 		self.switch_to_experiment_content(*event.GetValue())
+		
+	def on_request_switch_compounds(self, event):
+		self.switch_to_compounds_content(*event.GetValue())
 	
 	def add_project(self, project):
 		# TODO?: Check if project already in notebook
@@ -127,16 +134,28 @@ class Notebook(wx.aui.AuiNotebook):
 		self.SetSelection(self.PageCount-1)
 	
 	def get_selected_page(self):
-		return self.GetPage(self.GetSelection())
+		sel = self.GetSelection()
+		
+		if sel != -1:
+			return self.GetPage(sel)
 	
 	def get_selected_page_text(self):
-		return self.GetPageText(self.GetSelection())
+		sel = self.GetSelection()
+		
+		if sel != -1:
+			return self.GetPageText(sel)
 	
 	def get_selected_project(self):
-		return self.get_project_by_index(self.GetSelection())
+		sel = self.GetSelection()
+		
+		if sel != -1:
+			return self.get_project_by_index(sel)
 	
 	def get_selected_project_panel(self):
-		return self.get_project_panel_by_index(self.GetSelection())
+		sel = self.GetSelection()
+		
+		if sel != -1:
+			return self.get_project_panel_by_index(sel)
 	
 	def get_page_by_index(self, index):
 		return self.GetPage(index)
@@ -173,18 +192,32 @@ class Notebook(wx.aui.AuiNotebook):
 					self.SetSelection(tab_idx)
 					return tab_idx
 	
-	def on_nb_sel_changed(self, event):
+	def on_nb_sel_changed(self, _):
+		# print("Notebook Sel Changed")
+		# print(self.get_selected_page())
+		
 		if isinstance(self.get_selected_page(), Project.ProjectDataPanel):
+			# print(self.get_selected_page().get_selected_page())
+			
 			if isinstance(self.get_selected_page().get_selected_page(), Experiment.ExperimentDataPanel):
-				EVT_TOGGLE_EXPR_TOOLS.trigger(True)
+				# print(self.get_selected_page().get_selected_page().get_selected_page())
+				
+				pub.sendMessage("toggle_expr_tools", enable=True)
 				
 				if self.get_selected_page().get_selected_page().get_selected_page_text() == "TIC":
-					EVT_TOGGLE_VIEW_TOOLS.trigger(True)
+					pub.sendMessage("toggle_view_tools", enable=True)
 				else:
-					EVT_TOGGLE_VIEW_TOOLS.trigger(False)
+					pub.sendMessage("toggle_view_tools", enable=False)
+					
+			elif isinstance(self.get_selected_page().get_selected_page(), Project.CompoundsDataPanel) \
+				and isinstance(self.get_selected_page().get_selected_page().get_selected_page(), Project.DataViewer):
+				
+				pub.sendMessage("toggle_expr_tools", enable=True)
+				pub.sendMessage("toggle_view_tools", enable=True)
+				
 			else:
-				EVT_TOGGLE_VIEW_TOOLS.trigger(False)
-				EVT_TOGGLE_EXPR_TOOLS.trigger(False)
+				pub.sendMessage("toggle_view_tools", enable=False)
+				pub.sendMessage("toggle_expr_tools", enable=False)
 		else:
 			# # Welcome Page
 			# if use_cefpython:
@@ -193,8 +226,25 @@ class Notebook(wx.aui.AuiNotebook):
 			# 		if self.GetHandle():
 			# 			page.embed_browser(self)
 			
-			EVT_TOGGLE_VIEW_TOOLS.trigger(False)
-			EVT_TOGGLE_EXPR_TOOLS.trigger(False)
+			pub.sendMessage("toggle_view_tools", enable=False)
+			pub.sendMessage("toggle_expr_tools", enable=False)
+		
+		pub.sendMessage("refresh_menus")
+		
+		wx.CallAfter(self.freeze_hidden_tabs)
+		
+		# Ask GunShotMatch to check whether project has alignment, ident, consolidate etc data and disable menu options
+		
+	def freeze_hidden_tabs(self):
+		# print(self.get_selected_page_text())
+		for page_idx in range(self.GetPageCount()):
+			# print(self.GetPageText(page_idx))
+			if self.GetPage(page_idx).IsShownOnScreen():
+				if self.GetPage(page_idx).IsFrozen():
+					self.GetPage(page_idx).Thaw()
+			else:
+				if not self.GetPage(page_idx).IsFrozen():
+					self.GetPage(page_idx).Freeze()
 	
 	def update_titles(self, event=None):
 		current_project_idx = self.GetSelection()
@@ -220,27 +270,52 @@ class Notebook(wx.aui.AuiNotebook):
 		p_tab_idx, e_tab_idx = project_panel.switch_to_experiment_content(expr_name, page_title)
 		return tab_idx, p_tab_idx, e_tab_idx
 	
+	def switch_to_compounds_content(self, project, page_title):
+		# Switch notebook to the specified project, then the Comppunds tab, and finally the specified page
+		tab_idx = self.switch_to_project(project)
+		project_panel = self.GetPage(tab_idx)
+		p_tab_idx, c_tab_idx = project_panel.switch_to_compounds_content(page_title)
+		return tab_idx, p_tab_idx, c_tab_idx
+	
+	def _pass_through_view_event(self, method):
+		selected_page = self.get_selected_project_panel().get_selected_page()
+		
+		if isinstance(selected_page, Experiment.ExperimentDataPanel):
+			attr = getattr(selected_page.experiment_tic, method)
+			attr()
+		
+		elif isinstance(selected_page, Project.CompoundsDataPanel):
+			if isinstance(selected_page.get_selected_page(), Project.DataViewer):
+				attr = getattr(selected_page.get_selected_page(), method)
+				attr()
+		
+		else:
+			return
+			
 	def on_reset_view(self, event):  # wxGlade: GunShotMatch.<event_handler>
-		selected_experiment = self.get_selected_project_panel().get_selected_experiment_panel()
-		if selected_experiment:
-			selected_experiment.experiment_tic.reset_view()
+		self._pass_through_view_event("reset_view")
 		event.Skip()
 	
 	def on_previous_view(self, event):  # wxGlade: GunShotMatch.<event_handler>
-		selected_experiment = self.get_selected_project_panel().get_selected_experiment_panel()
-		if selected_experiment:
-			selected_experiment.experiment_tic.previous_view()
+		self._pass_through_view_event("previous_view")
+		event.Skip()
+		
+	def on_rescale_y(self, event):
+		self._pass_through_view_event("rescale_y")
+		event.Skip()
+		
+	def on_rescale_x(self, event):
+		self._pass_through_view_event("rescale_x")
 		event.Skip()
 	
-	def on_spectrum_scan(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_spectrum_scan(self, _):  # wxGlade: GunShotMatch.<event_handler>
 		if not isinstance(self.get_selected_page(), Project.ProjectDataPanel):
 			# Project not currently selected
 			return
 		
 		self.get_selected_page().view_spectrum_by_scan()
 	
-	def on_spectrum_rt(self, event):  # wxGlade: GunShotMatch.<event_handler>
-		
+	def on_spectrum_rt(self, _):  # wxGlade: GunShotMatch.<event_handler>
 		if not isinstance(self.get_selected_page(), Project.ProjectDataPanel):
 			# Project not currently selected
 			return

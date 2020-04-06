@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -33,14 +33,13 @@ from reportlab.lib.units import cm
 from reportlab.platypus import PageBreak, Paragraph, Spacer, Table, TableStyle
 
 # This package
-from GuiV2.GSMatch2_Core.exporters import inner_width, PDFExporterBase, styles
-
-font_size = 9
+from GuiV2.GSMatch2_Core.exporters import PDFExporterBase, styles, font_size
+from GuiV2.GSMatch2_Core.utils import divide_chunks
 
 
 class PeakListPDFExporter(PDFExporterBase):
 	def __init__(self, experiment, input_filename, output_filename):
-		PDFExporterBase.__init__(self, experiment, input_filename, output_filename, f"Peak List - {experiment.name}")
+		PDFExporterBase.__init__(self, input_filename, output_filename, f"Peak List - {experiment.name}")
 		
 		self.experiment = experiment
 		self.make_expr_peak_list_inner()
@@ -55,6 +54,7 @@ class PeakListPDFExporter(PDFExporterBase):
 		subsequent_page_peaks = first_page_peaks + 7
 		
 		category_style = TableStyle([
+				# (x, y)
 				('FONTSIZE', (0, 0), (-1, -1), font_size),
 				('ALIGN', (0, 0), (0, -1), 'LEFT'),
 				('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
@@ -74,7 +74,7 @@ class PeakListPDFExporter(PDFExporterBase):
 		chunks = [self.experiment.peak_list_data[:first_page_peaks * 2]]
 		chunks += list(divide_chunks(self.experiment.peak_list_data[first_page_peaks * 2:], subsequent_page_peaks * 2))
 		
-		col_widths = [inner_width * (4.25 / 20), inner_width * (1.8 / 20), inner_width * (3.95 / 20)] * 2
+		col_widths = [self.inner_width * (4.25 / 20), self.inner_width * (1.8 / 20), self.inner_width * (3.95 / 20)] * 2
 		
 		for chunk in chunks:
 			rows = [header_row]
@@ -109,17 +109,9 @@ def parse_peak(peak):
 			]
 
 
-# Yield successive n-sized chunks from l.
-# https://www.geeksforgeeks.org/break-list-chunks-size-n-python/
-def divide_chunks(l, n):
-	# looping till length l
-	for i in range(0, len(l), n):
-		yield l[i:i + n]
-
-
 class CompoundsPDFExporter(PDFExporterBase):
 	def __init__(self, experiment, input_filename, output_filename):
-		PDFExporterBase.__init__(self, experiment, input_filename, output_filename, f"Identified Compounds - {experiment.name}")
+		PDFExporterBase.__init__(self, input_filename, output_filename, f"Identified Compounds - {experiment.name}")
 		
 		self.experiment = experiment
 		self.make_expr_compounds_inner()
@@ -135,14 +127,15 @@ class CompoundsPDFExporter(PDFExporterBase):
 
 	def add_peak_compound(self, peak, show_peak_number=True):
 		col_widths = [
-				inner_width * (2.2 / 20),
-				inner_width * (10.6 / 20),
-				inner_width * (3 / 20),
-				inner_width * (2 / 20),
-				inner_width * (2.2 / 20),
+				self.inner_width * (2.2 / 20),
+				self.inner_width * (10.6 / 20),
+				self.inner_width * (3 / 20),
+				self.inner_width * (2 / 20),
+				self.inner_width * (2.2 / 20),
 				]
 		
 		hits_style = TableStyle([
+				# (x, y)
 				('FONTSIZE', (0, 0), (-1, -1), font_size),
 				('ALIGN', (0, 0), (0, -1), 'LEFT'),
 				('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
@@ -160,9 +153,15 @@ class CompoundsPDFExporter(PDFExporterBase):
 		peak_no_string = str(peak.peak_number).rjust(4).replace(' ', '&nbsp;')
 		
 		if show_peak_number:
-			rt_paragraph = Paragraph(f"Retention Time: {rt_string} minutes{'&nbsp;'*8}Peak Number: {peak_no_string}", styles["Normal"])
+			rt_paragraph = Paragraph(
+					f"Retention Time: {rt_string} minutes{'&nbsp;'*8}Peak Number: {peak_no_string}",
+					styles["Normal"],
+					)
 		else:
-			rt_paragraph = Paragraph(f"Retention Time: {rt_string} minutes", styles["Normal"])
+			rt_paragraph = Paragraph(
+					f"Retention Time: {rt_string} minutes",
+					styles["Normal"],
+					)
 		
 		rows = [
 				[
@@ -204,7 +203,12 @@ class CompoundsPDFExporter(PDFExporterBase):
 
 class SinglePeakCompoundsPDFExporter(CompoundsPDFExporter):
 	def __init__(self, peak_number, peak_list, expr_names, input_filename, output_filename):
-		PDFExporterBase.__init__(self, 0, input_filename, output_filename, f"Identified Compounds - Peak Number {peak_number}")
+		PDFExporterBase.__init__(
+				self,
+				input_filename,
+				output_filename,
+				f"Identified Compounds - Peak Number {peak_number}",
+				)
 		
 		self.peak_number = peak_number
 		self.peak_list = peak_list

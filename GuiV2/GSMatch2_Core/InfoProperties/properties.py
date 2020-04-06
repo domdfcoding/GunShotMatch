@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 #  MA 02110-1301, USA.
 #
 
+
 # stdlib
 import decimal
 import statistics
@@ -38,14 +39,18 @@ from GuiV2.GSMatch2_Core.InfoProperties.dialogs import MeasurementDialog
 from GuiV2.GSMatch2_Core.InfoProperties.editors import MeasurementEditor
 
 
-class RTRange(wx.propgrid.PGProperty):
-	def __init__(self, label, name=wx.propgrid.PG_LABEL, value=(0, 0)):
+class RangeProperty(wx.propgrid.PGProperty):
+	def __init__(
+			self, label, name=wx.propgrid.PG_LABEL,
+			value=(0, 0), start_label="Start", end_label="End",
+			):
+		
 		wx.propgrid.PGProperty.__init__(self, label, name)
 		
 		# value = self._ConvertValue(value)
 		
-		self.AddPrivateChild(wx.propgrid.FloatProperty("Start Time (minutes)", value=value[0]))
-		self.AddPrivateChild(wx.propgrid.FloatProperty("End Time (minutes)", value=value[1]))
+		self.AddPrivateChild(wx.propgrid.FloatProperty(start_label, value=value[0]))
+		self.AddPrivateChild(wx.propgrid.FloatProperty(end_label, value=value[1]))
 		
 		self.m_value = value
 	
@@ -61,49 +66,25 @@ class RTRange(wx.propgrid.PGProperty):
 		self.Item(1).SetValue(target_range[1])
 	
 	def ChildChanged(self, thisValue, childIndex, childValue):
-		target_range = self.m_value
+		the_range = self.m_value
 		if childIndex == 0:
-			target_range[0] = childValue
+			the_range[0] = childValue
 		elif childIndex == 1:
-			target_range[1] = childValue
+			the_range[1] = childValue
 		else:
 			raise AssertionError
 		
-		return target_range
+		return the_range
 
 
-class MassRange(wx.propgrid.PGProperty):
+class RTRange(RangeProperty):
 	def __init__(self, label, name=wx.propgrid.PG_LABEL, value=(0, 0)):
-		wx.propgrid.PGProperty.__init__(self, label, name)
-		
-		# value = self._ConvertValue(value)
-		
-		self.AddPrivateChild(wx.propgrid.FloatProperty("Minimum Mass (m/z)", value=value[0]))
-		self.AddPrivateChild(wx.propgrid.FloatProperty("Maximum Mass (m/z)", value=value[1]))
-		
-		self.m_value = value
-	
-	def GetClassName(self):
-		return self.__class__.__name__
-	
-	def DoGetEditorClass(self):
-		return wx.propgrid.PropertyGridInterface.GetEditorByName("TextCtrl")
-	
-	def RefreshChildren(self):
-		mass_range = self.m_value
-		self.Item(0).SetValue(mass_range[0])
-		self.Item(1).SetValue(mass_range[1])
-	
-	def ChildChanged(self, thisValue, childIndex, childValue):
-		mass_range = self.m_value
-		if childIndex == 0:
-			mass_range[0] = childValue
-		elif childIndex == 1:
-			mass_range[1] = childValue
-		else:
-			raise AssertionError
-		
-		return mass_range
+		RangeProperty.__init__(self, label, name, value, "Start Time (minutes)", "End Time (minutes)")
+
+
+class MassRange(RangeProperty):
+	def __init__(self, label, name=wx.propgrid.PG_LABEL, value=(0, 0)):
+		RangeProperty.__init__(self, label, name, value, "Minimum Mass (m/z)", "Maximum Mass (m/z)")
 
 
 class MeasurementProperty(wx.propgrid.LongStringProperty):

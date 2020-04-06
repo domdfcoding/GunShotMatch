@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,17 +26,24 @@
 #
 
 # stdlib
+import pathlib
+import signal
 import time
 import webbrowser
+from multiprocessing import Process
+import sys
 
 # 3rd party
 import wx.aui as aui
 import wx.grid
 import wx.html
+from appdirs import user_config_dir
 from domdf_wxpython_tools import coming_soon, file_dialog_multiple, file_dialog_wildcard
 from domdf_wxpython_tools.style_picker import colour_picker, style_picker
+from pid import PidFile
 from pubsub import pub
 
+from GSMatch.data_viewer_server import app
 # this package
 from GSMatch.GSMatch_Core import AboutDialog
 from GuiV2.GSMatch2_Core import Experiment, Project, utils
@@ -44,6 +51,10 @@ from GuiV2.GSMatch2_Core.Config import internal_config
 from GuiV2.GSMatch2_Core.GUI import Notebook, ProjectNavigator, SizeReportCtrl, WorkflowPanel
 from GuiV2.GSMatch2_Core.GUI.events import EVT_PROJECT_CHANGE
 from GuiV2.GSMatch2_Core.GUI.export_dialog import ExportDialog
+from GuiV2.GSMatch2_Core.GUI.menus import (
+	GSMChartsMenu, GSMExprMenu, GSMFileMenu, GSMHelpMenu, GSMProjectMenu,
+	GSMSearchMenu, GSMToolsMenu, GSMViewMenu,
+	)
 from GuiV2.GSMatch2_Core.GUI.toolbars import ChartToolBar, ExperimentToolBar, ExportToolBar, ProjectToolBar, ViewToolBar
 from GuiV2.GSMatch2_Core.IDs import *
 from GuiV2.GSMatch2_Core.pdfViewer import pdfViewer
@@ -51,169 +62,68 @@ from GuiV2.GSMatch2_Core.PreferencesDialog import PreferencesDialog
 from GuiV2.icons import get_icon
 
 
-# begin wxGlade: dependencies
-# end wxGlade
-
-# begin wxGlade: extracode
-# end wxGlade
-
-
-# TODO: Making and saving changes to method
-
-
 class GunShotMatch(wx.Frame):
-	def __init__(self, *args, **kwds):
+	def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, style=0):
+		"""
+		:param parent: The window parent. This may be, and often is, None. If it is not None, the frame will be minimized when its parent is minimized and restored when it is restored (although it will still be possible to minimize
+		:type parent: wx.Window
+		:param id: The window identifier. It may take a value of -1 to indicate a default value.
+		:type id: wx.WindowID, optional
+		:param pos: The window position. The value DefaultPosition indicates a default position, chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param style: The window style. See wx.Frame class description.
+		:type style: int, optional
+		"""
+		
+		signal.signal(signal.SIGINT, self.sigint_handler)
+		
 		self._perspectives = []
 		self.n = 0
 		self.x = 0
 		self.opened_projects = {}
 		
-		# begin wxGlade: GunShotMatch.__init__
-		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-		wx.Frame.__init__(self, *args, **kwds)
-		self.SetSize((1855, 1056))
+		wx.Frame.__init__(
+				self, parent, id=id, title="GunShotMatch", pos=pos, size=(1855, 1056),
+				style=style | wx.DEFAULT_FRAME_STYLE, name="GunShotMatch",
+				)
+		# self.SetSize((1855, 1056))
 		
 		# Menu Bar
 		self.GunShotMatch_menubar = wx.MenuBar()
-		wxglade_tmp_menu = wx.Menu()
-		wxglade_tmp_menu.Append(ID_Export, "Export", "")
-		self.Bind(wx.EVT_MENU, self.on_export, id=ID_Export)
-		wxglade_tmp_menu.Append(ID_Export_PDF, "Export as PDF", "")
-		self.Bind(wx.EVT_MENU, self.on_export_pdf, id=ID_Export_PDF)
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(wx.ID_PREVIEW_PRINT, "Print Preview", "")
-		self.Bind(wx.EVT_MENU, self.on_print_preview, id=wx.ID_PREVIEW_PRINT)
-		wxglade_tmp_menu.Append(wx.ID_PRINT, "Print", "")
-		self.Bind(wx.EVT_MENU, self.on_print, id=wx.ID_PRINT)
-		wxglade_tmp_menu.Append(wx.ID_PRINT_SETUP, "Printer Settings", "")
-		self.Bind(wx.EVT_MENU, self.on_printer_settings, id=wx.ID_PRINT_SETUP)
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(wx.ID_EXIT, "Quit GunShotMatch", "")
-		self.Bind(wx.EVT_MENU, self.OnExit, id=wx.ID_EXIT)
-		self.GunShotMatch_menubar.Append(wxglade_tmp_menu, "File")
-		self.menu_project = wx.Menu()
-		self.GunShotMatch_menubar.menu_project_new = self.menu_project.Append(wx.ID_NEW, "New Project", "")
-		self.Bind(wx.EVT_MENU, self.on_new_project, id=wx.ID_NEW)
-		self.menu_project.AppendSeparator()
-		self.GunShotMatch_menubar.menu_project_open = self.menu_project.Append(wx.ID_OPEN, "Open Project", "")
-		self.Bind(wx.EVT_MENU, self.on_open_project, id=wx.ID_OPEN)
-		recent_menu = wx.Menu()
-		recent_menu.Append(ID_RECENT_0, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_0)
-		recent_menu.Append(ID_RECENT_1, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_1)
-		recent_menu.Append(ID_RECENT_2, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_2)
-		recent_menu.Append(ID_RECENT_3, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_3)
-		recent_menu.Append(ID_RECENT_4, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_4)
-		recent_menu.Append(ID_RECENT_5, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_5)
-		recent_menu.Append(ID_RECENT_6, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_6)
-		recent_menu.Append(ID_RECENT_7, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_7)
-		recent_menu.Append(ID_RECENT_8, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_8)
-		recent_menu.Append(ID_RECENT_9, "item", "")
-		self.Bind(wx.EVT_MENU, self.on_recent_project, id=ID_RECENT_9)
-		self.menu_project.AppendMenu(wx.ID_ANY, "Recent Project", recent_menu, "")
-		self.menu_project.AppendSeparator()
-		self.menu_project.Append(wx.ID_SAVE, "Save Project", "")
-		self.Bind(wx.EVT_MENU, self.on_save_project, id=wx.ID_SAVE)
-		item = self.menu_project.Append(wx.ID_ANY, "Save All", "")
-		self.Bind(wx.EVT_MENU, self.on_save_all, id=item.GetId())
-		self.menu_project.AppendSeparator()
-		self.menu_project.Append(ID_Close_Project, "Close Project", "")
-		self.Bind(wx.EVT_MENU, self.on_close_project, id=ID_Close_Project)
+		
+		file_menu = GSMFileMenu(self)
+		self.GunShotMatch_menubar.Append(file_menu, "File")
+		
+		self.menu_project = GSMProjectMenu(self)
+		self.GunShotMatch_menubar.menu_project_new = self.menu_project.new_item
+		self.GunShotMatch_menubar.menu_project_open = self.menu_project.open_item
 		self.GunShotMatch_menubar.Append(self.menu_project, "Project")
-		wxglade_tmp_menu = wx.Menu()
-		wxglade_tmp_menu.Append(ID_New_Experiment, "New\tCtrl+E", "")
-		self.Bind(wx.EVT_MENU, self.on_new_experiment, id=ID_New_Experiment)
-		wxglade_tmp_menu.Append(ID_New_Experiment_Multiple, "Create Multiple", "")
-		self.Bind(wx.EVT_MENU, self.on_new_experiment_multiple, id=ID_New_Experiment_Multiple)
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(ID_Previous_Experiment, "Previous\tCtrl+<", "")
-		self.Bind(wx.EVT_MENU, self.on_previous_experiment, id=ID_Previous_Experiment)
-		wxglade_tmp_menu.Append(ID_Next_Experiment, "Next\tCtrl+>", "")
-		self.Bind(wx.EVT_MENU, self.on_next_experiment, id=ID_Next_Experiment)
-		self.GunShotMatch_menubar.Append(wxglade_tmp_menu, "Experiment")
-		wxglade_tmp_menu = wx.Menu()
-		wxglade_tmp_menu.Append(wx.ID_ANY, "Create Radar Chart", "")
-		wxglade_tmp_menu.Append(wx.ID_ANY, "Create Bar Chart", "")
-		wxglade_tmp_menu.Append(wx.ID_ANY, "Create Box Whisker Plot", "")
-		wxglade_tmp_menu.Append(wx.ID_ANY, "Create PCA Plot", "")
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(ID_Config_Colours, "Configure Colours", "")
-		self.Bind(wx.EVT_MENU, self.on_config_colours, id=ID_Config_Colours)
-		wxglade_tmp_menu.Append(ID_Config_Markers, "Configure Markers", "")
-		self.Bind(wx.EVT_MENU, self.on_config_markers, id=ID_Config_Markers)
-		wxglade_tmp_menu.Append(ID_Config_Borders, "Configure Borders", "")
-		self.Bind(wx.EVT_MENU, self.on_config_borders, id=ID_Config_Borders)
-		wxglade_tmp_menu.AppendSeparator()
-		item = wxglade_tmp_menu.Append(wx.ID_ANY, "Save As", "")
-		self.Bind(wx.EVT_MENU, self.on_chart_save, id=item.GetId())
-		self.GunShotMatch_menubar.Append(wxglade_tmp_menu, "Charts")
-		wxglade_tmp_menu = wx.Menu()
-		item = wxglade_tmp_menu.Append(wx.ID_ANY, "Reset Perspective", "")
-		self.Bind(wx.EVT_MENU, self.on_menu_view_restore, id=item.GetId())
-		wxglade_tmp_menu.Append(ID_View_Workflow, "View Workflow Panel", "", wx.ITEM_CHECK)
-		self.Bind(wx.EVT_MENU, self.on_toggle_workflow, id=ID_View_Workflow)
-		wxglade_tmp_menu.Append(ID_View_Proj_Nav, "View Project Navigator", "", wx.ITEM_CHECK)
-		self.Bind(wx.EVT_MENU, self.on_toggle_project_navigator, id=ID_View_Proj_Nav)
-		wxglade_tmp_menu.Append(ID_View_Legend, "View Legend", "", wx.ITEM_CHECK)
-		self.Bind(wx.EVT_MENU, self.on_toggle_legend, id=ID_View_Legend)
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(ID_View_Reset, "Reset View\tCtrl+Shift+R", "")
-		self.Bind(wx.EVT_MENU, self.on_reset_view, id=ID_View_Reset)
-		wxglade_tmp_menu.Append(ID_View_Previous, "Previous View", "")
-		self.Bind(wx.EVT_MENU, self.on_previous_view, id=ID_View_Previous)
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(ID_View_Default, "Select", "")
-		self.Bind(wx.EVT_MENU, self.on_view_select, id=ID_View_Default)
-		wxglade_tmp_menu.Append(ID_View_Zoom, "Zoom\tCtrl+Shift+Z", "")
-		self.Bind(wx.EVT_MENU, self.on_zoom, id=ID_View_Zoom)
-		wxglade_tmp_menu.Append(ID_View_Pan, "Pan\tCtrl+Shift+P", "")
-		self.Bind(wx.EVT_MENU, self.on_pan, id=ID_View_Pan)
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(ID_View_Spectrum, "Click to view Spectrum\tCtrl+Shift+S", "")
-		self.Bind(wx.EVT_MENU, self.on_spectrum_click, id=ID_View_Spectrum)
-		wxglade_tmp_menu.Append(ID_View_Spectrum_by_num, "View Spectrum by Scan No.", "")
-		self.Bind(wx.EVT_MENU, self.on_spectrum_scan, id=ID_View_Spectrum_by_num)
-		wxglade_tmp_menu.Append(ID_View_Spectrum_by_rt, "View Spectrum by RT", "")
-		self.Bind(wx.EVT_MENU, self.on_spectrum_rt, id=ID_View_Spectrum_by_rt)
-		self.GunShotMatch_menubar.Append(wxglade_tmp_menu, "View")
-		wxglade_tmp_menu = wx.Menu()
-		self.GunShotMatch_menubar.Append(wxglade_tmp_menu, "Search")
-		wxglade_tmp_menu = wx.Menu()
-		wxglade_tmp_menu.Append(ID_RemoveAlignmentData, "Remove Alignment Data", "")
-		self.Bind(wx.EVT_MENU, self.on_menu_remove_alignment, id=ID_RemoveAlignmentData)
-		wxglade_tmp_menu.Append(ID_RemoveIdentData, "Remove Compound Identification Data", "")
-		self.Bind(wx.EVT_MENU, self.on_menu_remove_ident, id=ID_RemoveIdentData)
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(ID_Tools_MethodEditor, "Method Editor", "Open the Method Editor to create or edit a Method")
-		self.Bind(wx.EVT_MENU, self.OnMethodEditor, id=ID_Tools_MethodEditor)
-		wxglade_tmp_menu.Append(ID_Tools_AmmunitionEditor, "Ammunition Details Editor", "Open the Ammunition Details Editor to create or edit an Ammunition Details file")
-		self.Bind(wx.EVT_MENU, self.OnAmmoEditor, id=ID_Tools_AmmunitionEditor)
-		wxglade_tmp_menu.AppendSeparator()
-		wxglade_tmp_menu.Append(ID_Settings, "Settings", "")
-		self.Bind(wx.EVT_MENU, self.on_menu_tools_settings, id=ID_Settings)
-		self.GunShotMatch_menubar.Append(wxglade_tmp_menu, "Tools")
-		wxglade_tmp_menu = wx.Menu()
-		wxglade_tmp_menu.Append(wx.ID_HELP, "Help", "")
-		self.Bind(wx.EVT_MENU, self.on_menu_help, id=wx.ID_HELP)
-		wxglade_tmp_menu.Append(ID_About, "About", "")
-		self.Bind(wx.EVT_MENU, self.on_menu_help_about, id=ID_About)
-		self.GunShotMatch_menubar.Append(wxglade_tmp_menu, "Help")
+		
+		self.expr_menu = GSMExprMenu(self)
+		self.GunShotMatch_menubar.Append(self.expr_menu, "Experiment")
+		
+		charts_menu = GSMChartsMenu(self)
+		self.GunShotMatch_menubar.Append(charts_menu, "Charts")
+
+		self.view_menu = GSMViewMenu(self)
+		self.GunShotMatch_menubar.Append(self.view_menu, "View")
+		
+		self.search_menu = GSMSearchMenu(self)
+		self.GunShotMatch_menubar.Append(self.search_menu, "Search")
+		
+		self.tools_menu = GSMToolsMenu(self)
+		self.GunShotMatch_menubar.Append(self.tools_menu, "Tools")
+		
+		help_menu = GSMHelpMenu(self)
+		self.GunShotMatch_menubar.Append(help_menu, "Help")
+		
 		self.SetMenuBar(self.GunShotMatch_menubar)
 		# Menu Bar end
+		
 		self.GunShotMatch_statusbar = self.CreateStatusBar(2)
 
-		self.__set_properties()
-		self.__do_layout()
-
-		# end wxGlade
+		self._set_properties()
+		self._do_layout()
 
 		self._bind_events()
 		
@@ -231,27 +141,20 @@ class GunShotMatch(wx.Frame):
 		
 		self.pdf_handler = pdfViewer(
 				self, wx.ID_ANY, wx.DefaultPosition,
-				wx.DefaultSize, wx.HSCROLL|wx.VSCROLL|wx.SUNKEN_BORDER
+				wx.DefaultSize, wx.HSCROLL | wx.VSCROLL | wx.SUNKEN_BORDER
 				)
 		self.pdf_handler.Hide()
+		
+		self.start_data_viewer_server()
 
 	def _bind_events(self):
 		# Toolbar Events
-		self.Bind(wx.EVT_TOOL, self.on_new_project, id=ID_New_Project)
-		self.Bind(wx.EVT_TOOL, self.on_open_project, id=ID_Open_Project)
-		self.Bind(wx.EVT_TOOL, self.on_save_project, id=ID_Save_Project)
-		self.Bind(wx.EVT_TOOL, self.on_save_all, id=ID_Save_All)
-		self.Bind(wx.EVT_TOOL, self.on_save_project, id=ID_Close_Project)
 		self.Bind(wx.EVT_MENU, self.on_new_experiment, id=ID_New_Experiment_Single)
 		self.Bind(wx.EVT_MENU, self.on_new_experiment_multiple, id=ID_New_Experiment_Multiple)
-		self.Bind(wx.EVT_TOOL, self.on_new_experiment, id=ID_New_Experiment)
-		
-		self.Bind(wx.EVT_TOOL, self.on_export_pdf, id=ID_Export_PDF)
-		self.Bind(wx.EVT_TOOL, self.on_print_preview, id=wx.ID_PREVIEW_PRINT)
-		self.Bind(wx.EVT_TOOL, self.on_print, id=wx.ID_PRINT)
+		# self.Bind(wx.EVT_TOOL, self.on_new_experiment, id=ID_New_Experiment)
 		
 		# self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
-		self.Bind(wx.EVT_SIZE, self.OnSize)
+		self.Bind(wx.EVT_SIZE, self.on_size)
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 		# self.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CLOSED, self.on_close_project)
 		
@@ -260,6 +163,7 @@ class GunShotMatch(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.on_run_alignment, self.workflow_panel.alignment_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_run_identify, self.workflow_panel.identify_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_run_consolidate, self.workflow_panel.consolidate_btn)
+		self.Bind(wx.EVT_BUTTON, self.on_run_analysis, self.workflow_panel.run_analysis_btn)
 
 		# Notebook
 		EVT_PROJECT_CHANGE.set_receiver(self)
@@ -268,6 +172,7 @@ class GunShotMatch(wx.Frame):
 		
 		# Export Dialog request exporting current page as PDF
 		pub.subscribe(self.on_export_pdf, "export_current_pdf")
+		pub.subscribe(self.on_export_project_report, "export_project_report")
 		# pub.subscribe(self.on_export_images, "export_current_images")
 		# pub.subscribe(self.on_export_csv, "export_current_csv")
 		# TODO: above
@@ -275,7 +180,12 @@ class GunShotMatch(wx.Frame):
 		# Export Dialog request for exporting method and ammo_details files
 		pub.subscribe(self.on_export_method, "export_method")
 		pub.subscribe(self.on_export_ammo_details, "export_ammo_details")
-	
+		
+		# Bind events for enabling and disabling controls
+		pub.subscribe(self.toggle_spectrum_options, "toggle_view_tools")
+		pub.subscribe(self.toggle_expr_options, "toggle_expr_tools")
+		pub.subscribe(self.on_refresh_menus, "refresh_menus")
+		
 	def _create_toolbars(self):
 		# Create Toolbars
 		self.tb_project = ProjectToolBar(self)
@@ -293,38 +203,34 @@ class GunShotMatch(wx.Frame):
 		
 		# Set the initial state of buttons
 		self.tb_view.toggle_view_tools(False)
-		self.toggle_experiment_tools(False)
+		self.tb_view.toggle_experiment_tools(False)
+		self.tb_experiment.toggle_experiment_tools(False)
 		
-	def __set_properties(self):
+	def _set_properties(self):
 		# tell FrameManager to manage this frame
 		self._mgr = aui.AuiManager(flags=wx.aui.AUI_MGR_LIVE_RESIZE | wx.aui.AUI_MGR_DEFAULT)
 		self._mgr.SetManagedWindow(self)
 		
-		# begin wxGlade: GunShotMatch.__set_properties
-		self.SetTitle("GunShotMatch")
 		self.GunShotMatch_statusbar.SetStatusWidths([-2, -3])
 		
 		# statusbar fields
 		GunShotMatch_statusbar_fields = ["Ready", "Welcome to GunShotMatch"]
 		for i in range(len(GunShotMatch_statusbar_fields)):
 			self.GunShotMatch_statusbar.SetStatusText(GunShotMatch_statusbar_fields[i], i)
-		# end wxGlade
 		
 		_icon = wx.NullIcon
 		_icon.CopyFromBitmap(get_icon("logo-v2", 256))
 		self.SetIcon(_icon)
 
-	def __do_layout(self):
-		# begin wxGlade: GunShotMatch.__do_layout
+	def _do_layout(self):
 		master_sizer = wx.BoxSizer(wx.VERTICAL)
 		master_sizer.Add((0, 0), 0, 0, 0)
 		self.SetSizer(master_sizer)
 		self.Layout()
-		# end wxGlade
 		
 		self._create_toolbars()
 		
-		#self.project_navigator = self.create_project_navigator_ctrl()
+		# self.project_navigator = self.create_project_navigator_ctrl()
 		self.project_navigator = ProjectNavigator(self, wx.ID_ANY)
 		
 		# Project Navigator Pane on the top left
@@ -333,24 +239,25 @@ class GunShotMatch(wx.Frame):
 						  Caption("Project Navigator").CloseButton(True).
 						  MaximizeButton(False).BestSize((250, 800)).MinimizeButton(True)) # MinSize((250, 300))
 		
-		# Experiment Navigator Pane on the bottom left
-		self._mgr.AddPane(self.create_tree_ctrl(), aui.AuiPaneInfo().
-						  Name("Experiment Navigator").Caption("Experiment Navigator").
-						  Left().Layer(1).Position(2).CloseButton(True).MaximizeButton(False).
-						  BestSize((250, 250)).MinimizeButton(True)) # MinSize((250, 250)).
-		
-		# Placeholder for legend on bottom right
-		self._mgr.AddPane(self.create_size_report_ctrl(), aui.AuiPaneInfo().
-						  Name("Chart Legend").Caption("Legend Placeholder").
-						  Right().Layer(1).Position(2).CloseButton(True).MaximizeButton(False).MinimizeButton(True))
-		
 		self.workflow_panel = WorkflowPanel(self, wx.ID_ANY)
 		
-		# Workflow Pane on the top right
+		# Workflow Pane on the middle left
 		self._mgr.AddPane(self.workflow_panel, aui.AuiPaneInfo().
 						  Name("Workflow").Caption("Workflow").
-						  Right().Layer(1).Position(1).CloseButton(True).MaximizeButton(False).
-						  BestSize((250, 900)).MinimizeButton(True)) # MinSize((250, 100)).
+						  Left().Layer(1).Position(2).CloseButton(True).MaximizeButton(False).
+						  BestSize((250, 900)).MinimizeButton(True))  # MinSize((250, 100)).
+		
+		self.legend_panel = self.create_size_report_ctrl()
+		
+		# Placeholder for legend on bottom left
+		self._mgr.AddPane(self.legend_panel, aui.AuiPaneInfo().
+						  Name("Chart Legend").Caption("Legend Placeholder").
+						  Left().Layer(1).Position(3).CloseButton(True).MaximizeButton(False).MinimizeButton(True))
+		
+		# Set initial sizes of panels
+		self._mgr.GetPane("Project Navigator").dock_proportion = 20
+		self._mgr.GetPane("Workflow").dock_proportion = 25
+		self._mgr.GetPane("Chart Legend").dock_proportion = 10
 		
 		# Data Notebook in the center
 		self.notebook = Notebook(self)
@@ -360,7 +267,6 @@ class GunShotMatch(wx.Frame):
 		self.default_perspective = self._mgr.SavePerspective()
 		self._perspectives.append(self.default_perspective)
 
-		
 		# Unused panes
 		
 		# self._mgr.AddPane(SettingsPanel(self, self), aui.AuiPaneInfo().
@@ -377,6 +283,64 @@ class GunShotMatch(wx.Frame):
 		self._mgr.Update()
 		
 		self.notebook.SetTabCtrlHeight(35)
+	
+	def toggle_expr_options(self, enable=True):
+		for tool_id in {ID_View_Spectrum_by_rt, ID_View_Spectrum_by_num}:
+			self.view_menu.FindItemById(tool_id).Enable(enable)
+			
+		for tool_id in {ID_Next_Experiment, ID_Previous_Experiment}:
+			self.expr_menu.FindItemById(tool_id).Enable(enable)
+	
+	def toggle_chart_options(self, enable=True):
+		for tool_id in {
+				ID_View_Reset, ID_View_Previous, ID_View_Default, ID_View_Zoom,
+				ID_View_Pan, ID_View_Rescale_x, ID_View_Rescale_y,
+				}:
+			self.view_menu.FindItemById(tool_id).Enable(enable)
+	
+	def toggle_spectrum_options(self, enable=True):
+		self.toggle_chart_options(enable)
+		
+		for tool_id in {ID_View_Spectrum}:
+			self.view_menu.FindItemById(tool_id).Enable(enable)
+	
+	def toggle_remove_alignment(self, enable=True):
+		self.tools_menu.FindItemById(ID_RemoveAlignmentData).Enable(enable)
+	
+	def toggle_remove_ident(self, enable=True):
+		self.tools_menu.FindItemById(ID_RemoveIdentData).Enable(enable)
+	
+	def toggle_remove_consolidate(self, enable=True):
+		self.tools_menu.FindItemById(ID_RemoveConsolidateData).Enable(enable)
+	
+	def on_refresh_menus(self):
+		selected_project_panel = self.notebook.get_selected_project_panel()
+		
+		if selected_project_panel is None:
+			# Disable all
+			# self.toggle_expr_options(False)
+			# self.toggle_spectrum_options(False)
+			self.toggle_remove_alignment(False)
+			self.toggle_remove_ident(False)
+			self.toggle_remove_consolidate(False)
+		else:
+			# selected_expr_panel = selected_project_panel.get_selected_experiment_panel()
+			#
+			# self.toggle_expr_options(bool(selected_expr_panel))
+			#
+			# if selected_expr_panel:
+			# 	self.toggle_expr_options()
+			# 	expr_selected_tab = selected_expr_panel.get_selected_page()
+			#
+			# 	self.toggle_spectrum_options(isinstance(expr_selected_tab, Experiment.ChromatogramPanel))
+			
+			selected_project = selected_project_panel.project
+			
+			self.toggle_remove_alignment(selected_project.alignment_performed)
+			self.toggle_remove_ident(any(
+					experiment.identification_performed for experiment in selected_project.experiment_objects
+					))
+			self.toggle_remove_consolidate(selected_project.consolidate_performed)
 	
 	def on_pane_close(self, event):
 		# Cancel closing the pane, we'll hide it later so we can open it again
@@ -417,7 +381,7 @@ class GunShotMatch(wx.Frame):
 		self.notebook.update_titles(event)
 	
 	def setup_recent_menu(self):
-		dropdown = self.tb_project.FindById(ID_Open_Project).GetDropdownMenu()
+		dropdown = self.tb_project.FindById(wx.ID_OPEN).GetDropdownMenu()
 		
 		for idx, ID in enumerate(recent_project_ids):
 			menu_recent = self.menu_project.FindItemById(ID)
@@ -454,8 +418,10 @@ class GunShotMatch(wx.Frame):
 	
 	def create_tree_ctrl(self):
 		
-		tree = wx.TreeCtrl(self, -1, wx.Point(0, 0), wx.Size(160, 250),
-						   wx.TR_DEFAULT_STYLE | wx.NO_BORDER)
+		tree = wx.TreeCtrl(
+				self, -1, wx.Point(0, 0), wx.Size(160, 250),
+				wx.TR_DEFAULT_STYLE | wx.NO_BORDER,
+				)
 		
 		root = tree.AddRoot("AUI Project")
 		items = []
@@ -472,12 +438,12 @@ class GunShotMatch(wx.Frame):
 		items.append(tree.AppendItem(root, "Item 5", 0))
 		
 		for ii in range(len(items)):
-			id = items[ii]
-			tree.AppendItem(id, "Subitem 1", 1)
-			tree.AppendItem(id, "Subitem 2", 1)
-			tree.AppendItem(id, "Subitem 3", 1)
-			tree.AppendItem(id, "Subitem 4", 1)
-			tree.AppendItem(id, "Subitem 5", 1)
+			item_id = items[ii]
+			tree.AppendItem(item_id, "Subitem 1", 1)
+			tree.AppendItem(item_id, "Subitem 2", 1)
+			tree.AppendItem(item_id, "Subitem 3", 1)
+			tree.AppendItem(item_id, "Subitem 4", 1)
+			tree.AppendItem(item_id, "Subitem 5", 1)
 		
 		tree.Expand(root)
 		
@@ -497,9 +463,13 @@ class GunShotMatch(wx.Frame):
 	
 	# Projects
 
-	def on_open_project(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_open_project(self, _):
 
-		filenames = file_dialog_multiple(self, "proj", "Open Project", "Project files", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE, defaultDir=str(internal_config.last_project))
+		filenames = file_dialog_multiple(
+				self, "proj", "Open Project", "Project files",
+				style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE,
+				defaultDir=str(internal_config.last_project),
+				)
 
 		if filenames:
 			for filename in filenames:
@@ -508,7 +478,7 @@ class GunShotMatch(wx.Frame):
 	def open_project(self, filename):
 		print(f"Opening project: {filename}")
 		
-		project = Project.Project.load(filename)
+		project = Project.load(filename)
 		
 		if project.name in self.opened_projects:
 			wx.MessageBox(
@@ -535,30 +505,50 @@ Please choose a different project.""",
 		current_project_panel = self.notebook.GetPage(current_project_idx)
 		print(f"Unsaved Changes: {current_project_panel.project.unsaved_changes}")
 	
-	def on_new_project(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_new_project(self, _):
+		# TODO: do this like the new_experiment dialog, where it is not modal, including the guard code
+		# TODO@ guard code could perhaps be a decorator
 		with Project.NewProjectDialog(self, wx.ID_ANY) as dlg:
 			if dlg.ShowModal() == wx.ID_OK:
 				if dlg.filename:
 					self.open_project(dlg.filename)
 	
-	def on_recent_project(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_recent_project(self, event):
 		clicked_id = event.Id
 		
 		for idx, recent_id in enumerate(recent_project_ids):
 			if recent_id == clicked_id:
 				self.open_project(internal_config.recent_projects[idx][1])
 	
-	def on_close_project(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_close_project(self, _):
 		self.notebook.remove_project()
 	
-	def on_save_project(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_save_project(self, _):
 		pub.sendMessage("SaveProject")
 		self.notebook.get_selected_page().save()
 
-	def on_save_all(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_save_all(self, _):
 		coming_soon()
 	
-	def on_run_alignment(self, event):
+	def on_run_analysis(self, _):
+		if self.workflow_panel.alignment_checkbox.GetValue():
+			self.on_run_alignment()
+		
+		if self.workflow_panel.identify_checkbox.GetValue():
+			self.on_run_identify()
+		
+		if self.workflow_panel.consolidate_checkbox.GetValue():
+			self.on_run_consolidate()
+		
+		if self.workflow_panel.spectra_checkbox.GetValue():
+			# TODO:
+			pass
+		
+		if self.workflow_panel.charts_checkbox.GetValue():
+			# TODO:
+			pass
+		
+	def on_run_alignment(self, event=None):
 		project_panel = self.notebook.get_selected_project_panel()
 		if isinstance(project_panel, Project.ProjectDataPanel):
 			
@@ -567,7 +557,7 @@ Please choose a different project.""",
 			print(project_panel.project.unsaved_changes)
 			print("#######")
 		
-	def on_run_identify(self, event):
+	def on_run_identify(self, event=None):
 		print("Identifying Compounds...")
 		
 		project_panel = self.notebook.get_selected_project_panel()
@@ -576,24 +566,8 @@ Please choose a different project.""",
 			project_panel.identify()
 			print(project_panel.project.unsaved_changes)
 			print("#######")
-		return
-		
-		project_name = self.notebook.get_selected_project().name
-		print(project_name)
-		project = self.project_navigator.project_navigator_data[project_name]["project"]
-		print(project)
-		
-		try:
-			project.align()
-		except ValueError:
-			with wx.MessageDialog(
-					self, f"Alignment has already been performed.\n{project.alignment_audit_record}",
-					caption="Error", style=wx.OK | wx.CENTRE | wx.ICON_ERROR) as dlg:
-				dlg.ShowModal()
-		
-		# TODO: add alignment tab and add to tree
 	
-	def on_run_consolidate(self, event):
+	def on_run_consolidate(self, event=None):
 		print("Performing Consolidate...")
 		
 		project_panel = self.notebook.get_selected_project_panel()
@@ -602,37 +576,37 @@ Please choose a different project.""",
 			project_panel.consolidate()
 			# print(project_panel.project.unsaved_changes)
 			print("#######")
-		return
 		
-	def save_changes(self):
-		for project, data in self.project_navigator.project_navigator_data.items():
-			if project != "__root":
-				print(project)
-				print(data["project"])
-		
-		return True
-		if self.AmmunitionDetailsPanel.fileNotSaved:
-			while True:
-				with wx.MessageDialog(
-						self,
-						"Do you want to save the changes to the current Ammunition Details record?",
-						"Save Changes?",
-						wx.ICON_QUESTION | wx.YES_NO | wx.CANCEL
-						) as dlg:
-					res = dlg.ShowModal()
-					
-					if res == wx.ID_YES:
-						if self.save_record():
-							break
-					elif res == wx.ID_NO:
-						print("Changes discarded")
-						break
-					else:
-						return False
-	
+	# def save_changes(self):
+	# 	for project, data in self.project_navigator.project_navigator_data.items():
+	# 		if project != "__root":
+	# 			print(project)
+	# 			print(data["project"])
+	#
+	# 	return True
+	# 	if self.AmmunitionDetailsPanel.fileNotSaved:
+	# 		while True:
+	# 			with wx.MessageDialog(
+	# 					self,
+	# 					"Do you want to save the changes to the current Ammunition Details record?",
+	# 					"Save Changes?",
+	# 					wx.ICON_QUESTION | wx.YES_NO | wx.CANCEL
+	# 					) as dlg:
+	# 				res = dlg.ShowModal()
+	#
+	# 				if res == wx.ID_YES:
+	# 					if self.save_record():
+	# 						break
+	# 				elif res == wx.ID_NO:
+	# 					print("Changes discarded")
+	# 					break
+	# 				else:
+	# 					return False
+	#
 	# Experiments
 	
-	def on_new_experiment(self, _):  # wxGlade: GunShotMatch.<event_handler>
+	def on_new_experiment(self, _):
+		# TODO: check to see if dialog is already open
 		# if hasattr(self, "new_experiment_dialog"):
 		# 	# Already open
 		# 	self.new_experiment_dialog.SetFocus()
@@ -640,15 +614,16 @@ Please choose a different project.""",
 		self.new_experiment_dialog = Experiment.NewExperimentDialog(self, wx.ID_ANY)
 		self.new_experiment_dialog.Show()
 	
-	def on_new_experiment_multiple(self, _):  # wxGlade: GunShotMatch.<event_handler>
+	def on_new_experiment_multiple(self, _):
+		# TODO: check to see if dialog is already open
 		Experiment.MultipleExperimentsDialog(self, wx.ID_ANY).Show()
 	
-	def on_next_experiment(self, _):  # wxGlade: GunShotMatch.<event_handler>
+	def on_next_experiment(self, _):
 		current_selected_page = self.notebook.get_selected_page()
 		current_selected_page.next_experiment()
 		return
 	
-	def on_previous_experiment(self, _):  # wxGlade: GunShotMatch.<event_handler>
+	def on_previous_experiment(self, _):
 		current_selected_page = self.notebook.get_selected_page()
 		current_selected_page.previous_experiment()
 		return
@@ -664,7 +639,7 @@ Please choose a different project.""",
 	def OnClose(self, event):
 		self.OnExit(event)
 	
-	def OnExit(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def OnExit(self, event):
 		internal_config.last_position = self.GetPosition()
 		internal_config.last_size = self.GetSize()
 		internal_config.last_maximized = self.IsMaximized()
@@ -682,22 +657,29 @@ Please choose a different project.""",
 			if not project_panel.save_changes():
 				return
 		
-		print("Bye")
+		self.stop_data_viewer_server()
+		
 		self._mgr.UnInit()
 		del self._mgr
+		self.Raise()
+		self.SetFocus()
 		self.Destroy()
+		print("Be Seeing You!")
 	
 	# Printing and Export
 	
-	def on_export(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_export(self, _):
 		ExportDialog(self).Show()
 	
-	def on_export_pdf(self, event=None):  # wxGlade: GunShotMatch.<event_handler>
+	def on_export_pdf(self, event=None):
 		# Determine the currently selected tab and ask it to export as PDF
+		# TODO: Guard for welcome page
 		selected_project = self.notebook.get_selected_project()
 		selected_page = self.notebook.get_selected_project_panel().get_selected_page()
 		
 		if isinstance(selected_page, Experiment.ExperimentDataPanel):
+			selected_page.export_pdf(input_filename=selected_project.filename.value)
+		elif isinstance(selected_page, Project.CompoundsDataPanel):
 			selected_page.export_pdf(input_filename=selected_project.filename.value)
 		
 		elif hasattr(selected_page, "export_pdf"):
@@ -715,6 +697,28 @@ Please choose a different project.""",
 						input_filename=selected_project.filename.value,
 						output_filename=filename[0]
 						)
+			
+				time.sleep(1)
+				webbrowser.open(filename[0])
+		else:
+			wx.MessageBox("The current page does not support exporting to PDF.", "Unsupported")
+	
+	def on_export_project_report(self, event=None):
+		# Determine the currently selected tab and ask it to export as PDF
+		selected_project_panel = self.notebook.get_selected_project_panel()
+		
+		if selected_project_panel:
+			filename = file_dialog_wildcard(
+					self,
+					title="Export Project Report",
+					wildcard="PDF Files (*.pdf)|*.pdf;*.PDF",
+					defaultDir=str(internal_config.last_export)
+					)
+			
+			if filename:
+				internal_config.last_export = filename[0]
+				
+				selected_project_panel.export_project_report(output_filename=filename[0])
 			
 				time.sleep(1)
 				webbrowser.open(filename[0])
@@ -744,7 +748,7 @@ Please choose a different project.""",
 	def on_export_ammo_details(self, event=None):
 		# Determine the currently selected tab and ask it to export as PDF
 		selected_page = self.notebook.get_selected_project_panel()
-		print(selected_page)
+		
 		if hasattr(selected_page, "export_ammo_details"):
 			filename = file_dialog_wildcard(
 					self,
@@ -761,7 +765,10 @@ Please choose a different project.""",
 		else:
 			wx.MessageBox("The Ammo Details cannot be exported for the current page.", "Unsupported")
 	
-	def on_print_preview(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_print_preview(self, _):
+		# TODO
+		# TODO: Guard for welcome page
+		# TODO: Guard could be a decorator
 		# Determine the currently selected tab and ask it to export as PDF
 		selected_project = self.notebook.get_selected_project()
 		selected_page = self.notebook.get_selected_project_panel().get_selected_page()
@@ -774,7 +781,9 @@ Please choose a different project.""",
 		else:
 			wx.MessageBox("The current page does not support exporting to PDF.", "Unsupported")
 	
-	def on_print(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_print(self, _):
+		# TODO
+		# TODO: Guard for welcome page
 		# Determine the currently selected tab and ask it to export as PDF
 		selected_project = self.notebook.get_selected_project()
 		selected_page = self.notebook.get_selected_project_panel().get_selected_page()
@@ -787,27 +796,26 @@ Please choose a different project.""",
 		else:
 			wx.MessageBox("The current page does not support exporting to PDF.", "Unsupported")
 	
-	def on_printer_settings(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_printer_settings(self, _):
 		# Determine the currently selected tab and ask it to print
 		print(self.notebook.get_selected_project_panel().get_selected_page())
-		print("on_printer_settings")
-	
+		
 	# Charts
 	
-	def on_config_colours(self, _):  # wxGlade: GunShotMatch.<event_handler>
+	def on_config_colours(self, _):
 		"""
 		Opens the colour_picker dialog to allow the user to choose the colours for the chart
 		"""
-		print(internal_config.chart_colours)
+
 		dlg = colour_picker(self, selection_choices=internal_config.chart_colours)
 		res = dlg.ShowModal()
 		if res == wx.ID_OK:
 			internal_config.chart_colours = dlg.colour_list
-			print(internal_config.chart_colours)
+
 			dlg.Destroy()
 			# todo: self.replot_chart()
 
-	def on_config_markers(self, _):  # wxGlade: GunShotMatch.<event_handler>
+	def on_config_markers(self, _):
 		"""
 		Opens the style_picker dialog to allow the user to choose the styles for the chart
 		"""
@@ -816,11 +824,11 @@ Please choose a different project.""",
 		res = dlg.ShowModal()
 		if res == wx.ID_OK:
 			internal_config.chart_styles = dlg.style_list
-			print(internal_config.chart_styles)
+			
 			dlg.Destroy()
 			# todo: self.replot_chart()
 	
-	def on_config_borders(self, _):  # wxGlade: GunShotMatch.<event_handler>
+	def on_config_borders(self, _):
 		coming_soon()
 	
 	# Other
@@ -828,19 +836,19 @@ Please choose a different project.""",
 	# def get_dock_art(self):
 	# 	return self._mgr.GetArtProvider()
 	
-	def OnSize(self, event):
+	def on_size(self, event):
 		event.Skip()
 	
-	def on_menu_view_restore(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_menu_view_restore(self, event):
 		self._mgr.LoadPerspective(self.default_perspective)
 		event.Skip()
 	
-	def on_menu_tools_settings(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_menu_tools_settings(self, event):
 		PreferencesDialog(self).Show()
 		
 		event.Skip()
 	
-	def on_menu_help_about(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_menu_help_about(self, event):
 		"""
 		Handler for "Menu" > "About" menu entry
 		"""
@@ -854,19 +862,27 @@ Please choose a different project.""",
 		print("Event handler 'on_quick_start_guide' not implemented!")
 		event.Skip()
 	
-	def on_chart_save(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_chart_save(self, event):
 		print("Event handler 'on_chart_save' not implemented!")
 		event.Skip()
 	
-	def on_reset_view(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_reset_view(self, event):
 		self.notebook.on_reset_view(event)
 		event.Skip()
 	
-	def on_previous_view(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_previous_view(self, event):
 		self.notebook.on_previous_view(event)
 		event.Skip()
 	
-	def on_view_select(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_rescale_y(self, event):
+		self.notebook.on_rescale_y(event)
+		event.Skip()
+	
+	def on_rescale_x(self, event):
+		self.notebook.on_rescale_x(event)
+		event.Skip()
+	
+	def on_view_select(self, _):
 		self.tb_view.ToggleTool(ID_View_Default, True)
 		self.tb_view.ToggleTool(ID_View_Pan, False)
 		self.tb_view.ToggleTool(ID_View_Zoom, False)
@@ -874,8 +890,11 @@ Please choose a different project.""",
 		
 		self.trigger_view_mode_change()
 	
-	def on_zoom(self, event):  # wxGlade: GunShotMatch.<event_handler>
-		if self.tb_view.GetToolState(ID_View_Zoom) and not isinstance(event.GetEventObject(), wx.ToolBar):
+	def check_tool_state(self, event, tool_id):
+		return self.tb_view.GetToolState(tool_id) and not isinstance(event.GetEventObject(), wx.ToolBar)
+		
+	def on_zoom(self, event):
+		if self.check_tool_state(event, ID_View_Zoom):
 			self.tb_view.ToggleTool(ID_View_Zoom, False)
 			self.tb_view.ToggleTool(ID_View_Default, True)
 		else:
@@ -887,8 +906,8 @@ Please choose a different project.""",
 		
 		self.trigger_view_mode_change()
 		
-	def on_pan(self, event):  # wxGlade: GunShotMatch.<event_handler>
-		if self.tb_view.GetToolState(ID_View_Pan) and not isinstance(event.GetEventObject(), wx.ToolBar):
+	def on_pan(self, event):
+		if self.check_tool_state(event, ID_View_Pan):
 			self.tb_view.ToggleTool(ID_View_Default, True)
 			self.tb_view.ToggleTool(ID_View_Pan, False)
 		else:
@@ -901,12 +920,10 @@ Please choose a different project.""",
 		self.trigger_view_mode_change()
 		
 	def trigger_view_mode_change(self):
-		for project in self.notebook.iter_project_panels():
-			for experiment in project.iter_experiment_panels():
-				experiment.experiment_tic.tool_changed(0)
+		pub.sendMessage("view_mode_changed")
 
-	def on_spectrum_click(self, event):  # wxGlade: GunShotMatch.<event_handler>
-		if self.tb_view.GetToolState(ID_View_Spectrum) and not isinstance(event.GetEventObject(), wx.ToolBar):
+	def on_spectrum_click(self, event):
+		if self.check_tool_state(event, ID_View_Spectrum):
 			self.tb_view.ToggleTool(ID_View_Default, True)
 			self.tb_view.ToggleTool(ID_View_Spectrum, False)
 		else:
@@ -918,33 +935,29 @@ Please choose a different project.""",
 		
 		self.trigger_view_mode_change()
 		
-	def on_spectrum_scan(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_spectrum_scan(self, event):
 		self.notebook.on_spectrum_scan(event)
 		
-	def on_spectrum_rt(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_spectrum_rt(self, event):
 		self.notebook.on_spectrum_rt(event)
 	
-	def on_menu_help(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_menu_help(self, event):
 		print("Event handler 'on_menu_help' not implemented!")
 		event.Skip()
-
-	def toggle_experiment_tools(self, enabled=True):
-		self.tb_view.toggle_experiment_tools(enabled)
-		self.tb_experiment.toggle_experiment_tools(enabled)
 		
-	def on_toggle_workflow(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_toggle_workflow(self, event):
 		self.show_pane("Workflow", self.GunShotMatch_menubar.IsChecked(ID_View_Workflow))
 		event.Skip()
 		
-	def on_toggle_project_navigator(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_toggle_project_navigator(self, event):
 		self.show_pane("Project Navigator", self.GunShotMatch_menubar.IsChecked(ID_View_Proj_Nav))
 		event.Skip()
 		
-	def on_toggle_legend(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_toggle_legend(self, event):
 		self.show_pane("Chart Legend", self.GunShotMatch_menubar.IsChecked(ID_View_Legend))
 		event.Skip()
 	
-	def on_menu_remove_ident(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_menu_remove_ident(self, event):
 		choices = [label for label in self.project_navigator.project_navigator_data.keys() if label != "__root"]
 		print(choices)
 		
@@ -973,12 +986,46 @@ Please choose a different project.""",
 		for project_name in selected_projects:
 			for tab_idx in range(self.notebook.GetPageCount()):
 				if self.notebook.GetPageText(tab_idx) == project_name:
-					self.notebook.GetPage(tab_idx).remove_compound_identification_data()
+					self.notebook.GetPage(tab_idx).remove_identification_data()
 					continue
 		
 		event.Skip()
 	
-	def on_menu_remove_alignment(self, event):  # wxGlade: GunShotMatch.<event_handler>
+	def on_menu_remove_consolidate(self, event):
+		choices = [label for label in self.project_navigator.project_navigator_data.keys() if label != "__root"]
+		print(choices)
+		
+		selected_projects = []
+		
+		if len(choices) == 1:
+			with wx.MessageDialog(
+					self,
+					"Do you want to remove Consolidate data from the Project?",
+					"Remove Consolidate Data?",
+					style=wx.YES_NO | wx.NO_DEFAULT | wx.CENTRE) as dlg:
+				if dlg.ShowModal() == wx.ID_YES:
+					selected_projects = choices[:]
+		
+		elif len(choices) > 1:
+			with wx.MultiChoiceDialog(
+					self,
+					"Select Projects to remove Consolidate data from:",
+					"Remove Consolidate Data",
+					choices
+					) as dlg:
+				if dlg.ShowModal() == wx.ID_OK:
+					selected_projects = [choices[x] for x in dlg.GetSelections()]
+		
+		# Remove the consolidate data
+		for project_name in selected_projects:
+			for tab_idx in range(self.notebook.GetPageCount()):
+				if self.notebook.GetPageText(tab_idx) == project_name:
+					self.notebook.GetPage(tab_idx).remove_consolidate_data()
+					continue
+		
+		event.Skip()
+	
+	def on_menu_remove_alignment(self, event):
 		choices = [label for label in self.project_navigator.project_navigator_data.keys() if label != "__root"]
 		print(choices)
 		
@@ -1013,11 +1060,37 @@ Please choose a different project.""",
 		event.Skip()
 		
 	@staticmethod
-	def OnMethodEditor(_):  # wxGlade: GunShotMatch.<event_handler>
+	def on_method_editor(_):
 		utils.method_editor()
 		
 	@staticmethod
-	def OnAmmoEditor(_):  # wxGlade: GunShotMatch.<event_handler>
+	def on_ammo_editor(_):
 		utils.ammo_editor()
-
+	
+	def start_data_viewer_server(self, debug=False):
+		self.flask = Process(target=run_flask, args=(debug,))
+		self.flask.start()
+	
+	def stop_data_viewer_server(self):
+		if hasattr(self, "flask"):
+			try:
+				self.flask.terminate()
+				self.flask.join()
+			except AttributeError:
+				pass
+	
+	def sigint_handler(self, sig, frame):
+		self.Close()
+		
 # end of class GunShotMatch
+
+
+def run_flask(debug):
+	sys.stderr = sys.stdout
+	
+	pid_dir = pathlib.Path(user_config_dir("GunShotMatch")) / ".pid"
+	if not pid_dir.exists():
+		pid_dir.mkdir()
+
+	with PidFile(pidname="DataViewer", piddir=str(pid_dir)) as p:
+		app.run(debug=debug)

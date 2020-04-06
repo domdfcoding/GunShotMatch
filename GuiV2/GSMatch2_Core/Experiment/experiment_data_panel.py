@@ -5,7 +5,7 @@
 # 
 #  This file is part of GunShotMatch
 # 
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 # 
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@
 # stdlib
 import time
 import webbrowser
-from pprint import pprint
 
 # 3rd party
 import wx
@@ -35,23 +34,21 @@ import wx.propgrid
 from domdf_wxpython_tools import file_dialog_wildcard
 # from GuiV2.GSMatch2_Core.SpectrumFrame import SpectrumFrame
 from mathematical.utils import rounders
-from wx.aui import AuiNotebook
 
 # this package
 from GuiV2.GSMatch2_Core import Experiment, Method, SorterPanels
+from GuiV2.GSMatch2_Core.Base import ProjExprPanelBase
 from GuiV2.GSMatch2_Core.Config import internal_config
 from GuiV2.GSMatch2_Core.SpectrumFrame import SpectrumFrame
 
 
-class ExperimentDataPanel(wx.Panel):
+class ExperimentDataPanel(ProjExprPanelBase):
 	def __init__(
 			self, experiment, parent, id=wx.ID_ANY, pos=wx.DefaultPosition,
-			size=wx.DefaultSize, style=0, name="IdentificationPanel"):
+			size=wx.DefaultSize, style=0, name="ExperimentDataPanel"):
 		"""
 		:param parent: The parent window.
 		:type parent: wx.Window
-		:param peak_list:
-		:type peak_list: list of QualifiedPeak objects
 		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
 		:type id: wx.WindowID, optional
 		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
@@ -68,39 +65,26 @@ class ExperimentDataPanel(wx.Panel):
 		
 		self.experiment = experiment
 		
-		wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style | wx.TAB_TRAVERSAL, name=name)
-		self.notebook = AuiNotebook(self, wx.ID_ANY, style=wx.aui.AUI_NB_TOP | wx.aui.AUI_NB_TAB_SPLIT | wx.aui.AUI_NB_TAB_MOVE | wx.aui.AUI_NB_SCROLL_BUTTONS | wx.aui.AUI_NB_CLOSE_ON_ACTIVE_TAB | wx.aui.AUI_NB_MIDDLE_CLICK_CLOSE)
-
-		self._do_layout()
+		ProjExprPanelBase.__init__(self, parent, id=id, pos=pos, size=size, style=style | wx.TAB_TRAVERSAL, name=name)
 		
 		# Make tabs
 		self.experiment_tic = None
-		self.experiment_method = None
-		self.experiment_peaks = None
-		self.ident_panel = None
-
 		self.make_tic_tab()
-		self.make_method_tab()
-		self.make_peak_list_tab()
 		
+		self.method_tab = None
+		self.make_method_tab()
+		
+		self.experiment_peaks = None
+		self.make_peak_list_tab()
+
+		self.ident_panel = None
 		if self.experiment.identification_performed:
 			self.add_ident_tab()
-		
-		self.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.on_page_close, self.notebook)
 		
 		self.experiment._unsaved_changes = False
 		self.experiment.ammo_details_unsaved = False
 		self.experiment.method_unsaved = False
-	
-	def add_experiment_method_tab(self):
-		for tab_idx in range(self.notebook.GetPageCount()):
-			if self.notebook.GetPageText(tab_idx) == "Method":
-				# tab is already open
-				return
-		
-		# Tab is not open
-		self.notebook.AddPage(self.experiment_method, "Method", select=True)
-	
+
 	def add_experiment_peak_list_tab(self):
 		for tab_idx in range(self.notebook.GetPageCount()):
 			if self.notebook.GetPageText(tab_idx) == "Peak List":
@@ -110,10 +94,10 @@ class ExperimentDataPanel(wx.Panel):
 		# Tab is not open
 		self.notebook.AddPage(self.experiment_peaks, "Peak List", select=True)
 	
-	def add_experiment_tab(self, tab_name):
+	def add_tab(self, tab_name):
 		
 		if tab_name == "Method":
-			self.add_experiment_method_tab()
+			self.add_method_tab()
 		elif tab_name == "Peak List":
 			self.add_experiment_peak_list_tab()
 	
@@ -125,13 +109,6 @@ class ExperimentDataPanel(wx.Panel):
 		self.ident_panel = Experiment.IdentificationPanel(self, self.experiment.ident_peaks)
 		self.notebook.AddPage(self.ident_panel, "Compounds", select=True)
 	
-	def _do_layout(self):
-		outer_sizer = wx.BoxSizer(wx.VERTICAL)
-		outer_sizer.Add(self.notebook, 1, wx.EXPAND, 0)
-		self.SetSizer(outer_sizer)
-		outer_sizer.Fit(self)
-		self.Layout()
-	
 	def export_compounds_pdf(self, input_filename, output_filename):
 		Experiment.CompoundsPDFExporter(
 				self.experiment,
@@ -142,9 +119,9 @@ class ExperimentDataPanel(wx.Panel):
 	def export_pdf(self, input_filename):
 		selected_page = self.get_selected_page()
 		
-		special_pages = {self.experiment_peaks, self.ident_panel}
+		exportable_pages = {self.experiment_peaks, self.ident_panel}
 		
-		if (selected_page in special_pages) or hasattr(selected_page, "export_pdf"):
+		if (selected_page in exportable_pages) or hasattr(selected_page, "export_pdf"):
 			
 			filename = file_dialog_wildcard(
 					self,
@@ -175,24 +152,18 @@ class ExperimentDataPanel(wx.Panel):
 				input_filename=input_filename,
 				output_filename=output_filename,
 				)
-		
-	def get_page_by_index(self, index):
-		return self.notebook.GetPage(index)
-	
-	def get_selected_page(self):
-		return self.notebook.GetPage(self.notebook.GetSelection())
-	
-	def get_selected_page_text(self):
-		return self.notebook.GetPageText(self.notebook.GetSelection())
-	
+
 	def make_tic_tab(self):
 		self.experiment_tic = Experiment.ChromatogramPanel(self.experiment, self.notebook, wx.ID_ANY)
 		self.notebook.AddPage(self.experiment_tic, "TIC")
 	
 	def make_method_tab(self):
-		self.experiment_method = Method.MethodPGPanel(self.notebook, method=self.experiment.method_data, editable=False)
-		self.experiment_method.filename_value.SetValue(str(self.experiment.method))
-		self.notebook.AddPage(self.experiment_method, "Method")
+		self.do_make_method_tab(self.experiment.method_data, editable=False)
+		self.method_tab.filename_value.SetValue(str(self.experiment.method))
+	
+	def do_make_method_tab(self, method, editable=True):
+		self.method_tab = Method.MethodPGPanel(self.notebook, method=method, editable=editable)
+		self.notebook.AddPage(self.method_tab, "Method", select=True)
 	
 	def make_peak_list_tab(self):
 		self.experiment_peaks = SorterPanels.SorterPanel(self.notebook, wx.ID_ANY)
@@ -209,34 +180,6 @@ class ExperimentDataPanel(wx.Panel):
 	@property
 	def name(self):
 		return self.experiment.name
-	
-	def on_page_close(self, event):
-		pprint(dir(event))
-		closed_tab_idx = event.GetOldSelection()
-		closed_tab = self.notebook.GetPage(closed_tab_idx)
-		event.Veto()
-		self.notebook.RemovePage(closed_tab_idx)
-		closed_tab.Hide()
-
-	def remove_ident_tab(self):
-		for tab_idx in range(self.notebook.GetPageCount()):
-			if self.notebook.GetPage(tab_idx) == self.ident_panel:
-				self.notebook.RemovePage(tab_idx)
-				self.ident_panel.Destroy()
-				self.ident_panel = None
-				return
-	
-	def switch_to_content(self, page_title):
-		# Switch notebook to the given page
-		
-		for tab_idx in range(self.notebook.PageCount):
-			if self.notebook.GetPageText(tab_idx) == page_title:
-				self.notebook.SetSelection(tab_idx)
-				return tab_idx
-		
-		# Tab not open, so open it
-		self.add_experiment_tab(page_title)
-		return self.notebook.GetPageCount() - 1
 	
 	def view_spectrum(self, *, rt=None, num=None):
 		"""
@@ -264,6 +207,7 @@ class ExperimentDataPanel(wx.Panel):
 			if not isinstance(num, int):
 				raise TypeError("'num' must be an int")
 			print(f"Loading Spectrum with scan number: {num}")
-			SpectrumFrame(self, self.experiment, scan_number=num).Show()
+			# TODO: Get the scan from the experiment and pass it to the spectrum frame
+			# SpectrumFrame(self, self.experiment, scan_number=num).Show()
 		
 # end of class ExperimentDataPanel

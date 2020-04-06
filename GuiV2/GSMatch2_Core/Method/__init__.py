@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,19 +23,21 @@
 #  MA 02110-1301, USA.
 #
 
-
-from GuiV2.GSMatch2_Core.Method.exporters import PDFExporter
+from GuiV2.GSMatch2_Core.Method.exporters import MethodPDFExporter
 from GuiV2.GSMatch2_Core.Method.method import descriptions, Method
-from GuiV2.GSMatch2_Core.Method.MethodEditor import MethodEditor
-from GuiV2.GSMatch2_Core.Method.MethodPGPanel import MassRange, MethodPGPanel
+# MethodPickerMixin must be imported before MethodEditor
 from GuiV2.GSMatch2_Core.Method.method_picker_mixin import MethodPickerMixin
+from GuiV2.GSMatch2_Core.Method.MethodEditor import MethodEditor
+from GuiV2.GSMatch2_Core.Method.MethodEditorAboutDialog import MethodEditorAboutDialog as AboutDialog
+from GuiV2.GSMatch2_Core.Method.MethodPGPanel import MassRange, MethodPGPanel
 
 __all__ = [
-		"Method",
-		"MethodEditor",
-		"MethodPGPanel",
-		"MassRange",
-		"MethodPickerMixin",
+		"MethodPDFExporter",
 		"descriptions",
-		"PDFExporter",
+		"Method",
+		"MethodPickerMixin",
+		"MethodEditor",
+		"AboutDialog",
+		"MassRange",
+		"MethodPGPanel",
 		]

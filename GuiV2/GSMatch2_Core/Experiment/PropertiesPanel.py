@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,17 +26,16 @@
 #
 
 
-# stdlib
-
 # 3rd party
 from domdf_wxpython_tools import TabbableTextCtrl
-
+import wx
 
 # this package
-from GuiV2.GSMatch2_Core.IDs import *
 from GuiV2.GSMatch2_Core.GUI.validators import (
 	ExperimentFilenameValidator, ExperimentNameValidator,
 	)
+from GuiV2.GSMatch2_Core.IDs import *
+
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -47,6 +46,23 @@ from GuiV2.GSMatch2_Core.GUI.validators import (
 
 class PropertiesPanel(wx.Panel):
 	def __init__(self, *args, **kwds):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
+		
 		# begin wxGlade: PropertiesPanel.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.TAB_TRAVERSAL
 		wx.Panel.__init__(self, *args, **kwds)

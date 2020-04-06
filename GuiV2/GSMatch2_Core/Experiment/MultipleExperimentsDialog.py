@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -42,10 +42,12 @@ from GuiV2.GSMatch2_Core import Experiment, Method, SorterPanels
 from GuiV2.GSMatch2_Core.Config import internal_config
 from GuiV2.GSMatch2_Core.Experiment.DatafilePanel import DatafilePanel
 from GuiV2.GSMatch2_Core.Experiment.PropertiesPanel import PropertiesPanel
-from GuiV2.GSMatch2_Core.GUI.prog_dialog_indeterminate import ProgDialogThread
+from GuiV2.GSMatch2_Core.GUI.prog_dialog_indeterminate import AnimatedProgDialog
 from GuiV2.GSMatch2_Core.GUI.validators import ExperimentMethodValidator
 from GuiV2.GSMatch2_Core.IDs import *
 from GuiV2.GSMatch2_Core.utils import lookup_filetype
+from GuiV2.GSMatch2_Core.utils import create_button
+
 
 # 3rd party
 
@@ -59,10 +61,11 @@ from MultipleExperimentSorterPanel import MultipleExperimentSorterPanel
 # end wxGlade
 
 
-# TODO: Import and export of csv file containing experiments and properties to process
 class MultipleExperimentsDialog(wx.Dialog, Method.MethodPickerMixin):
 	"""
 	Dialog for creating multiple Experiments in bulk using similar settings
+	
+	TODO: Import and export of csv file containing experiments and properties to process
 	"""
 
 	def __init__(self, *args, **kwds):
@@ -71,12 +74,10 @@ class MultipleExperimentsDialog(wx.Dialog, Method.MethodPickerMixin):
 		:type parent: wx.Window
 		:param id: An identifier for the dialog. wx.ID_ANY is taken to mean a default.
 		:type id: wx.WindowID, optional
-		:param pos: The dialog position. The value ::wxDefaultPosition indicates a default position,
+		:param pos: The dialog position. The value wx.DefaultPosition indicates a default position, chosen by either the windowing system or wxWidgets, depending on platform.
 		:type pos: wx.Point, optional
-			chosen by either the windowing system or wxWidgets, depending on platform.
-		:param size: The dialog size. The value ::wxDefaultSize indicates a default size, chosen by
+		:param size: The dialog size. The value wx.DefaultSize indicates a default size, chosen by either the windowing system or wxWidgets, depending on platform.
 		:type size: wx.Size, optional
-			either the windowing system or wxWidgets, depending on platform.
 		:param style: The window style. See wxPanel.
 		:type style: int, optional
 		:param name: Window name.
@@ -256,7 +257,7 @@ class MultipleExperimentsDialog(wx.Dialog, Method.MethodPickerMixin):
 		self.experiments = []
 		self.update_expr_list()
 	
-	def on_add_experiment(self, event):  # wxGlade: MultipleExperimentsDialog.<event_handler>
+	def on_add_experiment(self, _):  # wxGlade: MultipleExperimentsDialog.<event_handler>
 		
 		if self.Validate() and self.datafile.validate_datafile():
 			
@@ -311,6 +312,11 @@ class MultipleExperimentsDialog(wx.Dialog, Method.MethodPickerMixin):
 				experiment.original_filetype = ID
 				return
 	
+	def destroy_prog_dialog(self):
+		if hasattr(self, "prog_dialog"):
+			wx.CallAfter(self.prog_dialog.Destroy)
+			del self.prog_dialog
+	
 	def on_create(self, event=None):
 		"""
 		Event handler for 'Create' button being pressed.
@@ -354,60 +360,102 @@ Do you want to replace it?""",
 					elif res == wx.ID_YESTOALL:
 						yes_to_all = True
 					
-			
 			# If file doesn't exist or if it does exist and user wants to replace it:
 			internal_config.last_experiment = filename
 			experiment.filename.value = filename
 			experiments_to_process.append(experiment)
 		
-		MultipleExperimentsProgressDialog(self, experiments_to_process)
+		# MultipleExperimentsProgressDialog(self, experiments_to_process)
+			
+		# Create progressbar and create experiment
+		thread = MultipleExperimentsThread(self, experiments_to_process)
+		thread.start()
+		# TODO: Give progress update to say which experiment is being created
+		self.prog_dialog = AnimatedProgDialog("Experiment Creation In Progress...", self)
+		self.prog_dialog.ShowModal()
+		
+		# ExperimentProgressDialog(self, self.experiment, self.datafile.expr_picker.GetValue(), selected_button)
+		
+		for experiment in experiments_to_process:
+			experiment.store()
+			
+		print("Experiments Created")
+		with wx.MessageDialog(
+				self,
+				"Experiments Created Successfully.",
+				"Experiments Created") as dlg:
+			dlg.ShowModal()
+		
+		if self.IsModal():
+			wx.CallAfter(self.EndModal, wx.ID_OK)
+		else:
+			wx.CallAfter(self.Destroy)
+		
+		return
 					
 # end of class MultipleExperimentsDialog
 
 
 class OverwritePrompt(wx.Dialog):
-	def __init__(self, parent, id=wx.ID_ANY, message="Do you want to overwrite the existing file?", title='Overwrite File?', pos=wx.DefaultPosition, size=wx.DefaultSize, style=wx.DEFAULT_DIALOG_STYLE, name=wx.DialogNameStr):
+	def __init__(
+			self, parent, id=wx.ID_ANY,
+			message="Do you want to overwrite the existing file?",
+			title='Overwrite File?', pos=wx.DefaultPosition, size=wx.DefaultSize,
+			style=wx.DEFAULT_DIALOG_STYLE, name=wx.DialogNameStr
+			):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param size: The dialog size. The value DefaultSize indicates a default
+		size, chosen by either the windowing system or wxWidgets, depending on
+		platform.
+		:type size: wx.Size
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
+		
 		wx.Dialog.__init__(self, parent, id=id, title=title, pos=pos, size=size, style=style, name=name)
 		
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		sizer.Add(wx.StaticText(self, label=str(message)), 0, wx.ALL, 10)
 		
-		self.cancel_btn = wx.Button(self, label="Cancel")
-		self.no_btn = wx.Button(self, label="&No")
-		self.yes_btn = wx.Button(self, label="&Yes")
-		self.yes_to_all_btn = wx.Button(self, label="Yes to All")
-		
 		btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		btn_sizer.AddSpacer(10)
-		btn_sizer.Add(self.cancel_btn)
-		btn_sizer.Add(self.no_btn)
-		btn_sizer.Add(self.yes_btn)
-		btn_sizer.Add(self.yes_to_all_btn)
+		
+		self.cancel_btn = create_button(self, label="Cancel", sizer=btn_sizer, handler=self.on_yes)
+		self.no_btn = create_button(self, label="&No", sizer=btn_sizer, handler=self.on_yes_to_all)
+		self.yes_btn = create_button(self, label="&Yes", sizer=btn_sizer, handler=self.on_no)
+		self.yes_to_all_btn = create_button(self, label="Yes to All", sizer=btn_sizer, handler=self.on_cancel)
 		
 		sizer.Add(btn_sizer, 1, wx.EXPAND | wx.ALIGN_RIGHT | wx.ALL, 10)
 		self.SetSizerAndFit(sizer)
 		
-		self.Bind(wx.EVT_BUTTON, self.on_yes, self.yes_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_yes_to_all, self.yes_to_all_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_no, self.no_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_cancel, self.cancel_btn)
-		
 		self.no_btn.SetFocus()
 		
-	
 	def Show(self, *args, **kwargs):
 		return self.ShowModal()
 	
-	def on_yes(self, event):
+	def on_yes(self, _):
 		self.EndModal(wx.ID_YES)
 		
-	def on_yes_to_all(self, event):
+	def on_yes_to_all(self, _):
 		self.EndModal(wx.ID_YESTOALL)
 		
-	def on_no(self, event):
+	def on_no(self, _):
 		self.EndModal(wx.ID_NO)
 		
-	def on_cancel(self, event):
+	def on_cancel(self, _):
 		self.EndModal(wx.ID_CANCEL)
 		
 
@@ -416,9 +464,10 @@ class MultipleExperimentsThread(threading.Thread):
 	Thread for creating multiple Experiments
 	"""
 	
-	def __init__(self, experiment_list):
+	def __init__(self, parent, experiment_list):
 		threading.Thread.__init__(self)
 		
+		self.parent = parent
 		self.experiment_list = experiment_list
 	
 	def run(self):
@@ -430,53 +479,54 @@ class MultipleExperimentsThread(threading.Thread):
 		for experiment in self.experiment_list:
 			# TODO: perform creation in parallel
 			experiment.run(experiment.original_filename, experiment.original_filetype)
+		self.parent.destroy_prog_dialog()
 
 
-class MultipleExperimentsProgressDialog(ProgDialogThread):
-	def __init__(self, parent, experiment_list):
-		"""
-		:param parent:
-		:type parent:
-		:param experiment_list: A list of :class:`Experiment` object to process
-		:type experiment_list:
-		
-		.. note: Unlike with :class:`ExperimentProgressDialog`,
-		the original_filetype and original_filename attributes must have already
-		been set for the Experiment
-		"""
-		
-		self.parent = parent
-		self.experiment_list = experiment_list
-		thread = MultipleExperimentsThread(self.experiment_list)
-		
-		ProgDialogThread.__init__(self, thread, "Experiment", "Experiment Creation In Progress...", 100, parent)
-	
-	def updateProgress(self, msg):
-		"""
-		Event handler for updating the progress bar
-		"""
-		
-		self.Pulse()
-		
-		if msg == "Dead":
-			# Thread is dead because Experiment has been created
-			
-			for experiment in self.experiment_list:
-				experiment.store()
-				
-			print("Experiments Created")
-			with wx.MessageDialog(
-					self,
-					"Experiments Created Successfully.",
-					"Experiments Created") as dlg:
-				dlg.ShowModal()
-				
-			if self.parent.IsModal():
-				self.parent.EndModal(wx.ID_OK)
-			else:
-				self.parent.Destroy()
-		
-			self.Destroy()
+# class MultipleExperimentsProgressDialog(ProgDialogThread):
+# 	def __init__(self, parent, experiment_list):
+# 		"""
+# 		:param parent:
+# 		:type parent:
+# 		:param experiment_list: A list of :class:`Experiment` object to process
+# 		:type experiment_list:
+#
+# 		.. note: Unlike with :class:`ExperimentProgressDialog`,
+# 		the original_filetype and original_filename attributes must have already
+# 		been set for the Experiment
+# 		"""
+#
+# 		self.parent = parent
+# 		self.experiment_list = experiment_list
+# 		thread = MultipleExperimentsThread(self.experiment_list)
+#
+# 		ProgDialogThread.__init__(self, thread, "Experiment", "Experiment Creation In Progress...", 100, parent)
+#
+# 	def updateProgress(self, msg):
+# 		"""
+# 		Event handler for updating the progress bar
+# 		"""
+#
+# 		self.Pulse()
+#
+# 		if msg == "Dead":
+# 			# Thread is dead because Experiment has been created
+#
+# 			for experiment in self.experiment_list:
+# 				experiment.store()
+#
+# 			print("Experiments Created")
+# 			with wx.MessageDialog(
+# 					self,
+# 					"Experiments Created Successfully.",
+# 					"Experiments Created") as dlg:
+# 				dlg.ShowModal()
+#
+# 			if self.parent.IsModal():
+# 				self.parent.EndModal(wx.ID_OK)
+# 			else:
+# 				self.parent.Destroy()
+#
+# 			self.Destroy()
 
 
 if __name__ == '__main__':

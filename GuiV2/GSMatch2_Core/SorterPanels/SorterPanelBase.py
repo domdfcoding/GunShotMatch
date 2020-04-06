@@ -9,10 +9,10 @@ wx.Panel containing a wx.ListCtrl that can be sorted by clicking the column head
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  ColSelectMixin based on wx.lib.mixins.listctrl.TextEditMixin
-#  (c) 2001-2018 by Total Control Software
+#  © 2001-2018 by Total Control Software
 #  Licensed under the wxWindows license
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
@@ -33,20 +33,16 @@ wx.Panel containing a wx.ListCtrl that can be sorted by clicking the column head
 
 
 # stdlib
+from bisect import bisect
+import locale
 
 # 3rd party
 import wx
-from wx.lib.mixins.listctrl import ColumnSorterMixin, TextEditMixin
-
-from bisect import bisect
-
-
-# this package
+from wx.lib.mixins.listctrl import ColumnSorterMixin
 
 
 # begin wxGlade: dependencies
 # end wxGlade
-
 # begin wxGlade: extracode
 # end wxGlade
 
@@ -55,6 +51,8 @@ myEVT_SORTER_PANEL_DCLICK = wx.PyEventBinder(EVT_SORTER_PANEL_DCLICK, 1)
 EVT_SORTER_PANEL_RCLICK = wx.NewEventType()
 myEVT_SORTER_PANEL_RCLICK = wx.PyEventBinder(EVT_SORTER_PANEL_RCLICK, 1)
 
+
+# TODO: Right click menu does not appear under wxMSW, and clicking header to sort columns results in an error.
 
 class ColSelectMixin:
 	"""
@@ -77,22 +75,25 @@ class ColSelectMixin:
 		self.OnLeftClick()
 		
 		self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftClick)
-		self.Bind(wx.EVT_RIGHT_UP, self.OnRightClick)
+		if wx.Platform == "__WXGTK__":
+			self.Bind(wx.EVT_RIGHT_UP, self.OnRightClick)
+		elif wx.Platform == "__WXMSW__":
+			self.Parent.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnRightClick, self)
 		self.Bind(wx.EVT_LEFT_DCLICK, self.OnDoubleClick)
 	
 	def OnLeftClick(self, event=None):
+		
 		self.curRow = 0
 		self.curCol = 0
 		if event:
 			event.Skip()
-		
 	
 	def OnDoubleClick(self, event):
 		"""
 		Examine the double click events to see if a row has been click on twice.
 		If so, determine the current row and column and open the editor.
 		"""
-		
+		print("On Double Click")
 		x, y = event.GetPosition()
 		row, flags = self.HitTest((x, y))
 		
@@ -108,8 +109,7 @@ class ColSelectMixin:
 			self.col_locs.append(loc)
 		
 		col = bisect(self.col_locs, x + self.GetScrollPos(wx.HORIZONTAL)) - 1
-		# print(f"Column Selected: {col}")
-		# print(f"Row Selected: {row}")
+		
 		self.curRow = row
 		self.curCol = col
 		
@@ -121,9 +121,16 @@ class ColSelectMixin:
 		"""
 		Determine the current row and column
 		"""
+		print("Right Click")
+		if wx.Platform == "__WXMSW__":
+			x, y = wx.GetMousePosition()
+		elif wx.Platform == "__WXGTK__":
+			x, y = event.GetPosition()
+		else:
+			raise NotImplementedError
 		
-		x, y = event.GetPosition()
 		row, flags = self.HitTest((x, y))
+			
 		
 		# the following should really be done in the mixin's init but
 		# the wx.ListCtrl demo creates the columns after creating the
@@ -137,8 +144,7 @@ class ColSelectMixin:
 			self.col_locs.append(loc)
 		
 		col = bisect(self.col_locs, x + self.GetScrollPos(wx.HORIZONTAL)) - 1
-		# print(f"Column Selected: {col}")
-		# print(f"Row Selected: {row}")
+
 		self.curRow = row
 		self.curCol = col
 		
@@ -170,7 +176,7 @@ class ColSelectListCtrl(wx.ListCtrl, ColSelectMixin):
 class SorterPanel(wx.Panel, ColumnSorterMixin):
 	def __init__(
 			self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.DefaultSize,
-			style=wx.TAB_TRAVERSAL | wx.BORDER_DEFAULT | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES,
+			style=wx.TAB_TRAVERSAL | wx.BORDER_DEFAULT | wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES | wx.LC_SINGLE_SEL,
 			validator=wx.DefaultValidator, name=wx.ListCtrlNameStr
 			):
 		
@@ -204,17 +210,13 @@ class SorterPanel(wx.Panel, ColumnSorterMixin):
 		"""
 		
 		if len(entry):
-			# print(f"Entry: {entry}")
 			pos = self.listCtrl.InsertItem(self.GetItemCount(), str(entry[0]))
 			for i in range(1, len(entry)):
-				# print(i)
-				# print(pos, i, entry[i])
 				self.listCtrl.SetItem(pos, i, str(entry[i]))
 			
-			# ret = self.listCtrl.Append(entry)
-			self.itemDataMap[self.GetItemCount() - 1] = entry
+			self.itemDataMap[self.GetItemCount() - 1] = [x for x in entry]
 			self.listCtrl.SetItemData(self.GetItemCount() - 1, self.GetItemCount() - 1)
-			# return ret
+
 			return pos
 	
 	def AppendColumn(self, heading, format=wx.LIST_FORMAT_LEFT, width=-1):
@@ -238,7 +240,7 @@ class SorterPanel(wx.Panel, ColumnSorterMixin):
 		
 		self.default_column_headers.append(heading)
 		self.SetColumnCount(self.GetColumnCount() + 1)
-		return self.listCtrl.AppendColumn(heading, format, width)
+		return self.listCtrl.AppendColumn(f"{heading}  ", format, width)
 	
 	def ClearAll(self):
 		"""
@@ -481,26 +483,27 @@ class SorterPanel(wx.Panel, ColumnSorterMixin):
 	def GetListCtrl(self):
 		return self.listCtrl
 	
+	def refresh_col_headers(self):
+		sorted_col_idx, ascending = self.GetSortState()
+		ascending = bool(ascending)
+		
+		for col_idx, col_label in enumerate(self.default_column_headers):
+			header = self.listCtrl.GetColumn(col_idx)
+			
+			if col_idx == sorted_col_idx:
+				header.SetText(f"{col_label} {'⭡' if ascending else '⭣'}")
+			else:
+				header.SetText(f"{col_label}  ")
+			self.listCtrl.SetColumn(col_idx, header)
+	
 	def OnColClick(self, event):
 		"""
 		Handler for clicking column header
 		"""
 		print("Header clicked")
 		
-		sorted_col_idx, ascending = self.GetSortState()
-		ascending = bool(ascending)
-		print(sorted_col_idx, ascending)
+		self.refresh_col_headers()
 		
-		for col_idx, col_label in enumerate(self.default_column_headers):
-			header = self.listCtrl.GetColumn(col_idx)
-			print(header.GetText())
-			
-			if col_idx == sorted_col_idx:
-				header.SetText(f"{col_label} {'⭡' if ascending else '⭣'}")
-			else:
-				header.SetText(f"{col_label}")
-			self.listCtrl.SetColumn(col_idx, header)
-	
 	def GetDoubleClickedCell(self):
 		"""
 		Returns the row and column index of the double clicked cell
@@ -509,5 +512,37 @@ class SorterPanel(wx.Panel, ColumnSorterMixin):
 		:rtype: typle
 		"""
 		return self.listCtrl.curRow, self.listCtrl.curCol
+	
+	# def SetItemData(self, item, data):
+	# 	self.listCtrl.SetItemData(item, data)
+
+	def FindItem(self, start=-1, *args, **kwargs):
+		"""
+		FindItem(start, str, partial=False) -> long
+		FindItem(start, data) -> long
+		FindItem(start, pt, direction) -> long
+		
+		Find an item whose label matches this string, starting from start or
+		the beginning if start is -1.
+
+		:param start:
+		:type start:
+		:param args:
+		:type args:
+		:return:
+		:rtype:
+		"""
+		
+		return self.listCtrl.FindItem(start, *args, **kwargs)
+	
+	def SortListItems(self, col=-1, ascending=1):
+		"""
+		Sort the list on demand.  Can also be used to set the sort column and order.
+		"""
+		
+		ColumnSorterMixin.SortListItems(self, col, ascending)
+		self.refresh_col_headers()
 
 # end of class ExperimentSorterPanel
+
+

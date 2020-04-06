@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,13 +23,25 @@
 #  MA 02110-1301, USA.
 #
 
+
 # stdlib
 from string import ascii_lowercase
 
 # 3rd party
 import wx
 
-# this package
+
+def id_from_string(id_string):
+	int_id = ['1']
+	for character in id_string.lower():
+		char_num = str(ascii_lowercase.index(character))
+		if len(char_num) == 1:
+			char_num = f"0{char_num}"
+		int_id.append(char_num)
+	return int("".join(int_id))
+
+
+tb_icon_size = (24, 24)
 
 
 ID_Settings = wx.NewIdRef()
@@ -47,13 +59,10 @@ ID_RECENT_9 = wx.NewIdRef()
 
 recent_project_ids = [ID_RECENT_0, ID_RECENT_1, ID_RECENT_2, ID_RECENT_3, ID_RECENT_4, ID_RECENT_5, ID_RECENT_6, ID_RECENT_7, ID_RECENT_8, ID_RECENT_9]
 
-ID_New_Project = wx.ID_NEW
 ID_New_Experiment = wx.NewIdRef()
 ID_New_Experiment_Single = wx.NewIdRef()
 ID_New_Experiment_Multiple = wx.NewIdRef()
 
-ID_Open_Project = wx.ID_OPEN
-ID_Save_Project = wx.ID_SAVE
 ID_Save_All = wx.NewIdRef()
 ID_Close_Project = wx.NewIdRef()
 
@@ -66,6 +75,8 @@ ID_Config_Borders = wx.NewIdRef()
 
 ID_View_Reset = wx.NewIdRef()
 ID_View_Previous = wx.NewIdRef()
+ID_View_Rescale_y = wx.NewIdRef()
+ID_View_Rescale_x = wx.NewIdRef()
 ID_View_Default = wx.NewIdRef()
 ID_View_Zoom = wx.NewIdRef()
 ID_View_Pan = wx.NewIdRef()
@@ -76,19 +87,6 @@ ID_View_Toolbar = wx.NewIdRef()
 ID_View_Legend = wx.NewIdRef()
 ID_View_Proj_Nav = wx.NewIdRef()
 ID_View_Workflow = wx.NewIdRef()
-
-tb_icon_size = (24, 24)
-
-
-def id_from_string(id_string):
-	int_id = ['1']
-	for character in id_string.lower():
-		char_num = str(ascii_lowercase.index(character))
-		if len(char_num) == 1:
-			char_num = f"0{char_num}"
-		int_id.append(char_num)
-	return int("".join(int_id))
-
 
 ID_Format_MassHunter = 4808
 ID_Format_WatersRAW = 8218
@@ -120,13 +118,17 @@ ID_Spec_Viewer_Save = wx.NewIdRef()
 ID_Spec_Viewer_Copy_Image = wx.NewIdRef()
 ID_Spec_Viewer_Copy_Data = wx.NewIdRef()
 
-
 ID_RemoveAlignmentData = wx.NewIdRef()
 ID_RemoveIdentData = wx.NewIdRef()
-
+ID_RemoveConsolidateData = wx.NewIdRef()
 
 ID_Tools_MethodEditor = wx.NewIdRef()
 ID_Tools_AmmunitionEditor = wx.NewIdRef()
 
 ID_Export = wx.NewIdRef()
 ID_Export_PDF = wx.NewIdRef()
+
+
+# cleanup
+del ascii_lowercase
+del wx

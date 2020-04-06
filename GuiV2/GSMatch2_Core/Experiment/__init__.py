@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,31 +31,31 @@ from GuiV2.GSMatch2_Core.Experiment.exporters import (
 	CompoundsPDFExporter, PeakListPDFExporter,
 	SinglePeakCompoundsPDFExporter,
 	)
-from GuiV2.GSMatch2_Core.Experiment.functions import create_msp
-from GuiV2.GSMatch2_Core.Experiment.identification import QualifiedPeak, SearchResult
-from GuiV2.GSMatch2_Core.Experiment.identification_panel import IdentificationPanel, SinglePeakIdentificationPanel
+from GuiV2.GSMatch2_Core.Experiment.identification import (
+	IdentificationPanel, QualifiedPeak, SinglePeakIdentificationPanel,
+	)
+from GuiV2.GSMatch2_Core.Experiment.identification.functions import create_msp
 from GuiV2.GSMatch2_Core.Experiment.MultipleExperimentsDialog import MultipleExperimentsDialog
 from GuiV2.GSMatch2_Core.Experiment.NewExperimentDialog import NewExperimentDialog
-from GuiV2.GSMatch2_Core.Experiment.spectrum_panel import SpectrumPanel, SpectrumPanel
+from GuiV2.GSMatch2_Core.Experiment.spectrum_panel import SpectrumPanel
+
 
 __all__ = [
 		"ChromatogramPanel",
-		"Experiment",
 		"DatafilePanel",
-		"SpectrumPanel",
+		"Experiment",
+		"load",
+		"new",
+		"new_empty",
 		"ExperimentDataPanel",
+		"CompoundsPDFExporter",
+		"PeakListPDFExporter",
+		"SinglePeakCompoundsPDFExporter",
+		"IdentificationPanel",
+		"QualifiedPeak",
+		"SinglePeakIdentificationPanel",
+		"create_msp",
 		"MultipleExperimentsDialog",
 		"NewExperimentDialog",
 		"SpectrumPanel",
-		"create_msp",
-		"new",
-		"load",
-		"new_empty",
-		"SearchResult",
-		"QualifiedPeak",
-		"IdentificationPanel",
-		"PeakListPDFExporter",
-		"CompoundsPDFExporter",
-		"SinglePeakIdentificationPanel",
-		"SinglePeakCompoundsPDFExporter",
 		]

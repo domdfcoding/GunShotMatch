@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,16 +23,9 @@
 #  MA 02110-1301, USA.
 #
 
-# stdlib
-
-# 3rd party
-import wx
-from importlib_resources import path
 
 # this package
-import GSMatch.lib.icons
 from GuiV2.GSMatch2_Core.IDs import *
-from GuiV2.icons import get_icon
 
 
 windows_only_formats = [ID_Format_MassHunter]

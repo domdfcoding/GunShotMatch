@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,15 +32,15 @@ import socket
 import threading
 
 # 3rd party
-from domdf_wxpython_tools import file_dialog
-from domdf_wxpython_tools import FileBrowseCtrl
+from domdf_wxpython_tools import file_dialog, FileBrowseCtrl
+import wx
 
 # this package
 from GuiV2.GSMatch2_Core import Experiment, Method
 from GuiV2.GSMatch2_Core.Config import internal_config
 from GuiV2.GSMatch2_Core.Experiment.DatafilePanel import DatafilePanel
 from GuiV2.GSMatch2_Core.Experiment.PropertiesPanel import PropertiesPanel
-from GuiV2.GSMatch2_Core.GUI.prog_dialog_indeterminate import ProgDialogThread
+from GuiV2.GSMatch2_Core.GUI.prog_dialog_indeterminate import AnimatedProgDialog
 from GuiV2.GSMatch2_Core.GUI.validators import ExperimentMethodValidator
 from GuiV2.GSMatch2_Core.IDs import *
 
@@ -63,12 +63,10 @@ class NewExperimentDialog(wx.Dialog, Method.MethodPickerMixin):
 		:type parent: wx.Window
 		:param id: An identifier for the dialog. wx.ID_ANY is taken to mean a default.
 		:type id: wx.WindowID, optional
-		:param pos: The dialog position. The value ::wxDefaultPosition indicates a default position,
+		:param pos: The dialog position. The value wx.DefaultPosition indicates a default position, chosen by either the windowing system or wxWidgets, depending on platform.
 		:type pos: wx.Point, optional
-			chosen by either the windowing system or wxWidgets, depending on platform.
-		:param size: The dialog size. The value ::wxDefaultSize indicates a default size, chosen by
+		:param size: The dialog size. The value wx.DefaultSize indicates a default size, chosen by either the windowing system or wxWidgets, depending on platform.
 		:type size: wx.Size, optional
-			either the windowing system or wxWidgets, depending on platform.
 		:param style: The window style. See wxPanel.
 		:type style: int, optional
 		:param name: Window name.
@@ -89,6 +87,7 @@ class NewExperimentDialog(wx.Dialog, Method.MethodPickerMixin):
 		self.__set_properties()
 		self.__do_layout()
 		# end wxGlade
+		
 		Method.MethodPickerMixin.__init__(self)
 		
 		self.properties.user.SetValue(getpass.getuser())
@@ -149,6 +148,11 @@ class NewExperimentDialog(wx.Dialog, Method.MethodPickerMixin):
 		self.FindWindow(self.ok_btn_id).SetLabel("Create")
 		outer_sizer.Add(btnsizer, 0, wx.ALIGN_RIGHT | wx.EXPAND | wx.BOTTOM, 5)
 	
+	def destroy_prog_dialog(self):
+		if hasattr(self, "prog_dialog"):
+			wx.CallAfter(self.prog_dialog.Destroy)
+			del self.prog_dialog
+	
 	def on_create(self, event=None):
 		"""
 		Event handler for 'Create' button being pressed.
@@ -183,17 +187,43 @@ class NewExperimentDialog(wx.Dialog, Method.MethodPickerMixin):
 					
 					print("Now the experiment will be created")
 					
-					ExperimentProgressDialog(self, self.experiment, self.datafile.expr_picker.GetValue(), selected_button)
+					# Create progressbar and create experiment
+					thread = ExperimentThread(self, self.experiment, self.datafile.expr_picker.GetValue(), selected_button)
+					thread.start()
+					self.prog_dialog = AnimatedProgDialog("Experiment Creation In Progress...", self)
+					self.prog_dialog.ShowModal()
 					
+					# ExperimentProgressDialog(self, self.experiment, self.datafile.expr_picker.GetValue(), selected_button)
+					
+					self.experiment.store(self.filename)
+					self.filenames.append(self.filename)
+					
+					self.filename = None
+					
+					print("Experiment Created")
+					with wx.MessageDialog(
+							self,
+							"Experiment Created Successfully.\nDo you want to create another Experiment?",
+							"Experiment Created",
+							wx.ICON_QUESTION | wx.YES_NO
+							) as dlg:
+						res = dlg.ShowModal()
+					
+					if res != wx.ID_YES:
+						if self.IsModal():
+							wx.CallAfter(self.EndModal, wx.ID_OK)
+						else:
+							wx.CallAfter(self.Destroy)
+							
 					return
-			
+
 
 class ExperimentThread(threading.Thread):
 	"""
 	Thread for creating the Experiment
 	"""
 	
-	def __init__(self, experiment, original_filename, original_filetype):
+	def __init__(self, parent, experiment, original_filename, original_filetype):
 		"""
 		:param experiment: The :class:`Experiment` object to create the experiment from.
 		:type experiment:
@@ -205,6 +235,7 @@ class ExperimentThread(threading.Thread):
 		
 		threading.Thread.__init__(self)
 		
+		self.parent = parent
 		self.experiment = experiment
 		self.original_filename = str(original_filename)
 		self.original_filetype = int(original_filetype)
@@ -217,58 +248,59 @@ class ExperimentThread(threading.Thread):
 		print("Experiment Creation in Progress...")
 		
 		self.experiment.run(self.original_filename, self.original_filetype)
+		self.parent.destroy_prog_dialog()
 
-
-class ExperimentProgressDialog(ProgDialogThread):
-	def __init__(self, parent, experiment, original_filename, original_filetype):
-		"""
-		:param parent:
-		:type parent:
-		:param experiment: The :class:`Experiment` object to create the experiment from.
-		:type experiment:
-		:param original_filename: The filename of the original datafile to create the experiment from.
-		:type original_filename: str
-		:param original_filetype: The filetype of the datafile the experiment is to be created from.
-		:type original_filetype:
-		"""
-		
-		self.parent = parent
-
-		self.experiment = experiment
-		
-		thread = ExperimentThread(self.experiment, original_filename, original_filetype)
-		
-		ProgDialogThread.__init__(self, thread, "Experiment", "Experiment Creation In Progress...", 100, parent)
-	
-	def updateProgress(self, msg):
-		"""
-		Event handler for updating the progress bar
-		"""
-		
-		self.Pulse()
-		
-		if msg == "Dead":
-			# Thread is dead because Experiment has been created
-			
-			self.experiment.store(self.parent.filename)
-			self.parent.filenames.append(self.parent.filename)
-			
-			self.parent.filename = None
-			
-			print("Experiment Created")
-			with wx.MessageDialog(
-					self,
-					"Experiment Created Successfully.\nDo you want to create another Experiment?",
-					"Experiment Created",
-					wx.ICON_QUESTION | wx.YES_NO
-					) as dlg:
-				res = dlg.ShowModal()
-			
-			if res != wx.ID_YES:
-				if self.parent.IsModal():
-					wx.CallAfter(self.parent.EndModal, wx.ID_OK)
-				else:
-					wx.CallAfter(self.parent.Destroy)
-			
-			self.Destroy()
-
+#
+# class ExperimentProgressDialog(ProgDialogThread):
+# 	def __init__(self, parent, experiment, original_filename, original_filetype):
+# 		"""
+# 		:param parent:
+# 		:type parent:
+# 		:param experiment: The :class:`Experiment` object to create the experiment from.
+# 		:type experiment:
+# 		:param original_filename: The filename of the original datafile to create the experiment from.
+# 		:type original_filename: str
+# 		:param original_filetype: The filetype of the datafile the experiment is to be created from.
+# 		:type original_filetype:
+# 		"""
+#
+# 		self.parent = parent
+#
+# 		self.experiment = experiment
+#
+# 		thread = ExperimentThread(self.experiment, original_filename, original_filetype)
+#
+# 		ProgDialogThread.__init__(self, thread, "Experiment", "Experiment Creation In Progress...", 100, parent)
+#
+# 	def updateProgress(self, msg):
+# 		"""
+# 		Event handler for updating the progress bar
+# 		"""
+#
+# 		self.Pulse()
+#
+# 		if msg == "Dead":
+# 			# Thread is dead because Experiment has been created
+#
+# 			self.experiment.store(self.parent.filename)
+# 			self.parent.filenames.append(self.parent.filename)
+#
+# 			self.parent.filename = None
+#
+# 			print("Experiment Created")
+# 			with wx.MessageDialog(
+# 					self,
+# 					"Experiment Created Successfully.\nDo you want to create another Experiment?",
+# 					"Experiment Created",
+# 					wx.ICON_QUESTION | wx.YES_NO
+# 					) as dlg:
+# 				res = dlg.ShowModal()
+#
+# 			if res != wx.ID_YES:
+# 				if self.parent.IsModal():
+# 					wx.CallAfter(self.parent.EndModal, wx.ID_OK)
+# 				else:
+# 					wx.CallAfter(self.parent.Destroy)
+#
+# 			self.Destroy()
+#

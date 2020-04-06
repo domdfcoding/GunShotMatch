@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -34,7 +34,6 @@ class MeasurementDialog(wx.Dialog):
 			pos=wx.DefaultPosition, size=(180, -1), style=wx.DEFAULT_DIALOG_STYLE,
 			name=wx.DialogNameStr):
 		"""
-
 		:param parent: Can be None, a frame or another dialog box.
 		:type parent: wx.Window
 		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.

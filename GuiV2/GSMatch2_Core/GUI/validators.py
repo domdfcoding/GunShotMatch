@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  Based on the Validator demo from wxPython
 #
@@ -27,11 +27,9 @@
 
 # stdlib
 import pathlib
-import string
 
 # 3rd party
 import wx
-
 # this package
 from domdf_wxpython_tools import ValidatorBase
 
@@ -66,13 +64,14 @@ class TextValidatorBase(ValidatorBase):
 	""" This validator is used to ensure that the user has entered something
 		into the text object editor dialog's text field.
 	"""
-	def __init__(self):
-		"""
-		Standard constructor.
-		"""
-		
-		wx.Validator.__init__(self)
-		self.error_message = "Please enter a value."
+	error_message = "Please enter a value."
+	
+	# def __init__(self):
+	# 	"""
+	# 	Standard constructor.
+	# 	"""
+	#
+	# 	wx.Validator.__init__(self)
 
 	def Validate(self, win):
 		"""
@@ -92,13 +91,18 @@ class PathValidatorBase(ValidatorBase):
 		into the text object editor dialog's text field, and that it points
 		to an extant file or directory.
 	"""
-	def __init__(self):
-		""" Standard constructor.
-		"""
-		wx.Validator.__init__(self)
-		self.error_message = "Please enter a value."
-		self.mode = "file"
-		self.non_existant_message = f"The selected {self.mode} does not exist"
+	
+	error_message = "Please enter a value."
+	mode = "file"
+	non_existant_message = f"The selected {mode} does not exist"
+	
+	# def __init__(self):
+	# 	""" Standard constructor.
+	# 	"""
+	# 	wx.Validator.__init__(self)
+	# 	self.error_message = "Please enter a value."
+	# 	self.mode = "file"
+	# 	self.non_existant_message = f"The selected {self.mode} does not exist"
 
 	def Validate(self, win):
 		""" Validate the contents of the given text control.
@@ -122,39 +126,27 @@ class PathValidatorBase(ValidatorBase):
 
 
 class ProjectNameValidator(TextValidatorBase):
-	def __init__(self):
-		super(TextValidatorBase, self).__init__()
-		self.error_message = "Please enter a name for the Project."
-	
+	error_message = "Please enter a name for the Project."
+
 
 class ExperimentNameValidator(TextValidatorBase):
-	def __init__(self):
-		super(TextValidatorBase, self).__init__()
-		self.error_message = "Please enter a name for the Experiment."
+	error_message = "Please enter a name for the Experiment."
 
-		
+
 class ExperimentFilenameValidator(TextValidatorBase):
-	def __init__(self):
-		super(TextValidatorBase, self).__init__()
-		self.error_message = "Please enter a filename for the Experiment."
+	error_message = "Please enter a filename for the Experiment."
 
 
 class ProjectMethodValidator(PathValidatorBase):
-	def __init__(self):
-		super(PathValidatorBase, self).__init__()
-		self.error_message = "Please choose a Method for the Project."
-		self.non_existant_message = "The selected Method file does not exist."
-		
+	error_message = "Please choose a Method for the Project."
+	non_existant_message = "The selected Method file does not exist."
+
 
 class ProjectAmmoValidator(PathValidatorBase):
-	def __init__(self):
-		super(PathValidatorBase, self).__init__()
-		self.error_message = "Please choose an Ammunition Details file for the Project."
-		self.non_existant_message = "The selected Ammunition Details file does not exist."
-	
+	error_message = "Please choose an Ammunition Details file for the Project."
+	non_existant_message = "The selected Ammunition Details file does not exist."
+
 
 class ExperimentMethodValidator(PathValidatorBase):
-	def __init__(self):
-		super(PathValidatorBase, self).__init__()
-		self.error_message = "Please choose a Method for the Experiment."
-		self.non_existant_message = "The selected Method file does not exist."
+	error_message = "Please choose a Method for the Experiment."
+	non_existant_message = "The selected Method file does not exist."

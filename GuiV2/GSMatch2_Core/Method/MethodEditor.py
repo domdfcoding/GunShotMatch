@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import time
 import webbrowser
 
 # 3rd party
+import wx
 from domdf_wxpython_tools import coming_soon, file_dialog, file_dialog_wildcard
 from importlib_resources import path
 
@@ -38,7 +39,7 @@ import GSMatch.lib
 from GuiV2.GSMatch2_Core import Method
 from GuiV2.GSMatch2_Core.GUI.toolbars import ToolData
 from GuiV2.GSMatch2_Core.IDs import *
-from GuiV2.GSMatch2_Core.Method.exporters import PDFExporter
+from GuiV2.GSMatch2_Core.Method import MethodPDFExporter
 from GuiV2.GSMatch2_Core.pdfViewer import pdfViewer
 from GuiV2.icons import get_icon
 
@@ -50,17 +51,40 @@ from GuiV2.icons import get_icon
 # end wxGlade
 
 
-# TODO: Value validation before saving
-
-
 class MethodEditor(wx.Frame):
-	def __init__(self, *args, method=None, **kwds):
+	def __init__(
+			self, parent, method=None, id=wx.ID_ANY, title='',
+			pos=wx.DefaultPosition, size=wx.DefaultSize,
+			style=wx.DEFAULT_FRAME_STYLE, name="MethodEditor"):
 		"""
-
-
+		TODO: Value validation before saving
+		
+		:param parent: The window parent. This may be, and often is, None. If it is not None, the frame will be minimized when its parent is minimized and restored when it is restored (although it will still be possible to minimize
+		:type parent: wx.Window
 		:param method: The method file to open, Default None
 		:type method: str, optional
+		:param id: The window identifier. It may take a value of -1 to indicate a default value.
+		:type id: wx.WindowID, optional
+		:param title: The caption to be displayed on the frame’s title bar.
+		:type title: str, optional
+		:param pos: The window position. The value DefaultPosition indicates a default position, chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The window size. The value DefaultSize indicates a default size, chosen by either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Frame class description.
+		:type style: int, optional
+		:param name: The name of the window. This parameter is used to associate a name with the item, allowing the application user to set Motif resource values for individual windows.
+		:type name: str, optional
 		"""
+		
+		args = (parent, id)
+		kwds = {
+				"pos": pos,
+				"size": size,
+				"title": title,
+				"style": style,
+				"name": name,
+				}
 		
 		# begin wxGlade: MethodEditor.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -70,63 +94,90 @@ class MethodEditor(wx.Frame):
 		# Menu Bar
 		self.MethodEditor_menubar = wx.MenuBar()
 		wxglade_tmp_menu = wx.Menu()
+		wxglade_tmp_menu.Append(wx.ID_NEW, "&New Method", "")
+		self.Bind(wx.EVT_MENU, self.new_method, id=wx.ID_NEW)
+		wxglade_tmp_menu.Append(wx.ID_OPEN, "&Open Method", "")
+		self.Bind(wx.EVT_MENU, self.on_open_method, id=wx.ID_OPEN)
+		wxglade_tmp_menu.Append(wx.ID_SAVE, "&Save Method", "")
+		self.Bind(wx.EVT_MENU, self.on_save_method, id=wx.ID_SAVE)
+		wxglade_tmp_menu.Append(wx.ID_SAVEAS, "Save Method As", "")
+		self.Bind(wx.EVT_MENU, self.save_method_as, id=wx.ID_SAVEAS)
+		wxglade_tmp_menu.AppendSeparator()
 		wxglade_tmp_menu.Append(ID_Export_PDF, "Export as PDF", "")
 		self.Bind(wx.EVT_MENU, self.on_export_pdf, id=ID_Export_PDF)
-		self.MethodEditor_menubar.menu_print = wxglade_tmp_menu.Append(wx.ID_PRINT, "Print", "")
+		wxglade_tmp_menu.Append(wx.ID_PRINT, "Print", "")
 		self.Bind(wx.EVT_MENU, self.on_print, id=wx.ID_PRINT)
 		wxglade_tmp_menu.AppendSeparator()
 		wxglade_tmp_menu.Append(wx.ID_EXIT, "Close", "")
 		self.Bind(wx.EVT_MENU, self.exit, id=wx.ID_EXIT)
 		self.MethodEditor_menubar.Append(wxglade_tmp_menu, "File")
 		wxglade_tmp_menu = wx.Menu()
-		wxglade_tmp_menu.Append(wx.ID_OPEN, "&Open Method", "")
-		self.Bind(wx.EVT_MENU, self.on_open_method, id=wx.ID_OPEN)
-		wxglade_tmp_menu.Append(wx.ID_NEW, "&New Method", "")
-		self.Bind(wx.EVT_MENU, self.new_method, id=wx.ID_NEW)
-		wxglade_tmp_menu.Append(wx.ID_SAVE, "&Save Method", "")
-		self.Bind(wx.EVT_MENU, self.on_save_method, id=wx.ID_SAVE)
-		wxglade_tmp_menu.Append(wx.ID_SAVEAS, "Save Method As", "")
-		self.Bind(wx.EVT_MENU, self.save_method_as, id=wx.ID_SAVEAS)
-		self.MethodEditor_menubar.Append(wxglade_tmp_menu, "Method")
-		wxglade_tmp_menu = wx.Menu()
 		wxglade_tmp_menu.Append(wx.ID_HELP, "Help", "")
 		self.Bind(wx.EVT_MENU, self.on_help, id=wx.ID_HELP)
+		wxglade_tmp_menu.Append(wx.ID_ABOUT, "About", "")
+		self.Bind(wx.EVT_MENU, self.on_about, id=wx.ID_ABOUT)
 		self.MethodEditor_menubar.Append(wxglade_tmp_menu, "Help")
 		self.SetMenuBar(self.MethodEditor_menubar)
 		# Menu Bar end
 		self.method_notebook = wx.Notebook(self, wx.ID_ANY)
 		self.expr_creation_tab = wx.Panel(self.method_notebook, wx.ID_ANY)
 		self.expr_creation_scroller = wx.ScrolledWindow(self.expr_creation_tab, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
+		self.min_mass_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Minimum Mass: ")
 		self.min_mass_spin_ctrl = wx.SpinCtrl(self.expr_creation_scroller, wx.ID_ANY, "50", min=0, max=2000)
+		self.max_mass_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Maximum Mass: ")
 		self.max_mass_spin_ctrl = wx.SpinCtrl(self.expr_creation_scroller, wx.ID_ANY, "50", min=0, max=2000)
+		self.mass_range_text_bottom = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "This must be small enough to encompass all samples")
 		self.sav_gol_checkbox = wx.CheckBox(self.expr_creation_scroller, wx.ID_ANY, "Perform Savitzky-Golay smoothing")
 		self.tophat_checkbox = wx.CheckBox(self.expr_creation_scroller, wx.ID_ANY, "Enable")
+		self.tophat_struct_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Tophat Structural Element: ")
 		self.tophat_struct_value = wx.TextCtrl(self.expr_creation_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
 		self.tophat_struct_units = wx.Choice(self.expr_creation_scroller, wx.ID_ANY, choices=["min", "sec", "ms"])
+		self.bb_points_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Number of Points: ")
 		self.bb_points_value = wx.SpinCtrl(self.expr_creation_scroller, wx.ID_ANY, "0", min=0, max=100, style=0)
+		self.bb_scans_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Number of Scans: ")
 		self.bb_scans_value = wx.SpinCtrl(self.expr_creation_scroller, wx.ID_ANY, "0", min=0, max=100, style=0)
+		self.target_range_top_text = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Search for peaks between these times:")
 		self.target_range_min_value = wx.TextCtrl(self.expr_creation_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
+		self.target_range_mid_text = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, " minutes and ")
 		self.target_range_max_value = wx.TextCtrl(self.expr_creation_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
+		self.target_range_post_text = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "minutes")
 		self.noise_filter_checkbox = wx.CheckBox(self.expr_creation_scroller, wx.ID_ANY, "Enable")
+		self.noise_thresh_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Noise Filtering Threshold: ")
 		self.noise_thresh_value = wx.SpinCtrl(self.expr_creation_scroller, wx.ID_ANY, "0", min=0, max=100, style=0)
+		self.noise_thresh_ions = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "ions")
+		self.base_peak_filter_text_1 = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Exclude peaks with the following base ion(s):")
 		self.base_peak_filter_value = wx.TextCtrl(self.expr_creation_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
+		self.base_peak_filter_text_2 = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Seperate multiple values with commas ( , )")
 		self.alignment_tab = wx.Panel(self.method_notebook, wx.ID_ANY)
 		self.dpa_scroller = wx.ScrolledWindow(self.alignment_tab, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
-		self.alignment_Dw_value = wx.TextCtrl(self.dpa_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
-		self.alignment_Gw_value = wx.TextCtrl(self.dpa_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
-		self.alignment_min_peaks_value = wx.TextCtrl(self.dpa_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
+		self.alignment_Dw_label = wx.StaticText(self.dpa_scroller, wx.ID_ANY, "RT Modulation: ")
+		self.alignment_Dw_value = wx.SpinCtrlDouble(self.dpa_scroller, wx.ID_ANY, "0", min=0.0, max=99.0)
+		self.alignment_Dw_label_2 = wx.StaticText(self.dpa_scroller, wx.ID_ANY, " s", style=wx.ALIGN_LEFT)
+		self.alignment_Gw_label = wx.StaticText(self.dpa_scroller, wx.ID_ANY, "Gap Penalty: ")
+		self.alignment_Gw_value = wx.SpinCtrlDouble(self.dpa_scroller, wx.ID_ANY, "0.0", min=0.0, max=99.0)
+		self.alignment_min_peaks_label = wx.StaticText(self.dpa_scroller, wx.ID_ANY, "Minimum Peaks: ")
+		self.alignment_min_peaks_value = wx.SpinCtrlDouble(self.dpa_scroller, wx.ID_ANY, "0.0", min=0.0, max=99.0)
 		self.ident_tab = wx.Panel(self.method_notebook, wx.ID_ANY)
 		self.ident_scroller = wx.ScrolledWindow(self.ident_tab, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
+		self.ident_min_aligned_peaks_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Minimum Aligned Peaks: ")
 		self.ident_min_aligned_peaks_value = wx.SpinCtrl(self.ident_scroller, wx.ID_ANY, "0", min=0, max=100, style=0)
+		self.ident_top_peaks_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Top Peaks: ")
 		self.ident_top_peaks_value = wx.SpinCtrl(self.ident_scroller, wx.ID_ANY, "0", min=0, max=100, style=0)
+		self.ident_nist_n_hits_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Number of `Hits`: ")
 		self.ident_nist_n_hits_value = wx.SpinCtrl(self.ident_scroller, wx.ID_ANY, "0", min=0, max=100, style=0)
+		self.ident_min_peak_area_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Minimum Peak Area: ")
 		self.ident_min_peak_area_value = wx.SpinCtrlDouble(self.ident_scroller, wx.ID_ANY, "0.0", min=0.0, max=100.0)
-		self.ident_min_match_factor_value = wx.SpinCtrl(self.ident_scroller, wx.ID_ANY, "0", min=0, max=1000, style=0)
+		self.ident_min_match_factor_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Minimum Match Factor: ")
+		self.ident_min_match_factor_value = wx.SpinCtrlDouble(self.ident_scroller, wx.ID_ANY, "0.0", min=0.0, max=1000.0)
 		self.comparison_tab = wx.Panel(self.method_notebook, wx.ID_ANY)
 		self.comparison_scroller = wx.ScrolledWindow(self.comparison_tab, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
-		self.comparison_alignment_Dw_value = wx.TextCtrl(self.comparison_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
-		self.comparison_alignment_Gw_value = wx.TextCtrl(self.comparison_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
-		self.comparison_alignment_min_peaks_value = wx.TextCtrl(self.comparison_scroller, wx.ID_ANY, "", style=wx.TE_NO_VSCROLL)
+		self.comparison_alignment_Dw_label = wx.StaticText(self.comparison_scroller, wx.ID_ANY, "RT Modulation: ")
+		self.comparison_alignment_Dw_value = wx.SpinCtrlDouble(self.comparison_scroller, wx.ID_ANY, "0.0", min=0.0, max=99.0)
+		self.comparison_alignment_Dw_label_2 = wx.StaticText(self.comparison_scroller, wx.ID_ANY, " s", style=wx.ALIGN_LEFT)
+		self.comparison_alignment_Gw_label = wx.StaticText(self.comparison_scroller, wx.ID_ANY, "Gap Penalty: ")
+		self.comparison_alignment_Gw_value = wx.SpinCtrlDouble(self.comparison_scroller, wx.ID_ANY, "0.0", min=0.0, max=99.0)
+		self.comparison_alignment_min_peaks_label = wx.StaticText(self.comparison_scroller, wx.ID_ANY, "Minimum Peaks: ")
+		self.comparison_alignment_min_peaks_value = wx.SpinCtrlDouble(self.comparison_scroller, wx.ID_ANY, "0.0", min=0.0, max=99.0)
 		self.significance_level_value = wx.SpinCtrlDouble(self.comparison_scroller, wx.ID_ANY, "0.05", min=0.0, max=1.0)
 		self.significance_level_value.SetDigits(3)
 
@@ -160,10 +211,13 @@ class MethodEditor(wx.Frame):
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.noise_thresh_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.base_peak_filter_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.base_peak_filter_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.alignment_Dw_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.alignment_Dw_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.alignment_Dw_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.alignment_Gw_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.alignment_Gw_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.alignment_Gw_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.alignment_min_peaks_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.alignment_min_peaks_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.alignment_min_peaks_value)
 		self.Bind(wx.EVT_SPINCTRL, self.on_change, self.ident_min_aligned_peaks_value)
@@ -178,13 +232,16 @@ class MethodEditor(wx.Frame):
 		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.ident_min_peak_area_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.ident_min_peak_area_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.ident_min_peak_area_value)
-		self.Bind(wx.EVT_SPINCTRL, self.on_change, self.ident_min_match_factor_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.ident_min_match_factor_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.ident_min_match_factor_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.ident_min_match_factor_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.comparison_alignment_Dw_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.comparison_alignment_Dw_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.comparison_alignment_Dw_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.comparison_alignment_Gw_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.comparison_alignment_Gw_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.comparison_alignment_Gw_value)
+		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.comparison_alignment_min_peaks_value)
 		self.Bind(wx.EVT_TEXT, self.on_change, self.comparison_alignment_min_peaks_value)
 		self.Bind(wx.EVT_TEXT_ENTER, self.on_change, self.comparison_alignment_min_peaks_value)
 		self.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change, self.significance_level_value)
@@ -194,7 +251,10 @@ class MethodEditor(wx.Frame):
 	
 		self._create_toolbar()
 		
-		self.Bind(wx.EVT_CLOSE, self.OnClose)
+		self.fileNotSaved = False
+		self.filename = None
+		
+		self.Bind(wx.EVT_CLOSE, self.on_close)
 		
 		if method:
 			self.open_method(method)
@@ -234,10 +294,13 @@ class MethodEditor(wx.Frame):
 		self.SetTitle("Method Editor")
 		self.sav_gol_checkbox.SetValue(1)
 		self.tophat_checkbox.SetValue(1)
+		self.tophat_struct_label.SetToolTip("Structural element for PyMS Tophat baseline correction. The structural element needs to be larger than the features one wants to retain in the spectrum after the top-hat transform")
 		self.tophat_struct_value.SetMinSize((50, 29))
 		self.tophat_struct_value.SetMaxLength(4)
 		self.tophat_struct_units.SetSelection(0)
+		self.bb_points_label.SetToolTip("The window width, in data points, for detecting the local maxima")
 		self.bb_points_value.SetMinSize((120, 29))
+		self.bb_scans_label.SetToolTip("The number of scans across which neighbouring, apexing, ions are combined and considered as belonging to the same peak")
 		self.bb_scans_value.SetMinSize((120, 29))
 		self.target_range_min_value.SetMinSize((55, 29))
 		self.target_range_min_value.SetMaxLength(5)
@@ -246,29 +309,87 @@ class MethodEditor(wx.Frame):
 		self.noise_filter_checkbox.SetValue(1)
 		self.noise_thresh_value.SetMinSize((120, 29))
 		self.base_peak_filter_value.SetMinSize((300, 29))
-		self.base_peak_filter_value.SetToolTip("Peaks with these base ions (i.e. the most intense peak in the mass spectrum) will be excluded from the results. This can be useful for excluding compounds related to septum bleed, which usually have a base ion at m/z 73")
 		self.expr_creation_scroller.SetScrollRate(10, 10)
-		self.alignment_Dw_value.SetMinSize((50, 29))
-		self.alignment_Dw_value.SetMaxLength(4)
-		self.alignment_Gw_value.SetMinSize((50, 29))
-		self.alignment_Gw_value.SetMaxLength(4)
-		self.alignment_min_peaks_value.SetMinSize((50, 29))
-		self.alignment_min_peaks_value.SetMaxLength(4)
+		self.alignment_Dw_value.SetMinSize((120, 29))
+		self.alignment_Dw_value.SetDigits(1)
+		self.alignment_Dw_value.SetIncrement(0.1)
+		self.alignment_Gw_value.SetMinSize((120, 29))
+		self.alignment_Gw_value.SetDigits(1)
+		self.alignment_Gw_value.SetIncrement(0.1)
+		self.alignment_min_peaks_value.SetMinSize((120, 29))
+		self.alignment_min_peaks_value.SetDigits(0)
+		self.alignment_min_peaks_value.SetIncrement(1.0)
 		self.dpa_scroller.SetScrollRate(10, 10)
-		self.ident_nist_n_hits_value.SetToolTip("The number of `hits` to return from NIST MS Search.")
-		self.ident_min_peak_area_value.SetToolTip("Any peaks with an average area less than this value will be ignored.")
-		self.ident_min_match_factor_value.SetToolTip("Any hits where BOTH the Match Factor and the Reverse Match Factor are less this value will be ignored.")
+		self.ident_min_match_factor_value.SetDigits(0)
+		self.ident_min_match_factor_value.SetIncrement(10.0)
 		self.ident_scroller.SetScrollRate(10, 10)
-		self.comparison_alignment_Dw_value.SetMinSize((50, 29))
-		self.comparison_alignment_Dw_value.SetMaxLength(4)
-		self.comparison_alignment_Gw_value.SetMinSize((50, 29))
-		self.comparison_alignment_Gw_value.SetMaxLength(4)
-		self.comparison_alignment_min_peaks_value.SetMinSize((50, 29))
-		self.comparison_alignment_min_peaks_value.SetMaxLength(4)
+		self.comparison_alignment_Dw_value.SetMinSize((120, 29))
+		self.comparison_alignment_Dw_value.SetDigits(1)
+		self.comparison_alignment_Dw_value.SetIncrement(0.1)
+		self.comparison_alignment_Gw_value.SetMinSize((120, 29))
+		self.comparison_alignment_Gw_value.SetDigits(1)
+		self.comparison_alignment_Gw_value.SetIncrement(0.1)
+		self.comparison_alignment_min_peaks_value.SetMinSize((120, 29))
+		self.comparison_alignment_min_peaks_value.SetDigits(0)
 		self.significance_level_value.SetIncrement(0.001)
 		self.comparison_scroller.SetScrollRate(10, 10)
 		# end wxGlade
+		
+		self.min_mass_label.SetToolTip(Method.descriptions["mass_range"])
+		self.min_mass_spin_ctrl.SetToolTip(Method.descriptions["mass_range"])
+		self.max_mass_label.SetToolTip(Method.descriptions["mass_range"])
+		self.max_mass_spin_ctrl.SetToolTip(Method.descriptions["mass_range"])
+		self.mass_range_text_bottom.SetToolTip(Method.descriptions["mass_range"])
+		self.sav_gol_checkbox.SetToolTip(Method.descriptions["expr_creation_enable_sav_gol"])
+		self.tophat_checkbox.SetToolTip(Method.descriptions["expr_creation_enable_tophat"])
+		self.tophat_struct_label.SetToolTip(Method.descriptions["expr_creation_tophat"])
+		self.tophat_struct_value.SetToolTip(Method.descriptions["expr_creation_tophat"])
+		self.tophat_struct_units.SetToolTip(Method.descriptions["expr_creation_tophat_unit"])
+		self.bb_points_label.SetToolTip(Method.descriptions["expr_creation_bb_points"])
+		self.bb_points_value.SetToolTip(Method.descriptions["expr_creation_bb_points"])
+		self.bb_scans_label.SetToolTip(Method.descriptions["expr_creation_bb_scans"])
+		self.bb_scans_value.SetToolTip(Method.descriptions["expr_creation_bb_scans"])
+		self.target_range_top_text.SetToolTip(Method.descriptions["target_range"])
+		self.target_range_min_value.SetToolTip(Method.descriptions["target_range"])
+		self.target_range_mid_text.SetToolTip(Method.descriptions["target_range"])
+		self.target_range_max_value.SetToolTip(Method.descriptions["target_range"])
+		self.target_range_post_text.SetToolTip(Method.descriptions["target_range"])
+		self.noise_filter_checkbox.SetToolTip(Method.descriptions["expr_creation_enable_noise_filter"])
+		self.noise_thresh_label.SetToolTip(Method.descriptions["expr_creation_noise_thresh"])
+		self.noise_thresh_value.SetToolTip(Method.descriptions["expr_creation_noise_thresh"])
+		self.noise_thresh_ions.SetToolTip(Method.descriptions["expr_creation_noise_thresh"])
+		self.base_peak_filter_text_1.SetToolTip(Method.descriptions["base_peak_filter"])
+		self.base_peak_filter_value.SetToolTip(Method.descriptions["base_peak_filter"])
+		self.base_peak_filter_text_2.SetToolTip(Method.descriptions["base_peak_filter"])
 	
+		self.alignment_Dw_label.SetToolTip(Method.descriptions["alignment_rt_modulation"])
+		self.alignment_Dw_value.SetToolTip(Method.descriptions["alignment_rt_modulation"])
+		self.alignment_Dw_label_2.SetToolTip(Method.descriptions["alignment_rt_modulation"])
+		self.alignment_Gw_label.SetToolTip(Method.descriptions["alignment_gap_penalty"])
+		self.alignment_Gw_value.SetToolTip(Method.descriptions["alignment_gap_penalty"])
+		self.alignment_min_peaks_label.SetToolTip(Method.descriptions["alignment_min_peaks"])
+		self.alignment_min_peaks_value.SetToolTip(Method.descriptions["alignment_min_peaks"])
+
+		self.ident_min_match_factor_label.SetToolTip(Method.descriptions["ident_min_match_factor"])
+		self.ident_min_match_factor_value.SetToolTip(Method.descriptions["ident_min_match_factor"])
+		self.ident_min_aligned_peaks_label.SetToolTip(Method.descriptions["ident_min_aligned_peaks"])
+		self.ident_min_aligned_peaks_value.SetToolTip(Method.descriptions["ident_min_aligned_peaks"])
+		self.ident_top_peaks_label.SetToolTip(Method.descriptions["ident_top_peaks"])
+		self.ident_top_peaks_value.SetToolTip(Method.descriptions["ident_top_peaks"])
+		self.ident_nist_n_hits_label.SetToolTip(Method.descriptions["ident_nist_n_hits"])
+		self.ident_nist_n_hits_value.SetToolTip(Method.descriptions["ident_nist_n_hits"])
+		self.ident_min_peak_area_label.SetToolTip(Method.descriptions["ident_min_peak_area"])
+		self.ident_min_peak_area_value.SetToolTip(Method.descriptions["ident_min_peak_area"])
+		
+		self.comparison_alignment_Dw_label.SetToolTip(Method.descriptions["comparison_rt_modulation"])
+		self.comparison_alignment_Dw_value.SetToolTip(Method.descriptions["comparison_rt_modulation"])
+		self.comparison_alignment_Dw_label_2.SetToolTip(Method.descriptions["comparison_rt_modulation"])
+		self.comparison_alignment_Gw_label.SetToolTip(Method.descriptions["comparison_gap_penalty"])
+		self.comparison_alignment_Gw_value.SetToolTip(Method.descriptions["comparison_gap_penalty"])
+		self.comparison_alignment_min_peaks_label.SetToolTip(Method.descriptions["comparison_min_peaks"])
+		self.comparison_alignment_min_peaks_value.SetToolTip(Method.descriptions["comparison_min_peaks"])
+		self.significance_level_value.SetToolTip(Method.descriptions["comparison_a"])
+		
 		self.ident_min_peak_area_value.SetMax(1000000000.0)
 		self.ident_min_peak_area_value.SetIncrement(1000.0)
 
@@ -303,59 +424,41 @@ class MethodEditor(wx.Frame):
 		expr_creation_header = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Experiment Creation")
 		expr_creation_header.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		expr_creation_sizer.Add(expr_creation_header, 0, wx.BOTTOM, 10)
-		min_mass_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Minimum Mass: ")
-		mass_range_grid.Add(min_mass_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		mass_range_grid.Add(self.min_mass_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		mass_range_grid.Add(self.min_mass_spin_ctrl, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		max_mass_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Maximum Mass: ")
-		mass_range_grid.Add(max_mass_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		mass_range_grid.Add(self.max_mass_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		mass_range_grid.Add(self.max_mass_spin_ctrl, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		mass_range_sizer.Add(mass_range_grid, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
-		mass_range_text_bottom = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "This must be small enough to encompass all samples")
-		mass_range_sizer.Add(mass_range_text_bottom, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
+		mass_range_sizer.Add(self.mass_range_text_bottom, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
 		expr_creation_sizer.Add(mass_range_sizer, 0, wx.BOTTOM | wx.EXPAND, 10)
 		expr_creation_sizer.Add(self.sav_gol_checkbox, 0, wx.BOTTOM, 10)
 		tophat_sizer.Add(self.tophat_checkbox, 0, wx.LEFT | wx.TOP, 5)
-		tophat_struct_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Tophat Structural Element: ")
-		tophat_struct_label.SetToolTip("Structural element for PyMS Tophat baseline correction. The structural element needs to be larger than the features one wants to retain in the spectrum after the top-hat transform")
-		tophat_grid_sizer.Add(tophat_struct_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		tophat_grid_sizer.Add(self.tophat_struct_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		tophat_grid_sizer.Add(self.tophat_struct_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		tophat_grid_sizer.Add(self.tophat_struct_units, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		tophat_sizer.Add(tophat_grid_sizer, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 		expr_creation_sizer.Add(tophat_sizer, 0, wx.BOTTOM | wx.EXPAND, 10)
-		bb_points_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Number of Points: ")
-		bb_points_label.SetToolTip("The window width, in data points, for detecting the local maxima")
-		bb_grid_sizer.Add(bb_points_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		bb_grid_sizer.Add(self.bb_points_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		bb_grid_sizer.Add(self.bb_points_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		bb_scans_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Number of Scans: ")
-		bb_scans_label.SetToolTip("The number of scans across which neighbouring, apexing, ions are combined and considered as belonging to the same peak")
-		bb_grid_sizer.Add(bb_scans_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		bb_grid_sizer.Add(self.bb_scans_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		bb_grid_sizer.Add(self.bb_scans_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		biller_biemann_sizer.Add(bb_grid_sizer, 1, wx.ALL | wx.EXPAND, 10)
-		target_range_top_text = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Search for peaks between these times:")
-		biller_biemann_sizer.Add(target_range_top_text, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+		biller_biemann_sizer.Add(self.target_range_top_text, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
 		target_range_grid_sizer.Add(self.target_range_min_value, 0, wx.LEFT, 5)
-		target_mid_text = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, " minutes and ")
-		target_range_grid_sizer.Add(target_mid_text, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		target_range_grid_sizer.Add(self.target_range_mid_text, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		target_range_grid_sizer.Add(self.target_range_max_value, 0, 0, 0)
-		target_post_text = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "minutes")
-		target_range_grid_sizer.Add(target_post_text, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		target_range_grid_sizer.Add(self.target_range_post_text, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		biller_biemann_sizer.Add(target_range_grid_sizer, 0, wx.ALL | wx.EXPAND, 10)
 		expr_creation_sizer.Add(biller_biemann_sizer, 0, wx.BOTTOM | wx.EXPAND, 10)
 		noise_filter_sizer.Add(self.noise_filter_checkbox, 0, wx.LEFT | wx.TOP, 5)
-		noise_thresh_label = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Noise Filtering Threshold: ")
-		noise_thresh_grid_sizer.Add(noise_thresh_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		noise_thresh_grid_sizer.Add(self.noise_thresh_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		noise_thresh_grid_sizer.Add(self.noise_thresh_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		noise_thresh_ions = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "ions")
-		noise_thresh_grid_sizer.Add(noise_thresh_ions, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		noise_thresh_grid_sizer.Add(self.noise_thresh_ions, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		noise_filter_sizer.Add(noise_thresh_grid_sizer, 1, wx.BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 		expr_creation_sizer.Add(noise_filter_sizer, 0, wx.BOTTOM | wx.EXPAND, 10)
-		base_peak_filter_text_1 = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Exclude peaks with the following base ion(s):")
-		base_peak_filter_text_1.SetToolTip("Peaks with these base ions (i.e. the most intense peak in the mass spectrum) will be excluded from the results. This can be useful for excluding compounds related to septum bleed, which usually have a base ion at m/z 73")
-		base_peak_filter_sizer.Add(base_peak_filter_text_1, 0, wx.ALL, 10)
+		base_peak_filter_sizer.Add(self.base_peak_filter_text_1, 0, wx.ALL, 10)
 		base_peak_filter_sizer.Add(self.base_peak_filter_value, 0, wx.LEFT | wx.RIGHT, 20)
-		base_peak_filter_text_2 = wx.StaticText(self.expr_creation_scroller, wx.ID_ANY, "Seperate multiple values with commas ( , )")
-		base_peak_filter_text_2.SetToolTip("Peaks with these base ions (i.e. the most intense peak in the mass spectrum) will be excluded from the results. This can be useful for excluding compounds related to septum bleed, which usually have a base ion at m/z 73")
-		base_peak_filter_sizer.Add(base_peak_filter_text_2, 0, wx.ALL, 10)
+		base_peak_filter_sizer.Add(self.base_peak_filter_text_2, 0, wx.ALL, 10)
 		expr_creation_sizer.Add(base_peak_filter_sizer, 1, wx.BOTTOM | wx.EXPAND, 10)
 		self.expr_creation_scroller.SetSizer(expr_creation_sizer)
 		expr_creation_scroller_sizer.Add(self.expr_creation_scroller, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
@@ -363,17 +466,13 @@ class MethodEditor(wx.Frame):
 		dpa_header = wx.StaticText(self.dpa_scroller, wx.ID_ANY, "Peak Alignment")
 		dpa_header.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		dpa_sizer.Add(dpa_header, 0, wx.BOTTOM, 10)
-		alignment_Dw_label = wx.StaticText(self.dpa_scroller, wx.ID_ANY, "RT Modulation: ")
-		dpa_grid_sizer.Add(alignment_Dw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dpa_grid_sizer.Add(self.alignment_Dw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		alignment_Dw_sizer.Add(self.alignment_Dw_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		alignment_Dw_label_2 = wx.StaticText(self.dpa_scroller, wx.ID_ANY, " s", style=wx.ALIGN_LEFT)
-		alignment_Dw_sizer.Add(alignment_Dw_label_2, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		alignment_Dw_sizer.Add(self.alignment_Dw_label_2, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		dpa_grid_sizer.Add(alignment_Dw_sizer, 1, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
-		alignment_Gw_label = wx.StaticText(self.dpa_scroller, wx.ID_ANY, "Gap Penalty: ")
-		dpa_grid_sizer.Add(alignment_Gw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dpa_grid_sizer.Add(self.alignment_Gw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		dpa_grid_sizer.Add(self.alignment_Gw_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		alignment_min_peaks_label = wx.StaticText(self.dpa_scroller, wx.ID_ANY, "Minimum Peaks: ")
-		dpa_grid_sizer.Add(alignment_min_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		dpa_grid_sizer.Add(self.alignment_min_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		dpa_grid_sizer.Add(self.alignment_min_peaks_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		dpa_sizer.Add(dpa_grid_sizer, 1, wx.EXPAND, 0)
 		self.dpa_scroller.SetSizer(dpa_sizer)
@@ -382,25 +481,16 @@ class MethodEditor(wx.Frame):
 		ident_header = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Compound Identification")
 		ident_header.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		ident_sizer.Add(ident_header, 0, wx.BOTTOM, 10)
-		ident_min_aligned_peaks_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Minimum Aligned Peaks: ")
-		ident_grid.Add(ident_min_aligned_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		ident_grid.Add(self.ident_min_aligned_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		ident_grid.Add(self.ident_min_aligned_peaks_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		ident_top_peaks_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Top Peaks: ")
-		ident_top_peaks_label.SetToolTip("The number of peaks to identify the compounds for.")
-		ident_grid.Add(ident_top_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		ident_grid.Add(self.ident_top_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		ident_grid.Add(self.ident_top_peaks_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		ident_nist_n_hits_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Number of `Hits`: ")
-		ident_nist_n_hits_label.SetToolTip("The number of `hits` to return from NIST MS Search.")
-		ident_grid.Add(ident_nist_n_hits_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		ident_grid.Add(self.ident_nist_n_hits_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		ident_grid.Add(self.ident_nist_n_hits_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		ident_min_peak_area_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Minimum Peak Area: ")
-		ident_min_peak_area_label.SetToolTip("Any peaks with an average area less than this value will be ignored.")
-		ident_grid.Add(ident_min_peak_area_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		ident_grid.Add(self.ident_min_peak_area_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		ident_grid.Add(self.ident_min_peak_area_value, 0, 0, 0)
-		ident_min_match_factor_label = wx.StaticText(self.ident_scroller, wx.ID_ANY, "Minimum Match Factor: ")
-		ident_min_match_factor_label.SetToolTip("Any hits where BOTH the Match Factor and the Reverse Match Factor are less this value will be ignored.")
-		ident_grid.Add(ident_min_match_factor_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		ident_grid.Add(self.ident_min_match_factor_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		ident_grid.Add(self.ident_min_match_factor_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		ident_grid.Add(self.ident_min_match_factor_value, 0, 0, 0)
 		ident_sizer.Add(ident_grid, 1, wx.EXPAND, 0)
 		self.ident_scroller.SetSizer(ident_sizer)
 		ident_scroller_sizer.Add(self.ident_scroller, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
@@ -408,17 +498,13 @@ class MethodEditor(wx.Frame):
 		comparison_header = wx.StaticText(self.comparison_scroller, wx.ID_ANY, "Project Comparison")
 		comparison_header.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		comparison_sizer.Add(comparison_header, 0, wx.BOTTOM, 10)
-		comparison_alignment_Dw_label = wx.StaticText(self.comparison_scroller, wx.ID_ANY, "RT Modulation: ")
-		alignment_grid_sizer_copy.Add(comparison_alignment_Dw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		alignment_grid_sizer_copy.Add(self.comparison_alignment_Dw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		comparison_alignment_Dw_sizer.Add(self.comparison_alignment_Dw_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		comparison_alignment_Dw_label_2 = wx.StaticText(self.comparison_scroller, wx.ID_ANY, " s", style=wx.ALIGN_LEFT)
-		comparison_alignment_Dw_sizer.Add(comparison_alignment_Dw_label_2, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		comparison_alignment_Dw_sizer.Add(self.comparison_alignment_Dw_label_2, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		alignment_grid_sizer_copy.Add(comparison_alignment_Dw_sizer, 1, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
-		comparison_alignment_Gw_label = wx.StaticText(self.comparison_scroller, wx.ID_ANY, "Gap Penalty: ")
-		alignment_grid_sizer_copy.Add(comparison_alignment_Gw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		alignment_grid_sizer_copy.Add(self.comparison_alignment_Gw_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		alignment_grid_sizer_copy.Add(self.comparison_alignment_Gw_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-		comparison_alignment_min_peaks_label = wx.StaticText(self.comparison_scroller, wx.ID_ANY, "Minimum Peaks: ")
-		alignment_grid_sizer_copy.Add(comparison_alignment_min_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+		alignment_grid_sizer_copy.Add(self.comparison_alignment_min_peaks_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		alignment_grid_sizer_copy.Add(self.comparison_alignment_min_peaks_value, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		comparison_dpa_sizer.Add(alignment_grid_sizer_copy, 1, wx.ALL | wx.EXPAND, 10)
 		comparison_sizer.Add(comparison_dpa_sizer, 0, 0, 0)
@@ -439,7 +525,8 @@ class MethodEditor(wx.Frame):
 	def _create_toolbar(self):
 		tb_icon_size = 24
 		
-		self.toolbar = self.CreateToolBar()  # wx.ToolBar(self, -1, wx.DefaultPosition, wx.DefaultSize, wx.TB_FLAT | wx.TB_NODIVIDER)
+		self.toolbar = self.CreateToolBar()
+		# self.toolbar = wx.ToolBar(self, -1, wx.DefaultPosition, wx.DefaultSize, wx.TB_FLAT | wx.TB_NODIVIDER)
 		self.toolbar.SetToolBitmapSize(wx.Size(tb_icon_size, tb_icon_size))
 		
 		self.add_tool(
@@ -474,8 +561,6 @@ class MethodEditor(wx.Frame):
 				tooltip="Help (F1)"
 				)
 		
-		
-		
 		# TODO: Recent methods
 		# recent_menu = wx.Menu()
 		#
@@ -484,14 +569,11 @@ class MethodEditor(wx.Frame):
 		# 	recent_menu.Append(ID, "item", "")
 		# 	self.Bind(wx.EVT_MENU, self.on_menu_project_recent, id=ID)
 		#
-		# self.toolbar.SetDropdownMenu(ID_Open_Project, recent_menu)
+		# self.toolbar.SetDropdownMenu(wx.ID_OPEN, recent_menu)
 		#
 		
 		self.toolbar.Realize()
 		
-		self.fileNotSaved = False
-		self.filename = None
-	
 	def add_tool(self, tool, kind=wx.ITEM_NORMAL, tooltip=None):
 		toolbar = self.toolbar
 		added_tool = toolbar.AddTool(tool.id, tool.name, tool.icon, tooltip if tooltip else tool.name, kind)
@@ -514,11 +596,11 @@ class MethodEditor(wx.Frame):
 		self.min_mass_spin_ctrl.SetValue(self.method.mass_range[0])
 		self.max_mass_spin_ctrl.SetValue(self.method.mass_range[1])
 		
-		self.sav_gol_checkbox.SetValue(self.method.enable_sav_gol)
+		self.sav_gol_checkbox.SetValue(self.method.expr_creation_enable_sav_gol)
 		
-		self.tophat_checkbox.SetValue(self.method.enable_tophat)
-		self.tophat_struct_value.SetValue(str(self.method.tophat))
-		tophat_unit = self.method.tophat_unit
+		self.tophat_checkbox.SetValue(self.method.expr_creation_enable_tophat)
+		self.tophat_struct_value.SetValue(str(self.method.expr_creation_tophat))
+		tophat_unit = self.method.expr_creation_tophat_unit
 		if tophat_unit == "m":
 			tophat_unit = 0
 		elif tophat_unit == "s":
@@ -527,20 +609,20 @@ class MethodEditor(wx.Frame):
 			tophat_unit = 2
 		self.tophat_struct_units.SetSelection(tophat_unit)
 		
-		self.bb_points_value.SetValue(self.method.bb_points)
-		self.bb_scans_value.SetValue(self.method.bb_scans)
+		self.bb_points_value.SetValue(self.method.expr_creation_bb_points)
+		self.bb_scans_value.SetValue(self.method.expr_creation_bb_scans)
 		target_range = self.method.target_range
 		self.target_range_min_value.SetValue(str(target_range[0]))
 		self.target_range_max_value.SetValue(str(target_range[1]))
 		
-		self.noise_filter_checkbox.SetValue(self.method.enable_noise_filter)
-		self.noise_thresh_value.SetValue(self.method.noise_thresh)
+		self.noise_filter_checkbox.SetValue(self.method.expr_creation_enable_noise_filter)
+		self.noise_thresh_value.SetValue(self.method.expr_creation_noise_thresh)
 		
 		self.base_peak_filter_value.SetValue(self.method.base_peak_filter_str)
 		
-		self.alignment_Dw_value.SetValue(str(self.method.rt_modulation))
-		self.alignment_Gw_value.SetValue(str(self.method.gap_penalty))
-		self.alignment_min_peaks_value.SetValue(str(self.method.min_peaks))
+		self.alignment_Dw_value.SetValue(str(self.method.alignment_rt_modulation))
+		self.alignment_Gw_value.SetValue(str(self.method.alignment_gap_penalty))
+		self.alignment_min_peaks_value.SetValue(str(self.method.alignment_min_peaks))
 		
 		self.ident_min_aligned_peaks_value.SetValue(self.method.ident_min_aligned_peaks)
 		self.ident_top_peaks_value.SetValue(self.method.ident_top_peaks)
@@ -609,34 +691,34 @@ class MethodEditor(wx.Frame):
 					self.filename = filename
 				else:
 					return False
-			else:
-				self.filename = self.filename
+		else:
+			self.filename = filename
 		
 		print(f"Saving method as {self.filename}")
 		
 		self.method.mass_range = (self.min_mass_spin_ctrl.GetValue(), self.max_mass_spin_ctrl.GetValue())
 		
-		self.method.enable_sav_gol = self.sav_gol_checkbox.GetValue()
+		self.method.expr_creation_enable_sav_gol = self.sav_gol_checkbox.GetValue()
 		
-		self.method.enable_tophat = self.tophat_checkbox.GetValue()
-		self.method.tophat = self.tophat_struct_value.GetValue()
-		self.method.tophat_unit = ["m", "s", "ms"][self.tophat_struct_units.GetSelection()]
+		self.method.expr_creation_enable_tophat = self.tophat_checkbox.GetValue()
+		self.method.expr_creation_tophat = self.tophat_struct_value.GetValue()
+		self.method.expr_creation_tophat_unit = ["m", "s", "ms"][self.tophat_struct_units.GetSelection()]
 		
-		self.method.bb_points = self.bb_points_value.GetValue()
-		self.method.bb_scans = self.bb_scans_value.GetValue()
+		self.method.expr_creation_bb_points = self.bb_points_value.GetValue()
+		self.method.expr_creation_bb_scans = self.bb_scans_value.GetValue()
 		self.method.target_range = (
 				float(self.target_range_min_value.GetValue()),
 				float(self.target_range_max_value.GetValue())
 				)
 		
-		self.method.enable_noise_filter = self.noise_filter_checkbox.GetValue()
-		self.method.noise_thresh = self.noise_thresh_value.GetValue()
+		self.method.expr_creation_enable_noise_filter = self.noise_filter_checkbox.GetValue()
+		self.method.expr_creation_noise_thresh = self.noise_thresh_value.GetValue()
 		
 		self.method.base_peak_filter = self.base_peak_filter_value.GetValue()
 		
-		self.method.rt_modulation = self.alignment_Dw_value.GetValue()
-		self.method.gap_penalty = self.alignment_Gw_value.GetValue()
-		self.method.min_peaks = self.alignment_min_peaks_value.GetValue()
+		self.method.alignment_rt_modulation = self.alignment_Dw_value.GetValue()
+		self.method.alignment_gap_penalty = self.alignment_Gw_value.GetValue()
+		self.method.alignment_min_peaks = self.alignment_min_peaks_value.GetValue()
 		
 		self.method.ident_min_aligned_peaks = self.ident_min_aligned_peaks_value.GetValue()
 		self.method.ident_top_peaks = self.ident_top_peaks_value.GetValue()
@@ -659,8 +741,10 @@ class MethodEditor(wx.Frame):
 		return True
 		
 	def save_method_dialog(self):
-		return file_dialog(self, "method", "Save Method As", "Method Files",
-						   style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+		return file_dialog(
+				self, "method", "Save Method As", "Method Files",
+				style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
+				)
 
 	def save_method_as(self, event=None):  # wxGlade: MethodEditor.<event_handler>
 		filename = self.save_method_dialog()
@@ -669,7 +753,7 @@ class MethodEditor(wx.Frame):
 	
 	# Close
 
-	def OnClose(self, event):
+	def on_close(self, event):
 		if event.CanVeto():
 			
 			if not self.save_changes():
@@ -696,8 +780,7 @@ class MethodEditor(wx.Frame):
 		
 	# Printing and Export
 	
-	
-	def on_export_pdf(self, event):  # wxGlade: MethodEditor.<event_handler>
+	def on_export_pdf(self, _):  # wxGlade: MethodEditor.<event_handler>
 		
 		filename = file_dialog_wildcard(
 				self,
@@ -706,7 +789,7 @@ class MethodEditor(wx.Frame):
 				)
 		
 		if filename:
-			PDFExporter(
+			MethodPDFExporter(
 					self.method,
 					input_filename=self.filename,
 					output_filename=filename[0],
@@ -715,9 +798,9 @@ class MethodEditor(wx.Frame):
 			time.sleep(1)
 			webbrowser.open(filename[0])
 	
-	def on_print(self, event):  # wxGlade: MethodEditor.<event_handler>
+	def on_print(self, _):  # wxGlade: MethodEditor.<event_handler>
 		# Determine the currently selected tab and ask it to print
-		PDFExporter(
+		MethodPDFExporter(
 				self.method,
 				input_filename=self.filename,
 				output_filename="C:/users/dom13/Desktop/Method.pdf",
@@ -730,4 +813,9 @@ class MethodEditor(wx.Frame):
 		
 		print("on_print")
 	
+	def on_about(self, event):  # wxGlade: MethodEditor.<event_handler>
+		Method.AboutDialog(self).ShowModal()
+		# print("Event handler 'on_about' not implemented!")
+		event.Skip()
+		
 # end of class MethodEditor

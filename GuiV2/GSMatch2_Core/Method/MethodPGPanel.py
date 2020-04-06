@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,20 +27,15 @@
 #
 
 
-# stdlib
-import time
-import webbrowser
-
 # 3rd party
-import wx.adv
+import wx
 from pubsub import pub
 from wx.propgrid import PropertyGrid
 
 # this package
 from GuiV2.GSMatch2_Core.IDs import *
 from GuiV2.GSMatch2_Core.InfoProperties import MassRange, RTRange
-from GuiV2.GSMatch2_Core.Method import descriptions
-from GuiV2.GSMatch2_Core.Method.exporters import PDFExporter
+from GuiV2.GSMatch2_Core.Method import descriptions, MethodPDFExporter
 
 _ = wx.GetTranslation
 
@@ -56,10 +51,12 @@ import wx.propgrid
 
 
 class MethodPGPanel(wx.Panel):
-	def __init__(self, parent, method, id=wx.ID_ANY, editable=True, pos=wx.DefaultPosition, size=wx.DefaultSize,
-			style=0, name=wx.PanelNameStr):
+	def __init__(
+			self, parent, method, id=wx.ID_ANY, editable=True,
+			pos=wx.DefaultPosition, size=wx.DefaultSize,
+			style=0, name="MethodPGPanel"
+			):
 		"""
-		
 		:param parent: The parent window.
 		:type parent: wx.Window
 		:param method:
@@ -103,6 +100,8 @@ class MethodPGPanel(wx.Panel):
 		self.allow_editing(editable)
 		
 		self.parent = parent
+		
+		self.fileNotSaved = False
 	
 	def __set_properties(self):
 		# begin wxGlade: MethodPGPanel.__set_properties
@@ -155,12 +154,12 @@ class MethodPGPanel(wx.Panel):
 		self._properties.add(mass_range_property)
 		
 		enable_sav_gol = self.add_bool_property(
-				name="enable_sav_gol",
+				name="expr_creation_enable_sav_gol",
 				label="Perform Savitzky-Golay smoothing")
 		self._properties.add(enable_sav_gol)
 		
 		enable_tophat = self.add_bool_property(
-				name="enable_tophat",
+				name="expr_creation_enable_tophat",
 				label="Enable TopHat baseline correction")
 		self._properties.add(enable_tophat)
 		
@@ -170,12 +169,12 @@ class MethodPGPanel(wx.Panel):
 		self._properties.add(tophat_struct)
 		
 		bb_points_property = self.add_int_property(
-				name="bb_points",
+				name="expr_creation_bb_points",
 				label="Biller-Biemann: Number of Scans")
 		self._properties.add(bb_points_property)
 		
 		bb_scans_property = self.add_int_property(
-				name="bb_scans",
+				name="expr_creation_bb_scans",
 				label="Biller-Biemann: Number of Points")
 		self._properties.add(bb_scans_property)
 		
@@ -184,13 +183,15 @@ class MethodPGPanel(wx.Panel):
 				label="Search for peaks between these times:")
 		self._properties.add(target_range_property)
 		
+		# print(f"Propgrid enable_noise_filter: {self.method.expr_creation_enable_noise_filter}")
+		
 		enable_noise_filter = self.add_bool_property(
-				name="enable_noise_filter",
+				name="expr_creation_enable_noise_filter",
 				label="Enable Noise Filtering")
 		self._properties.add(enable_noise_filter)
 		
 		noise_thresh_property = self.add_int_property(
-				name="noise_thresh",
+				name="expr_creation_noise_thresh",
 				label="Noise filtering threshold (ions)")
 		self._properties.add(noise_thresh_property)
 		
@@ -209,17 +210,17 @@ class MethodPGPanel(wx.Panel):
 		self.new_category("Peak Alignment")
 		
 		rt_modulation_property = self.add_float_property(
-				name="rt_modulation",
+				name="alignment_rt_modulation",
 				label="RT Modulation (seconds)")
 		self._properties.add(rt_modulation_property)
 		
 		gap_penalty_property = self.add_float_property(
-				name="gap_penalty",
+				name="alignment_gap_penalty",
 				label="Gap Penalty")
 		self._properties.add(gap_penalty_property)
 		
 		min_peaks_property = self.add_int_property(
-				name="min_peaks",
+				name="alignment_min_peaks",
 				label="Minimum Peaks")
 		self._properties.add(min_peaks_property)
 		
@@ -287,7 +288,20 @@ class MethodPGPanel(wx.Panel):
 		p = event.GetProperty()
 		if p:
 			print(f'{p.GetName()} changed to "{p.GetValueAsString()}"')
-	
+			
+			if getattr(self.method, p.GetName()) == p.GetValue():
+				# Don't save
+				print("Value didn't change")
+				print(p.GetName(), p.GetValue(), getattr(self.method, p.GetName()))
+				return
+			else:
+				setattr(self.method, p.GetName(), p.GetValue())
+				print("Value changed")
+			
+			self.fileNotSaved = True
+		
+		event.Skip()
+
 	def on_property_selected(self, event):
 		"""
 		Handler for events fired when property selected
@@ -295,7 +309,9 @@ class MethodPGPanel(wx.Panel):
 		
 		p = event.GetProperty()
 		if p:
-			print(f'{event.GetProperty().GetName()} selected')
+			print(f'{p.GetName()} selected')
+			# print(f"Propgrid Value: {p.GetValue()}")
+			# print(f"Method Value: {getattr(self.method, p.GetName())}")
 		else:
 			print('Nothing selected')
 	
@@ -339,17 +355,19 @@ class MethodPGPanel(wx.Panel):
 				value=getattr(self.method, name))
 		self.property_grid_1.Append(prop)
 		self.property_grid_1.SetPropertyHelpString(prop, descriptions[name])
+		
+		# print(f"Adding property {name} with value {getattr(self.method, name)}")
+		
 		return prop
 	
 	def new_category(self, label):
 		self.property_grid_1.Append(wx.propgrid.PropertyCategory(label))
 	
 	def export_pdf(self, input_filename, output_filename):
-		PDFExporter(
+		MethodPDFExporter(
 				self.method,
 				input_filename=input_filename,
 				output_filename=output_filename,
-				title="Method Report"
 				)
 
 # end of class MethodPGPanel

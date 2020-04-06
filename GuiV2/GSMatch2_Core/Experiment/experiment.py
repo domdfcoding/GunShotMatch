@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2017-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@
 
 # stdlib
 import csv
-import datetime
 import json
 import operator
 import os
@@ -43,6 +42,7 @@ from statistics import mean, median
 # 3rd party
 import numpy
 import pyms.Experiment
+import pyms_nist_search
 from domdf_python_tools.doctools import is_documented_by
 from mathematical.utils import rounders
 from pyms.BillerBiemann import BillerBiemann, num_ions_threshold
@@ -57,15 +57,15 @@ from pyms.TopHat import tophat
 
 # this package
 from GSMatch.utils import pynist
-from GuiV2.GSMatch2_Core import Method, Base
+from GuiV2.GSMatch2_Core import Base, Method
 from GuiV2.GSMatch2_Core.Config import internal_config
-from GuiV2.GSMatch2_Core.Experiment.functions import create_msp
-from GuiV2.GSMatch2_Core.Experiment.identification import QualifiedPeak, SearchResult
+from GuiV2.GSMatch2_Core.Experiment.identification import QualifiedPeak
+from GuiV2.GSMatch2_Core.Experiment.identification.functions import create_msp
 from GuiV2.GSMatch2_Core.IDs import *
-from GuiV2.GSMatch2_Core.InfoProperties import longstr, massrange, Property, rtrange
-from GuiV2.GSMatch2_Core.watchdog import AuditRecord, time_now
-from GuiV2.GSMatch2_Core.utils import filename_only
+from GuiV2.GSMatch2_Core.InfoProperties import massrange, Property, rtrange
 from GuiV2.GSMatch2_Core.io import get_file_from_archive, load_info_json
+from GuiV2.GSMatch2_Core.utils import filename_only
+from GuiV2.GSMatch2_Core.watchdog import AuditRecord, time_now
 
 conversion_thread_running = False
 
@@ -80,7 +80,9 @@ class Experiment(Base.GSMBase):
 	def __init__(
 			self, name, method, user, device, date_created, date_modified,
 			version, original_filename=None, original_filetype=0,
-			description='', filename=None, identification_performed=False, ident_audit_record=None):
+			description='', filename=None, identification_performed=False,
+			ident_audit_record=None
+			):
 		"""
 		:param name: The name of the Experiment
 		:type name: str
@@ -181,7 +183,7 @@ class Experiment(Base.GSMBase):
 	
 	def get_info_from_gcms_data(self):
 		"""
-		Method to get information from PyMassSpec gcms_data object contained within experiment
+		Method to get information from the :class:`pyms.GCMS.Class.GCMS_data` object contained within experiment
 		"""
 		
 		# TODO: within pyms make read only properties for these private attributes
@@ -189,13 +191,14 @@ class Experiment(Base.GSMBase):
 		self.data_rt_range.value = (self.gcms_data._min_rt / 60, self.gcms_data._max_rt / 60)
 		self.time_step.value = self.gcms_data._time_step
 		self.time_step_stdev.value = self.gcms_data._time_step_std
-		self.n_scans.value = len(self.gcms_data._scan_list)
+		self.n_scans.value = len(self.gcms_data.scan_list)
 		self.data_mz_range.value = (self.gcms_data._min_mass, self.gcms_data._max_mass)
 		
 		# calculate median number of m/z values measured per scan
 		n_list = []
-		for ii in range(len(self.gcms_data._scan_list)):
-			scan = self.gcms_data._scan_list[ii]
+		scan_list = self.gcms_data.scan_list
+		for ii in range(len(scan_list)):
+			scan = scan_list[ii]
 			n = len(scan)
 			n_list.append(n)
 		self.data_n_mz_mean.value = mean(n_list)
@@ -213,17 +216,6 @@ class Experiment(Base.GSMBase):
 		experiment_data = load_info_json(filename)
 		
 		expr = cls(**experiment_data, filename=filename)
-			# experiment_data["Name"], experiment_data["Method"], experiment_data["User"], experiment_data["Device"],
-			# date_created=experiment_data["Date Created"],
-			# date_modified=experiment_data["Date Modified"],
-			# version=experiment_data["Version"],
-			# original_filename=experiment_data["Original Filename"],
-			# original_filetype=experiment_data["Original Filetype"],
-			# description=experiment_data["Description"],
-			# filename=filename
-			# )
-			#
-		print(expr.name)
 		expr.gcms_data = pickle.load(get_file_from_archive(expr.filename.Path, "gcms_data.dat"))
 		expr.expr = pickle.load(get_file_from_archive(expr.filename.Path, "experiment.expr"))
 		expr.peak_list = pickle.load(get_file_from_archive(expr.filename.Path, "peaks.dat"))
@@ -254,7 +246,13 @@ class Experiment(Base.GSMBase):
 		
 		self.date_modified.value = time_now()
 		
-		if any((self.expr is None, self.tic is None, self.peak_list is None, self.intensity_matrix is None, self.gcms_data is None)):
+		if any((
+				self.expr is None,
+				self.tic is None,
+				self.peak_list is None,
+				self.intensity_matrix is None,
+				self.gcms_data is None
+				)):
 			raise ValueError("Must call 'Experiment.run()' before 'store()'")
 		
 		# Write experiment, tic and peak list to temporary directory
@@ -348,7 +346,7 @@ class Experiment(Base.GSMBase):
 		method = Method.Method(self.method.value)
 		
 		# list of all retention times, in seconds
-		times = self.gcms_data.get_time_list()
+		# times = self.gcms_data.get_time_list()
 		# get Total Ion Chromatogram
 		self.tic = self.gcms_data.get_tic()
 		# RT Range, time step, no. scans, min, max, mean and median m/z
@@ -381,12 +379,12 @@ class Experiment(Base.GSMBase):
 			# print("\rWorking on IC#", ii+1, '  ',end='')
 			ic = self.intensity_matrix.get_ic_at_index(ii)
 			
-			if method.enable_sav_gol:
+			if method.expr_creation_enable_sav_gol:
 				# Perform Savitzky-Golay smoothing.
 				# Note that Turbomass does not use smoothing for qualitative method.
 				ic = savitzky_golay(ic)
 			
-			if method.enable_tophat:
+			if method.expr_creation_enable_tophat:
 				# Perform Tophat baseline correction
 				# Top-hat baseline Correction seems to bring down noise,
 				#  		retaining shapes, but keeps points on actual peaks
@@ -397,16 +395,20 @@ class Experiment(Base.GSMBase):
 			
 		# Peak Detection based on Biller and Biemann (1974), with a window
 		# 	of <points>, and combining <scans> if they apex next to each other
-		peak_list = BillerBiemann(self.intensity_matrix, points=method.bb_points, scans=method.bb_scans)
+		peak_list = BillerBiemann(
+				self.intensity_matrix,
+				points=method.expr_creation_bb_points,
+				scans=method.expr_creation_bb_scans,
+				)
 		
 		print(" Number of peaks identified before filtering: {}".format(len(peak_list)))
 		
-		if method.enable_noise_filter:
+		if method.expr_creation_enable_noise_filter:
 			# Filtering peak lists with automatic noise filtering
 			noise_level = window_analyzer(self.tic)
 			# should we also do rel_threshold() here?
 			# https://pymassspec.readthedocs.io/en/master/pyms/BillerBiemann.html#pyms.BillerBiemann.rel_threshold
-			peak_list = num_ions_threshold(peak_list, method.noise_thresh, noise_level)
+			peak_list = num_ions_threshold(peak_list, method.expr_creation_noise_thresh, noise_level)
 		
 		self.peak_list = []
 		
@@ -440,18 +442,20 @@ class Experiment(Base.GSMBase):
 		self.expr = pyms.Experiment.Experiment(self.name, self.peak_list)
 		self.expr.sele_rt_range(["{}m".format(method.target_range[0]), "{}m".format(method.target_range[1])])
 		
-	def identify_compounds(self, rt_alignment):
+	def identify_compounds(self, rt_alignment, n_hits=10):
 		"""
 		Identify the compounds that produced each of the peaks in the Chromatogram
 		
 		:param rt_alignment:
 		:type rt_alignment:
+		:param n_hits: The number of hits to return from NIST MS Search
+		:type n_hits: int
 		"""
 		
 		print(f"Identifying Compounds for {self.name}")
 		
 		rt_list = rt_alignment[self.name]
-		tic = self.tic
+		# tic = self.tic
 		n_peaks = 80
 		
 		print(rt_list)
@@ -467,9 +471,7 @@ class Experiment(Base.GSMBase):
 		with open(combined_csv_file, "w") as combine_csv:
 			
 			# Sample name and header row
-			combine_csv.write(f"""{self.name}
-Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
-""")
+			combine_csv.write(f"{self.name}\n{csv_header_row}\n")
 			
 			report_buffer = []
 			# Filter to those peaks present in all samples, by UID
@@ -516,9 +518,6 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 				
 				qualified_peak = QualifiedPeak.from_peak(row[5])
 				
-				# Number of hits to get from NIST MS Search
-				n_hits = 10
-				
 				# Create MSP file for the peak
 				create_msp("{}_{}".format(self.name, row[1]), ms.mass_list, ms.mass_spec)
 				
@@ -531,20 +530,11 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 				combine_csv.write("{};{};Page {} of 80;;;;;;{}\n".format(row[1], row[4], row_idx + 1, row[2]))
 				
 				for hit in range(1, n_hits + 1):
-					search_result = SearchResult.from_pynist(matches_dict["Hit{}".format(hit)])
-					
-					# combine_csv.write(';;{};{};{};{};{};{};\n'.format(
-					# 		hit,
-					# 		matches_dict["Hit{}".format(hit)]["Lib"],
-					# 		matches_dict["Hit{}".format(hit)]["MF"],
-					# 		matches_dict["Hit{}".format(hit)]["RMF"],
-					# 		matches_dict["Hit{}".format(hit)]["Name"].replace(";", ":"),
-					# 		matches_dict["Hit{}".format(hit)]["CAS"],
-					# 		))
+					search_result = pyms_nist_search.SearchResult.from_pynist(matches_dict["Hit{}".format(hit)])
 					
 					combine_csv.write(';;{};{};{};{};{};{};\n'.format(
 								hit,
-								search_result.library,
+								'',  # search_result.library,
 								search_result.match_factor,
 								search_result.reverse_match_factor,
 								search_result.name,
@@ -557,18 +547,20 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 		
 		return 0
 		
-	def identify_compounds2(self, target_times):
+	def identify_compounds2(self, target_times, n_hits=10):
 		"""
 		Identify the compounds that produced each of the peaks in the Chromatogram
 		
-		:param rt_list:
-		:type rt_list:
+		:param target_times:
+		:type target_times:
+		:param n_hits: The number of hits to return from NIST MS Search
+		:type n_hits: int
 		"""
 		
 		print(f"Identifying Compounds for {self.name}")
 		
-		def round_rt(rt):
-			return rounders(rt, "0.0000000000")
+		# # Obtain area for each peak
+		# peak_area_list = get_area_list(self.peak_list)
 		
 		# Convert float retention times to Decimal
 		# rt_list = [rounders(rt, "0.0000000000") for rt in target_times]
@@ -578,37 +570,26 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 		# Sort smallest to largest
 		rt_list.sort()
 		
-		# Obtain area for each peak
-		peak_area_list = []
-		for peak in self.peak_list:
-			area = peak.get_area()
-			peak_area_list.append(area)
-		
 		# Write output to CSV file
 		combined_csv_file = os.path.join("/home/domdf/.config/GunShotMatch", "{}_COMBINED.csv".format(self.name))
 		with open(combined_csv_file, "w") as combine_csv:
 			
 			# Sample name and header row
-			combine_csv.write(f"""{self.name}
-Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
-""")
+			combine_csv.write(f"{self.name}\n{csv_header_row}\n")
 			peaks = []
 			
 			# Filter to those peaks present in all samples, by UID
 			for peak in self.peak_list:
-				qualified_peak = QualifiedPeak.from_peak(peak)
-				# Limit to 10 decimal places as that's what Pandas writes JSON data as; no need for greater precision
-				# print(rounders(peak.get_rt() / 60, "0.0000000000"))
+				
 				rt = (peak.rt / 60)
 				rounded_rt = round_rt(rt)
+				
 				if rounded_rt in rt_list:
-					qualified_peak.peak_number = target_times[target_times==rounded_rt].index[0]
+					qualified_peak = QualifiedPeak.from_peak(peak)
+					qualified_peak.peak_number = target_times[target_times == rounded_rt].index[0]
 					
-					ms = peak.mass_spectrum
+					ms = qualified_peak.mass_spectrum
 
-					# Number of hits to get from NIST MS Search
-					n_hits = 10
-					
 					# Create MSP file for the peak
 					create_msp(
 							"{}_{}".format(self.name, rt),
@@ -623,7 +604,7 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 					
 					# Add search results to peak
 					for hit in range(1, n_hits + 1):
-						search_result = SearchResult.from_pynist(matches_dict["Hit{}".format(hit)])
+						search_result = pyms_nist_search.SearchResult.from_pynist(matches_dict["Hit{}".format(hit)])
 						qualified_peak.hits.append(search_result)
 					
 					# Write to file
@@ -640,10 +621,93 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 		self.ident_audit_record = AuditRecord()
 		
 		return peaks
-
+		
+	def identify_compounds3(self, target_times, n_hits=10):
+		"""
+		Identify the compounds that produced each of the peaks in the Chromatogram
+		
+		:param target_times:
+		:type target_times:
+		:param n_hits: The number of hits to return from NIST MS Search
+		:type n_hits: int
+		"""
+		
+		print(f"Identifying Compounds for {self.name}")
+		
+		peaks = []
+		
+		# Initialise search engine.
+		# TODO: Ideally this can be done once and shared between all experiments
+		#  but it breaks when loading the Method editor
+		search = pyms_nist_search.Engine(
+				Base.FULL_PATH_TO_MAIN_LIBRARY,
+				pyms_nist_search.NISTMS_MAIN_LIB,
+				Base.FULL_PATH_TO_WORK_DIR,
+				debug=True,
+				)
+		
+		# Wrap search in try/except so that the search engine will be uninitialised in the event of an error
+		try:
+			# Convert float retention times to Decimal
+			# rt_list = [rounders(rt, "0.0000000000") for rt in target_times]
+			target_times = target_times.apply(round_rt)
+			# Remove NaN values
+			rt_list = [rt for rt in target_times if not rt.is_nan()]
+			# Sort smallest to largest
+			rt_list.sort()
+			
+			# # Obtain area for each peak
+			# peak_area_list = get_area_list(self.peak_list)
+			
+			# Write output to CSV file
+			combined_csv_file = os.path.join("/home/domdf/.config/GunShotMatch", "{}_COMBINED.csv".format(self.name))
+			with open(combined_csv_file, "w") as combine_csv:
+				
+				# Sample name and header row
+				combine_csv.write(f"{self.name}\n{csv_header_row}\n")
+				
+				# Filter to those peaks present in all samples, by UID
+				for peak in self.peak_list:
+					
+					rounded_rt = round_rt(peak.rt / 60)
+					
+					if rounded_rt in rt_list:
+						qualified_peak = QualifiedPeak.from_peak(peak)
+						qualified_peak.peak_number = target_times[target_times == rounded_rt].index[0]
+						
+						ms = qualified_peak.mass_spectrum
+	
+						print(f"Identifying peak at rt {rounded_rt} minutes...")
+						
+						hit_list = search.full_spectrum_search(ms, n_hits)
+						
+						# Add search results to peak
+						for hit in hit_list:
+							qualified_peak.hits.append(hit)
+						
+						# Write to file
+						for row in qualified_peak.to_csv():
+							combine_csv.write(f'{";".join(row)}\n')
+							
+						peaks.append(qualified_peak)
+			
+			# Add peaks to experiment and save
+			self.ident_peaks = peaks
+			self.identification_performed = True
+			self.ident_audit_record = AuditRecord()
+			
+		except Exception:
+			search.uninit()
+			raise
+		
+		search.uninit()
+		return peaks
+		
 	def nist_ms_comparison(self, sample_name, n_hits=5):
 		"""
-
+		
+		:param sample_name:
+		:type sample_name:
 		:param n_hits:
 		:type n_hits:
 
@@ -651,18 +715,18 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 		:rtype:
 		"""
 		
-		data_dict = {}
+		# data_dict = {}
 		
 		try:
 			pynist.generate_ini(internal_config.nist_path, "mainlib", n_hits)
 			
-			def remove_chars(input_string):
-				for i in range(n_hits + 1):
-					input_string = input_string.replace("Hit {}  : ", "")
-				
-				return input_string.replace("MF:", "") \
-					.replace(":", "").replace("<", "").replace(">", "") \
-					.replace(" ", "").replace(self.name, "")
+			# def remove_chars(input_string):
+			# 	for i in range(n_hits + 1):
+			# 		input_string = input_string.replace("Hit {}  : ", "")
+			#
+			# 	return input_string.replace("MF:", "") \
+			# 		.replace(":", "").replace("<", "").replace(">", "") \
+			# 		.replace(" ", "").replace(self.name, "")
 					
 			raw_output = pynist.nist_db_connector(
 					internal_config.nist_path,
@@ -686,7 +750,7 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 						"Name": row[1], "MF": (row[3].replace("MF:", '').replace(" ", '')),
 						"RMF": (row[4].replace("RMF:", '').replace(" ", '')),
 						"CAS": (row[6].replace("CAS:", '').replace(" ", '')),
-						"Lib": (row[8].replace("Lib:", '').replace(" ", ''))
+						# "Lib": (row[8].replace("Lib:", '').replace(" ", ''))
 						}
 		
 		except:
@@ -694,7 +758,7 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 			pynist.reload_ini(internal_config.nist_path)
 			sys.exit(1)
 		
-		print("\r\033[KSearch Complete")#, end='')
+		print("\r\033[KSearch Complete")  # , end='')
 		pynist.reload_ini(internal_config.nist_path)
 		return matches_dict
 	
@@ -707,7 +771,7 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 		:rtype:
 		"""
 		
-		#return pickle.load(get_file_from_archive(self.filename.Path, "experiment.expr"))
+		# return pickle.load(get_file_from_archive(self.filename.Path, "experiment.expr"))
 		return self.expr
 	
 	@property
@@ -752,9 +816,8 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 		tic = IonChromatogram(intensity_array, time_list)
 
 		return intensity_array, tic
-
-	@property
-	def all_properties(self):
+	
+	def _get_all_properties(self):
 		"""
 		Returns a list containing all of the properties, in the order they should be displayed
 
@@ -762,13 +825,8 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 		:rtype: list
 		"""
 		
-		return [
-				self.description,
-				self.user,
-				self.device,
-				self.date_created,
-				self.date_modified,
-				self.method,
+		all_props = Base.GSMBase._get_all_properties(self)
+		all_props = all_props[:-2] + [
 				self.data_rt_range,
 				self.time_step,
 				self.time_step_stdev,
@@ -781,45 +839,31 @@ Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes
 				self.original_filetype,
 				self.version,
 				]
-	
-	def __repr__(self):
-		return f"Experiment({self.name})"
-	
-	
+		return all_props
+
 # Code for running in parallel with old method
-"""
-# Number of workers for performing Quantitative Processing in parallel
-# If 0 processing will be performed sequentially
-n_quant_workers = self.PL_len
-
-if n_quant_workers:
-	# Perform Quantitative Processing in parallel
-	with Pool(n_quant_workers) as p:
-		p.map(
-			self.quantitative_processing, [os.path.join(
-				self.config.raw_dir,
-				"{}.JDX".format(prefix)
-			) for prefix in self.config.prefixList])
-		
-for prefix in self.config.prefixList:
-	if not n_quant_workers:
-		# Perform Quantitative Processing sequentially
-		self.quantitative_processing(os.path.join(self.config.raw_dir, "{}.JDX".format(prefix)), False)
-	
-	# Read the log file and print the contents
-	with open(os.path.join(self.config.log_dir, prefix + ".log"), "r") as f:
-		print(f.read())
-"""
-
-"""
-Next Stages:
-	Peak Alignment
-	Qualitative - requires rt_alignment (output of get_peak_alignment(A1))
-	Merge
-	Counter - requires ms_alignment (output of get_ms_alignment(A1))
-
-
-"""
+#
+# # Number of workers for performing Quantitative Processing in parallel
+# # If 0 processing will be performed sequentially
+# n_quant_workers = self.PL_len
+#
+# if n_quant_workers:
+# 	# Perform Quantitative Processing in parallel
+# 	with Pool(n_quant_workers) as p:
+# 		p.map(
+# 			self.quantitative_processing, [os.path.join(
+# 				self.config.raw_dir,
+# 				"{}.JDX".format(prefix)
+# 			) for prefix in self.config.prefixList])
+#
+# for prefix in self.config.prefixList:
+# 	if not n_quant_workers:
+# 		# Perform Quantitative Processing sequentially
+# 		self.quantitative_processing(os.path.join(self.config.raw_dir, "{}.JDX".format(prefix)), False)
+#
+# 	# Read the log file and print the contents
+# 	with open(os.path.join(self.config.log_dir, prefix + ".log"), "r") as f:
+# 		print(f.read())
 
 
 @is_documented_by(Experiment.new)
@@ -835,3 +879,39 @@ def new_empty():
 @is_documented_by(Experiment.load)
 def load(*args, **kwargs):
 	return Experiment.load(*args, **kwargs)
+
+
+def round_rt(rt):
+	"""
+	Limit to 10 decimal places as that's what Pandas writes JSON data as; no need for greater precision
+	
+	:param rt:
+	:type rt:
+	
+	:return:
+	:rtype:
+	"""
+	
+	return rounders(rt, "0.0000000000")
+
+
+def get_area_list(peak_list):
+	"""
+	Obtain area for each peak
+	
+	:param peak_list:
+	:type peak_list:
+	
+	:return:
+	:rtype: list of float
+	"""
+	
+	peak_area_list = []
+	for peak in peak_list:
+		area = peak.get_area()
+		peak_area_list.append(area)
+	
+	return peak_area_list
+
+
+csv_header_row = "Retention Time;Peak Area;;Lib;Match;R Match;Name;CAS Number;Notes"

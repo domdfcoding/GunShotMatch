@@ -3,35 +3,13 @@
 #
 #  settings_panel.py
 #
-#  This file is part of GunShotMatch
-#
-#  Copyright (c) 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
-#
-#  GunShotMatch is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  GunShotMatch is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
-#
+#  From wxPython Demo.
+#  Licenced under the wxWindows Library Licence, Version 3.1
 
-# stdlib
 
 # 3rd party
 import wx
-import wx.grid
-import wx.html
 import wx.aui as aui
-
-# this package
 
 
 ID_PaneBorderSize = wx.ID_HIGHEST + 1
@@ -53,12 +31,11 @@ class SettingsPanel(wx.Panel):
 
 	def __init__(self, parent, frame):
 
-		wx.Panel.__init__(self, parent, wx.ID_ANY, wx.DefaultPosition,
-						  wx.DefaultSize)
+		wx.Panel.__init__(self, parent, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize)
 
 		self._frame = frame
 
-		vert = wx.BoxSizer(wx.VERTICAL)
+		# vert = wx.BoxSizer(wx.VERTICAL)
 
 		s1 = wx.BoxSizer(wx.HORIZONTAL)
 		self._border_size = wx.SpinCtrl(self, ID_PaneBorderSize, "", wx.DefaultPosition, wx.Size(50,20))
@@ -221,7 +198,6 @@ class SettingsPanel(wx.Panel):
 		self.Bind(wx.EVT_BUTTON, self.OnSetColor, id=ID_BorderColor)
 		self.Bind(wx.EVT_BUTTON, self.OnSetColor, id=ID_GripperColor)
 
-
 	def CreateColorBitmap(self, c):
 		image = wx.Image(25, 14)
 
@@ -234,7 +210,6 @@ class SettingsPanel(wx.Panel):
 				image.SetRGB(x, y, pixcol.Red(), pixcol.Green(), pixcol.Blue())
 
 		return image.ConvertToBitmap()
-
 
 	def UpdateColors(self):
 
@@ -268,13 +243,11 @@ class SettingsPanel(wx.Panel):
 		gripper = self._frame.get_dock_art().GetColour(aui.AUI_DOCKART_GRIPPER_COLOUR)
 		self._gripper_color.SetBitmapLabel(self.CreateColorBitmap(gripper))
 
-
 	def OnPaneBorderSize(self, event):
 
 		self._frame.get_dock_art().SetMetric(aui.AUI_DOCKART_PANE_BORDER_SIZE,
 										   event.GetInt())
 		self._frame.DoUpdate()
-
 
 	def OnSashSize(self, event):
 
@@ -282,13 +255,11 @@ class SettingsPanel(wx.Panel):
 										   event.GetInt())
 		self._frame.DoUpdate()
 
-
 	def OnCaptionSize(self, event):
 
 		self._frame.get_dock_art().SetMetric(aui.AUI_DOCKART_CAPTION_SIZE,
 										   event.GetInt())
 		self._frame.DoUpdate()
-
 
 	def OnSetColor(self, event):
 
@@ -299,7 +270,7 @@ class SettingsPanel(wx.Panel):
 		if dlg.ShowModal() != wx.ID_OK:
 			return
 
-		var = 0
+		# var = 0
 		if event.GetId() == ID_BackgroundColor:
 			var = aui.AUI_DOCKART_BACKGROUND_COLOUR
 		elif event.GetId() == ID_SashColor:

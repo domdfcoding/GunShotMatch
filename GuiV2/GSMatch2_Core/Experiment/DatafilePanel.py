@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ from domdf_wxpython_tools.picker import file_folder_picker
 from GuiV2.GSMatch2_Core.Config import internal_config
 from GuiV2.GSMatch2_Core.GUI.constants import file_formats, folder_formats, windows_only_formats
 from GuiV2.GSMatch2_Core.IDs import *
+import wx
 
 
 # begin wxGlade: dependencies
@@ -48,6 +49,23 @@ from GuiV2.GSMatch2_Core.IDs import *
 
 class DatafilePanel(wx.Panel):
 	def __init__(self, *args, **kwds):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
+
 		# begin wxGlade: DatafilePanel.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.TAB_TRAVERSAL
 		wx.Panel.__init__(self, *args, **kwds)
@@ -57,7 +75,7 @@ class DatafilePanel(wx.Panel):
 		self.masshunter_radio = wx.RadioButton(self, ID_Format_MassHunter, "Agilent MassHunter (*.d)")
 		self.waters_raw_radio = wx.RadioButton(self, ID_Format_WatersRAW, "Waters MassLynx / PerkinElmer TurboMass (*.raw)")
 		self.thermo_raw_radio = wx.RadioButton(self, ID_Format_ThermoRAW, "ThermoFisher RAW (.raw)")
-		self.expr_picker = file_folder_picker(self, wx.ID_ANY, style=wx.TAB_TRAVERSAL|wx.FD_OPEN)
+		self.expr_picker = file_folder_picker(self, wx.ID_ANY, style=wx.TAB_TRAVERSAL | wx.FD_OPEN)
 
 		self.__set_properties()
 		self.__do_layout()
@@ -158,7 +176,6 @@ class DatafilePanel(wx.Panel):
 					raise ValueError("Unknown format type")
 				
 				break
-
 		
 		event.Skip()
 	
@@ -181,7 +198,7 @@ class DatafilePanel(wx.Panel):
 					return False
 				
 				elif (selected_button in file_formats and not pathlib.Path(text).absolute().is_file()) \
-						or (selected_button in folder_formats and not pathlib.Path(text).absolute().is_dir()):
+					or (selected_button in folder_formats and not pathlib.Path(text).absolute().is_dir()):
 					
 					# TODO: check validity of selected datafile for the chosen format
 					

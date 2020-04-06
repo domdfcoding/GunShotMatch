@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,19 +27,16 @@
 # stdlib
 import atexit
 import configparser
-import os
 import pathlib
-import platform
+import sys
 
 # 3rd party
-from domdf_python_tools.paths import maybe_make, relpath2
-from importlib_resources import path
 import appdirs
-from domdf_wxpython_tools.StylePickerPanel import default_styles
+from domdf_python_tools.paths import maybe_make, relpath2
 from domdf_wxpython_tools.ColourPickerPanel import default_colours
+from domdf_wxpython_tools.StylePickerPanel import default_styles
 
 # this package
-import GSMatch.lib
 
 # TODO: pathlib support
 
@@ -90,50 +87,17 @@ class InternalConfig:
 		maybe_make(self._configfile.parent)
 		
 		self._configfile.write_text("""
-		[main]
-		
-		[paths]
-		
-		[recent_projects]
-		
-		[charts]
+[main]
+
+[paths]
+
+[recent_projects]
+
+[charts]
 		""")
 		
 		self._load_from_file()
 		return
-		
-		# Sections
-		self.Config["main"] = {}
-		self.Config["paths"] = {}
-		self.Config["recent_projects"] = {}
-		self.Config["charts"] = {}
-		
-		self.nist_path = homedir
-		
-		# Directories
-		self.csv_dir = homedir / "Documents" / "GunShotMatch" / "CSV Reports"
-		self.spectra_dir = homedir / "Documents" / "GunShotMatch" / "Spectra Images"
-		self.charts_dir = homedir / "Documents" / "GunShotMatch" / "Charts"
-		self.msp_dir = homedir / "Documents" / "GunShotMatch" / "MSP Files"
-		self.results_dir = homedir / "Documents" / "GunShotMatch" / "Results"
-		self.log_dir = homedir / "Documents" / "GunShotMatch" / "Logs"
-		
-		# Recent Projects
-		for i in range(9, -1, -1):
-			self.add_recent_project("", ".")
-		
-		# Main
-		self.show_welcome_dialog = True
-		self.exit_on_closing_welcome_dialog = False
-		self.last_project = homedir
-		self.last_experiment = homedir
-		self.last_datafile = homedir
-		self.last_method = homedir
-		self.last_ammo = homedir
-		
-		# Charts
-		self.chart_styles = default_styles[:]
-		self.chart_colours = default_colours[:]
 	
 	def _load_from_file(self):
 		self.Config.read(self.configfile)
@@ -615,7 +579,6 @@ class InternalConfig:
 		
 		#self._recent_projects = value
 	
-	
 	def add_recent_project(self, name, filename):
 		# Check that the file exists
 		if not pathlib.Path(filename).is_file():
@@ -629,7 +592,6 @@ class InternalConfig:
 			]
 		
 		self._recent_projects.insert(0, (name, str(filename)))
-	
 	
 	def remove_recent_project(self, idx=None, name=None, filename=None):
 		
@@ -740,5 +702,4 @@ atexit.register(internal_config.save_config)
 
 
 if __name__ == "__main__":
-	import sys
 	sys.exit(1)

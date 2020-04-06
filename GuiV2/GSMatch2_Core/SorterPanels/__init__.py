@@ -1,11 +1,11 @@
 #  !/usr/bin/env python
 #   -*- coding: utf-8 -*-
 #
-#  filename.py
+#  __init__.py
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,5 +26,19 @@
 from GuiV2.GSMatch2_Core.SorterPanels.ExperimentSorterPanel import ExperimentSorterPanel
 from GuiV2.GSMatch2_Core.SorterPanels.MultipleExperimentSorterPanel import MultipleExperimentSorterPanel
 from GuiV2.GSMatch2_Core.SorterPanels.PeakListSorterPanel import PeakListSorterPanel
-from GuiV2.GSMatch2_Core.SorterPanels.SorterPanelBase import ColSelectMixin, ColSelectListCtrl, SorterPanel, myEVT_SORTER_PANEL_DCLICK, myEVT_SORTER_PANEL_RCLICK
+from GuiV2.GSMatch2_Core.SorterPanels.SorterPanelBase import (
+	ColSelectListCtrl, ColSelectMixin,
+	myEVT_SORTER_PANEL_DCLICK, myEVT_SORTER_PANEL_RCLICK, SorterPanel,
+	)
 
+
+__all__ = [
+		"ExperimentSorterPanel",
+		"MultipleExperimentSorterPanel",
+		"PeakListSorterPanel",
+		"ColSelectListCtrl",
+		"ColSelectMixin",
+		"myEVT_SORTER_PANEL_DCLICK",
+		"myEVT_SORTER_PANEL_RCLICK",
+		"SorterPanel",
+		]

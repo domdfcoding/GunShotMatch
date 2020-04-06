@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,13 +27,17 @@
 from collections import namedtuple
 
 # 3rd party
+import wx
+# import wx.lib.agw.aui as aui
+from pubsub import pub
 from wx import aui
-#import wx.lib.agw.aui as aui
 
 # this package
 from GuiV2.GSMatch2_Core.IDs import *
 from GuiV2.icons import get_icon
-from GuiV2.GSMatch2_Core.GUI.events import EVT_TOGGLE_EXPR_TOOLS, EVT_TOGGLE_VIEW_TOOLS
+
+
+# TODO: replace self.name with wxpython Name in __init__ and elsewhere
 
 
 class ToolData(namedtuple('__BaseTool', "name, icon, id, handler")):
@@ -49,12 +53,12 @@ class ToolBarBase(wx.ToolBar):
 	Base Class for custom ToolBars
 	"""
 	
-	def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.DefaultSize, name=wx.ToolBarNameStr):
+	def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.DefaultSize):
 		self.parent = parent
 		self.id = id
 		wx.ToolBar.__init__(
 				self, parent, id, pos, size,
-				style=wx.TB_FLAT | wx.TB_NODIVIDER, name=name
+				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="tb_base"
 				)
 		self.SetToolBitmapSize(wx.Size(*tb_icon_size))
 		self._populate_toolbar()
@@ -86,6 +90,7 @@ class ToolBarBase(wx.ToolBar):
 					Position(self.position)
 				)
 
+
 class ProjectToolBar(ToolBarBase):
 	"""
 	ToolBar for Projects
@@ -96,7 +101,7 @@ class ProjectToolBar(ToolBarBase):
 		self.id = id
 		wx.ToolBar.__init__(
 				self, parent, id, pos, size,
-				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="Project Toolbar"
+				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="tb_project"
 				)
 		self.SetToolBitmapSize(wx.Size(*tb_icon_size))
 		self._populate_toolbar()
@@ -107,13 +112,17 @@ class ProjectToolBar(ToolBarBase):
 	
 	def _populate_toolbar(self):
 		self.add_tool(ToolData(
-				"New Project (Ctrl+N)", get_icon(wx.ART_NEW, tb_icon_size[0]),
-				ID_New_Project,
+				name="New Project (Ctrl+N)",
+				icon=get_icon(wx.ART_NEW, tb_icon_size[0]),
+				id=wx.ID_NEW,
+				handler=self.parent.on_new_project,
 				))
 		
 		self.add_tool(ToolData(
-				"Open Project (Ctrl+O)", get_icon(wx.ART_FILE_OPEN, tb_icon_size[0]),
-				ID_Open_Project,
+				name="Open Project (Ctrl+O)",
+				icon=get_icon(wx.ART_FILE_OPEN, tb_icon_size[0]),
+				id=wx.ID_OPEN,
+				handler=self.parent.on_open_project,
 				),
 				wx.ITEM_DROPDOWN
 				)
@@ -123,24 +132,27 @@ class ProjectToolBar(ToolBarBase):
 		for ID in recent_project_ids:
 			recent_menu.Append(ID, "item", "")
 		
-		self.SetDropdownMenu(ID_Open_Project, recent_menu)
+		self.SetDropdownMenu(wx.ID_OPEN, recent_menu)
 		
 		self.add_tool(ToolData(
-				"Save Project (Ctrl+S)",
-				get_icon(wx.ART_FILE_SAVE, tb_icon_size[0]),
-				ID_Save_Project,
+				name="Save Project (Ctrl+S)",
+				icon=get_icon(wx.ART_FILE_SAVE, tb_icon_size[0]),
+				id=wx.ID_SAVE,
+				handler=self.parent.on_save_project,
 				))
 		
 		self.add_tool(ToolData(
-				"Save All",
-				get_icon("geany-save-all", 24),
-				ID_Save_All,
+				name="Save All",
+				icon=get_icon("geany-save-all", 24),
+				id=ID_Save_All,
+				handler=self.parent.on_save_all,
 				))
 		
 		self.add_tool(ToolData(
-				"Close Project",
-				get_icon("close", tb_icon_size[0]),
-				ID_Close_Project,
+				name="Close Project",
+				icon=get_icon("close", tb_icon_size[0]),
+				id=ID_Close_Project,
+				handler=self.parent.on_close_project,
 				))
 		
 
@@ -154,7 +166,7 @@ class ExperimentToolBar(ToolBarBase):
 		self.id = id
 		wx.ToolBar.__init__(
 				self, parent, id, pos, size,
-				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="Experiment Toolbar"
+				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="tb_experiment"
 				)
 		self.SetToolBitmapSize(wx.Size(*tb_icon_size))
 		self._populate_toolbar()
@@ -164,13 +176,14 @@ class ExperimentToolBar(ToolBarBase):
 		self.position = 1
 		
 		# # Bind events for enabling and disabling controls
-		EVT_TOGGLE_EXPR_TOOLS.Bind(receiver=self, handler=self.on_expr_tools_toggle)
+		pub.subscribe(self.toggle_experiment_tools, "toggle_expr_tools")
 
 	def _populate_toolbar(self):
 		self.add_tool(ToolData(
-				"New Experiment (Ctrl+E)",
-				get_icon("new-experiment", 24),
-				ID_New_Experiment,
+				name="New Experiment (Ctrl+E)",
+				icon=get_icon("new-experiment", 24),
+				id=ID_New_Experiment,
+				handler=self.parent.on_new_experiment,
 				),
 				wx.ITEM_DROPDOWN
 				)
@@ -183,23 +196,23 @@ class ExperimentToolBar(ToolBarBase):
 		self.SetDropdownMenu(ID_New_Experiment, new_experiment_menu)
 		
 		self.add_tool(ToolData(
-				"Previous Experiment (Ctrl+<)",
-				get_icon(wx.ART_GO_BACK, tb_icon_size[0]),
-				ID_Previous_Experiment
+				name="Previous Experiment (Ctrl+<)",
+				icon=get_icon(wx.ART_GO_BACK, tb_icon_size[0]),
+				id=ID_Previous_Experiment
 				))
 		
 		self.add_tool(ToolData(
-				"Next Experiment (Ctrl+>)",
-				get_icon(wx.ART_GO_FORWARD, tb_icon_size[0]),
-				ID_Next_Experiment
+				name="Next Experiment (Ctrl+>)",
+				icon=get_icon(wx.ART_GO_FORWARD, tb_icon_size[0]),
+				id=ID_Next_Experiment
 				))
 	
 	def on_expr_tools_toggle(self, event):
 		self.toggle_experiment_tools(event.GetValue())
 	
-	def toggle_experiment_tools(self, enabled=True):
-		self.EnableTool(ID_Next_Experiment, enabled)
-		self.EnableTool(ID_Previous_Experiment, enabled)
+	def toggle_experiment_tools(self, enable=True):
+		self.EnableTool(ID_Next_Experiment, enable)
+		self.EnableTool(ID_Previous_Experiment, enable)
 
 
 class ChartToolBar(ToolBarBase):
@@ -213,7 +226,7 @@ class ChartToolBar(ToolBarBase):
 		wx.ToolBar.__init__(
 				self, parent, id, pos, size,
 				style=wx.TB_FLAT | wx.TB_NODIVIDER | wx.TB_HORZ_TEXT,
-				name="Chart Toolbar"
+				name="tb_charts"
 				)
 		self.SetToolBitmapSize(wx.Size(*tb_icon_size))
 		self._populate_toolbar()
@@ -237,7 +250,7 @@ class ViewToolBar(ToolBarBase):
 		self.id = id
 		wx.ToolBar.__init__(
 				self, parent, id, pos, size,
-				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="View Tools Toolbar"
+				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="tb_view"
 				)
 		self.SetToolBitmapSize(wx.Size(*tb_icon_size))
 		self._populate_toolbar()
@@ -247,35 +260,68 @@ class ViewToolBar(ToolBarBase):
 		self.position = 3
 		
 		# Bind events for enabling and disabling controls
-		EVT_TOGGLE_VIEW_TOOLS.set_receiver(self)
-		EVT_TOGGLE_VIEW_TOOLS.Bind(self.on_view_tools_toggle)
-		EVT_TOGGLE_EXPR_TOOLS.Bind(receiver=self, handler=self.on_expr_tools_toggle)
-
+		pub.subscribe(self.toggle_view_tools, "toggle_view_tools")
+		pub.subscribe(self.toggle_experiment_tools, "toggle_expr_tools")
+	
 	def _populate_toolbar(self):
-		self.add_tool(ToolData("Reset View", get_icon(wx.ART_GO_HOME, tb_icon_size[0]), ID_View_Reset))
+		self.add_tool(ToolData(
+				name="Reset View",
+				icon=get_icon(wx.ART_GO_HOME, tb_icon_size[0]),
+				id=ID_View_Reset,
+				))
 		
-		self.add_tool(ToolData("Previous View", get_icon(wx.ART_GO_TO_PARENT, tb_icon_size[0]), ID_View_Previous))
+		self.add_tool(ToolData(
+				name="Previous View",
+				icon=get_icon(wx.ART_GO_TO_PARENT, tb_icon_size[0]),
+				id=ID_View_Previous,
+				))
 		
-		self.add_radio_tool(ToolData("Select", get_icon("default-cursor", 24), ID_View_Default))
+		self.add_tool(ToolData(
+				name="Rescale y-axis",
+				icon=get_icon("rescale_y", tb_icon_size[0]),
+				id=ID_View_Rescale_y,
+				))
+
+		self.add_tool(ToolData(
+				name="Rescale x-axis",
+				icon=get_icon("rescale_x", tb_icon_size[0]),
+				id=ID_View_Rescale_x,
+				))
 		
-		self.add_radio_tool(ToolData("Zoom (Ctrl+Shift+Z)", get_icon("zoom", 24), ID_View_Zoom))
+		self.AddSeparator()
 		
-		self.add_radio_tool(ToolData("Pan (Ctrl+Shift+P)", get_icon("gimp-tool-move", 24), ID_View_Pan))
+		self.add_radio_tool(ToolData(
+				name="Select",
+				icon=get_icon("default-cursor", 24),
+				id=ID_View_Default,
+				))
+		
+		self.add_radio_tool(ToolData(
+				name="Zoom (Ctrl+Shift+Z)",
+				icon=get_icon("zoom", 24),
+				id=ID_View_Zoom,
+				))
+		
+		self.add_radio_tool(ToolData(
+				name="Pan (Ctrl+Shift+P)",
+				icon=get_icon("gimp-tool-move", 24),
+				id=ID_View_Pan,
+				))
 		
 		self.add_radio_tool(
 			ToolData("View Spectrum On Click (Ctrl+Shift+S)", get_icon("mass-spectrum", 24), ID_View_Spectrum))
 		# TODO: Dropdown with options for Click to view, enter scan No, enter RT
 		
 		self.add_tool(ToolData(
-				"View Spectrum By Scan No.",
-				get_icon("mass-spectrum-123", tb_icon_size[0]),
-				ID_View_Spectrum_by_num
+				name="View Spectrum By Scan No.",
+				icon=get_icon("mass-spectrum-123", tb_icon_size[0]),
+				id=ID_View_Spectrum_by_num,
 				))
 		
 		self.add_tool(ToolData(
-				"View Spectrum By RT",
-				get_icon("mass-spectrum-rt", tb_icon_size[0]),
-				ID_View_Spectrum_by_rt
+				name="View Spectrum By RT",
+				icon=get_icon("mass-spectrum-rt", tb_icon_size[0]),
+				id=ID_View_Spectrum_by_rt,
 				))
 	
 	def on_view_tools_toggle(self, event):
@@ -284,17 +330,19 @@ class ViewToolBar(ToolBarBase):
 	def on_expr_tools_toggle(self, event):
 		self.toggle_experiment_tools(event.GetValue())
 	
-	def toggle_view_tools(self, enabled=True):
-		self.EnableTool(ID_View_Default, enabled)
-		self.EnableTool(ID_View_Pan, enabled)
-		self.EnableTool(ID_View_Zoom, enabled)
-		self.EnableTool(ID_View_Spectrum, enabled)
-		self.EnableTool(ID_View_Previous, enabled)
-		self.EnableTool(ID_View_Reset, enabled)
+	def toggle_view_tools(self, enable=True):
+		self.EnableTool(ID_View_Default, enable)
+		self.EnableTool(ID_View_Pan, enable)
+		self.EnableTool(ID_View_Zoom, enable)
+		self.EnableTool(ID_View_Spectrum, enable)
+		self.EnableTool(ID_View_Previous, enable)
+		self.EnableTool(ID_View_Rescale_x, enable)
+		self.EnableTool(ID_View_Rescale_y, enable)
+		self.EnableTool(ID_View_Reset, enable)
 	
-	def toggle_experiment_tools(self, enabled=True):
-		self.EnableTool(ID_View_Spectrum_by_num, enabled)
-		self.EnableTool(ID_View_Spectrum_by_rt, enabled)
+	def toggle_experiment_tools(self, enable=True):
+		self.EnableTool(ID_View_Spectrum_by_num, enable)
+		self.EnableTool(ID_View_Spectrum_by_rt, enable)
 
 
 class ExportToolBar(ToolBarBase):
@@ -306,7 +354,7 @@ class ExportToolBar(ToolBarBase):
 		self.id = id
 		wx.ToolBar.__init__(
 				self, parent, id, pos, size,
-				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="Export Tools Toolbar"
+				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="tb_export"
 				)
 		self.SetToolBitmapSize(wx.Size(*tb_icon_size))
 		self._populate_toolbar()
@@ -316,22 +364,41 @@ class ExportToolBar(ToolBarBase):
 		self.position = 4
 
 	def _populate_toolbar(self):
-		self.add_tool(ToolData("Export as PDF", get_icon("export-pdf", tb_icon_size[0]), ID_Export_PDF))
-		self.add_tool(ToolData("Print (Ctrl+P)", get_icon("Document-print", tb_icon_size[0]), wx.ID_PRINT))
-		self.add_tool(ToolData("Print Preview", get_icon("Document-print-preview", tb_icon_size[0]), wx.ID_PREVIEW))
+		self.add_tool(ToolData(
+				name="Export as PDF",
+				icon=get_icon("export-pdf", tb_icon_size[0]),
+				id=ID_Export_PDF,
+				handler=self.parent.on_export_pdf,
+				))
+		
+		self.add_tool(ToolData(
+				name="Print (Ctrl+P)",
+				icon=get_icon("Document-print", tb_icon_size[0]),
+				id=wx.ID_PRINT,
+				handler=self.parent.on_print,
+				))
+		
+		self.add_tool(ToolData(
+				name="Print Preview",
+				icon=get_icon("Document-print-preview", tb_icon_size[0]),
+				id=wx.ID_PREVIEW_PRINT,
+				handler=self.parent.on_print_preview,
+				))
 
 
 class SpectrumViewerToolBar(ToolBarBase):
 	"""
 	ToolBar for Spectrum Viewer
+	
+	TODO: copy and copy data
 	"""
-	# TODO: copy and copy data
+	
 	def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.DefaultSize):
 		self.parent = parent
 		self.id = id
 		wx.ToolBar.__init__(
 				self, parent, id, pos, size,
-				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="Spectrum Toolbar"
+				style=wx.TB_FLAT | wx.TB_NODIVIDER, name="tb_spectrum"
 				)
 		self.SetToolBitmapSize(wx.Size(*tb_icon_size))
 		self._populate_toolbar()
@@ -407,5 +474,3 @@ class SpectrumViewerToolBar(ToolBarBase):
 				ID_Spec_Viewer_by_rt,
 				self.parent.spectrum_by_rt
 				))
-		
-

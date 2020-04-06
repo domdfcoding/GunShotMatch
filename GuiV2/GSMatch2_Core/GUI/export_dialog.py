@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 #  MA 02110-1301, USA.
 #
 
+
 # 3rd party
 import wx
 from pubsub import pub
@@ -37,6 +38,23 @@ class ExportDialog(wx.Dialog):
 			self, parent, id=wx.ID_ANY, title='', pos=wx.DefaultPosition,
 			style=wx.DEFAULT_DIALOG_STYLE, name=wx.DialogNameStr
 			):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
 		
 		wx.Dialog.__init__(
 				self, parent=parent, id=id, title=title, pos=pos, size=(468, 420),
@@ -60,11 +78,6 @@ class ExportDialog(wx.Dialog):
 
 	def _set_properties(self):
 		self.SetTitle("Export")
-
-		def set_size(obj, size):
-			obj.SetMinSize(size)
-			obj.SetSize(size)
-			obj.SetMaxSize(size)
 		
 		for obj in {
 				self.proj_report_btn,
@@ -125,8 +138,9 @@ class ExportDialog(wx.Dialog):
 		self.Bind(wx.EVT_BUTTON, self.on_images, self.current_view_images_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_csv, self.current_view_csv_btn)
 	
-	def on_proj_report(self, event):
-		pass
+	def on_proj_report(self, _):
+		wx.CallAfter(pub.sendMessage, "export_project_report")
+		self.Destroy()
 	
 	def on_expr_report(self, event):
 		pass
@@ -134,15 +148,15 @@ class ExportDialog(wx.Dialog):
 	def on_expr_data(self, event):
 		pass
 	
-	def on_method(self, event):
+	def on_method(self, _):
 		wx.CallAfter(pub.sendMessage, "export_method")
 		self.Destroy()
 	
-	def on_ammo_details(self, event):
+	def on_ammo_details(self, _):
 		wx.CallAfter(pub.sendMessage, "export_ammo_details")
 		self.Destroy()
 	
-	def on_pdf(self, event):
+	def on_pdf(self, _):
 		wx.CallAfter(pub.sendMessage, "export_current_pdf")
 		self.Destroy()
 	
@@ -153,6 +167,20 @@ class ExportDialog(wx.Dialog):
 		pass
 
 # end of class ExportDialog
+
+
+def set_size(window, size):
+	"""
+	Set the current, minimum and maximum sizes of the given window
+	
+	:type window: wx.Window
+	:param size: The size to set the window to
+	:type size: wx.Size
+	"""
+	
+	window.SetMinSize(size)
+	window.SetSize(size)
+	window.SetMaxSize(size)
 
 
 if __name__ == "__main__":

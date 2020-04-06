@@ -1,11 +1,11 @@
 #  !/usr/bin/env python
 #   -*- coding: utf-8 -*-
 #
-#  filename.py
+#  exporters.py
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,8 +23,6 @@
 #  MA 02110-1301, USA.
 #
 
-# stdlib
-
 # 3rd party
 from reportlab.lib.units import cm
 from reportlab.platypus import Spacer
@@ -33,12 +31,12 @@ from reportlab.platypus import Spacer
 from GuiV2.GSMatch2_Core.exporters import PDFExporterBase
 
 
-class PDFExporter(PDFExporterBase):
+class MethodPDFExporter(PDFExporterBase):
 	no_input_filename_str = "&lt;Unsaved Method File&gt;"
 	no_input_full_filename_str = "an unsaved method file"
 
-	def __init__(self, method, input_filename, output_filename, title):
-		PDFExporterBase.__init__(self, method, input_filename, output_filename, title)
+	def __init__(self, method, input_filename, output_filename, title="Method Report"):
+		PDFExporterBase.__init__(self, input_filename, output_filename, title)
 		
 		self.method = method
 		self.make_method_inner()
@@ -47,31 +45,33 @@ class PDFExporter(PDFExporterBase):
 	def make_method_inner(self):
 		# Extract parameters from the method
 		
-		if self.method.tophat_unit == "m":
+		if self.method.expr_creation_tophat_unit == "m":
 			tophat_unit = "minutes"
-		elif self.method.tophat_unit == "s":
+		elif self.method.expr_creation_tophat_unit == "s":
 			tophat_unit = "seconds"
-		elif self.method.tophat_unit == "ms":
+		elif self.method.expr_creation_tophat_unit == "ms":
 			tophat_unit = "milliseconds"
+		else:
+			raise ValueError(f"Unrecognised tophat unit '{self.method.expr_creation_tophat_unit}'")
 		
 		expr_creation_data = [
 				["Mass Range", f"{self.method.mass_range}", "<i>m/z</i>"],
-				["Perform Savitsky-Golay smoothing", self.method.enable_sav_gol, ""],
-				["Perform Tophat baseline correction", self.method.enable_tophat, ""],
+				["Perform Savitsky-Golay smoothing", self.method.expr_creation_enable_sav_gol, ""],
+				["Perform Tophat baseline correction", self.method.expr_creation_enable_tophat, ""],
 				["Tophat structural element", self.method.tophat, tophat_unit],
 				["<b>Biller-Biemann Peak Detection</b>", "", ""],
-				["&nbsp;&nbsp;Number of Points", self.method.bb_points, ''],
-				["&nbsp;&nbsp;Number of Scans", self.method.bb_scans, ''],
+				["&nbsp;&nbsp;Number of Points", self.method.expr_creation_bb_points, ''],
+				["&nbsp;&nbsp;Number of Scans", self.method.expr_creation_bb_scans, ''],
 				["&nbsp;&nbsp;Time Range", self.method.target_range, "minutes"],
-				["Perform Noise Filtering", self.method.enable_noise_filter, ""],
-				["Noise Filtering Threshold", self.method.noise_thresh, "ions"],
-				["Exclude peaks with theee base ions", self.method.base_peak_filter, "<i>m/z</i>"],
+				["Perform Noise Filtering", self.method.expr_creation_enable_noise_filter, ""],
+				["Noise Filtering Threshold", self.method.expr_creation_noise_thresh, "ions"],
+				["Exclude peaks with theee base ions", self.method.expr_creation_base_peak_filter, "<i>m/z</i>"],
 				]
 		
 		peak_alignment_data = [
-				["Retention Time Modulation", self.method.rt_modulation, "seconds"],
-				["Gap Penalty", self.method.gap_penalty, ""],
-				["Minimum Peaks", self.method.min_peaks, ""],
+				["Retention Time Modulation", self.method.alignment_rt_modulation, "seconds"],
+				["Gap Penalty", self.method.alignment_gap_penalty, ""],
+				["Minimum Peaks", self.method.alignment_min_peaks, ""],
 				]
 		
 		ident_data = [

@@ -3,12 +3,12 @@
 #
 #  custom_bitmap_button.py
 #  Based on wx.lib.buttons.
-#  Copyright (c) 1999-2018 by Total Control Software
+#  Copyright © 1999-2018 by Total Control Software
 #  Licenced under the wxWindows license
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -34,10 +34,10 @@ class CustomBitmapButton(GenBitmapButton):
 	""" A generic bitmapped button with text label. """
 	
 	def __init__(
-			self, parent, id=-1, bitmap=wx.NullBitmap, label='',
+			self, parent, id=wx.ID_ANY, bitmap=wx.NullBitmap, label='',
 			pos=wx.DefaultPosition, size=wx.DefaultSize,
 			style=wx.BORDER_RAISED, validator=wx.DefaultValidator,
-			name="genbutton"):
+			name="CustomBitmapButton"):
 		"""
 		Default class constructor.
 
@@ -45,18 +45,15 @@ class CustomBitmapButton(GenBitmapButton):
 		:param integer `id`: window identifier. A value of -1 indicates a default value;
 		:param wx.Bitmap `bitmap`: the button bitmap;
 		:param string `label`: the button text label;
-		:param `pos`: the control position. A value of (-1, -1) indicates a default position,
-		 chosen by either the windowing system or wxPython, depending on platform;
+		:param `pos`: the control position. A value of (-1, -1) indicates a default position, chosen by either the windowing system or wxPython, depending on platform;
 		:type `pos`: tuple or :class:`wx.Point`
-		:param `size`: the control size. A value of (-1, -1) indicates a default size,
-		 chosen by either the windowing system or wxPython, depending on platform;
+		:param `size`: the control size. A value of (-1, -1) indicates a default size, chosen by either the windowing system or wxPython, depending on platform;
 		:type `size`: tuple or :class:`wx.Size`
 		:param integer `style`: the button style;
 		:param wx.Validator `validator`: the validator associated to the button;
 		:param string `name`: the button name.
-
-		.. seealso:: :class:`wx.Button` for a list of valid window styles.
 		"""
+		
 		# TODO: Positioning of text relative to bitmap
 		
 		self._mouse_over = False
@@ -75,14 +72,14 @@ class CustomBitmapButton(GenBitmapButton):
 		if not self._mouse_over:
 			GenBitmapButton.SetBackgroundColour(self, colour)
 	
-	def OnMouseEnter(self, event):
+	def OnMouseEnter(self, _):
 		self._mouse_over = True
 		self._original_background_colour = self.GetBackgroundColour()
 		r, g, b = self._original_background_colour.Get(False)
 		hover_background = wx.Colour(r + 9, g + 10, b + 10)
 		GenBitmapButton.SetBackgroundColour(self, hover_background)
 		
-	def OnMouseLeave(self, event):
+	def OnMouseLeave(self, _):
 		self._mouse_over = False
 		self.SetBackgroundColour(self._original_background_colour)
 	
@@ -141,7 +138,7 @@ class CustomBitmapButton(GenBitmapButton):
 		"""
 		Handles the ``wx.EVT_SET_FOCUS`` event for :class:`GenButton`.
 
-		:param `event`: a :class:`wx.FocusEvent` event to be processed.
+		:param event: a :class:`wx.FocusEvent` event to be processed.
 		"""
 		self.SetWindowStyleFlag(wx.BORDER_DEFAULT)
 		self.SetBezelWidth(1)
@@ -152,7 +149,7 @@ class CustomBitmapButton(GenBitmapButton):
 		"""
 		Handles the ``wx.EVT_KILL_FOCUS`` event for :class:`GenButton`.
 
-		:param `event`: a :class:`wx.FocusEvent` event to be processed.
+		:param event: a :class:`wx.FocusEvent` event to be processed.
 		"""
 		self.SetWindowStyleFlag(self.original_style)
 		self.SetUseFocusIndicator(False)

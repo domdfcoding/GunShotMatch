@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -25,14 +25,17 @@
 
 # 3rd party
 import matplotlib
-from matplotlib.figure import Figure
-from pyms.Display import Display
 from domdf_wxpython_tools import coming_soon
+from domdf_wxpython_tools.projections import XPanAxes
+from matplotlib.figure import Figure
+from pubsub import pub
+from pyms.Display import Display
+import wx
 
 # this package
-from GSMatch.GSMatch_Core.Projections import XPanAxes
-from GuiV2.GSMatch2_Core.chartpanel import ChartPanelBase
+from GuiV2.GSMatch2_Core.GUI.chartpanel import ChartPanelBase
 from GuiV2.GSMatch2_Core.IDs import *
+
 
 matplotlib.projections.register_projection(XPanAxes)
 
@@ -41,10 +44,12 @@ class ChromatogramPanel(ChartPanelBase):
 	"""
 	Panel for displaying a Chromatogram that can be zoomed, panned etc.
 	"""
+	
 	def __init__(
 			self, experiment, parent, id=wx.ID_ANY,
 			pos=wx.DefaultPosition, size=wx.DefaultSize,
-			style=0, name=wx.PanelNameStr):
+			style=0, name="ChromatogramPanel",
+			):
 		"""
 		:param experiment:
 		:type experiment:
@@ -52,12 +57,10 @@ class ChromatogramPanel(ChartPanelBase):
 		:type parent: wx.Window
 		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
 		:type id: wx.WindowID, optional
-		:param pos: The panel position. The value ::wxDefaultPosition indicates a default position,
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position, chosen by either the windowing system or wxWidgets, depending on platform.
 		:type pos: wx.Point, optional
-			chosen by either the windowing system or wxWidgets, depending on platform.
-		:param size: The panel size. The value ::wxDefaultSize indicates a default size, chosen by
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by, either the windowing system or wxWidgets, depending on platform.
 		:type size: wx.Size, optional
-			either the windowing system or wxWidgets, depending on platform.
 		:param style: The window style. See wxPanel.
 		:type style: int, optional
 		:param name: Window name.
@@ -71,10 +74,12 @@ class ChromatogramPanel(ChartPanelBase):
 
 		ChartPanelBase.__init__(self, parent, fig, ax, id, pos, size, style, name)
 		
+		pub.subscribe(self.view_mode_changed, "view_mode_changed")
+		
 		self.display()
 		self._view_spectrum_enabled = False
 
-	def tool_changed(self, event=None):
+	def view_mode_changed(self):
 		"""
 		Event handler for a toolbar button being being clicked
 		"""
@@ -86,9 +91,6 @@ class ChromatogramPanel(ChartPanelBase):
 		self.pan(tb_view.GetToolState(ID_View_Pan))
 		self.zoom(tb_view.GetToolState(ID_View_Zoom))
 		self.view_spectrum_on_click(tb_view.GetToolState(ID_View_Spectrum))
-		
-		if event:
-			event.Skip()
 	
 	def view_spectrum_on_click(self, enable=True):
 		"""
@@ -101,7 +103,6 @@ class ChromatogramPanel(ChartPanelBase):
 		if enable or (not enable and self._view_spectrum_enabled):
 			coming_soon("'view_spectrum_on_click' has not been implemented yet")
 			
-	
 	# def save(self, event):
 	#
 	# 	self.focus_thief.SetFocus()
@@ -157,7 +158,7 @@ class ChromatogramPanel(ChartPanelBase):
 		# Read the TIC from the tic.dat file in the experiment tarfile
 		intensity_array, tic = self.experiment.tic_data
 		
-		#peak_list = load_peaks(os.path.join(ExprDir, "{}_peaks.dat".format(self.experiment.name)))
+		# peak_list = load_peaks(os.path.join(ExprDir, "{}_peaks.dat".format(self.experiment.name)))
 		
 		display.plot_tic(tic, label=self.experiment.name, minutes=True)
 		# display.plot_peaks(filtered_peak_list, "Peaks")
@@ -165,7 +166,6 @@ class ChromatogramPanel(ChartPanelBase):
 		# display.do_plotting(f'{self.experiment.name} TIC')
 		display.do_plotting('')
 		
-		y = tic.intensity_array
 		x = [time / 60 for time in tic.time_list]
 		
 		self.ax.set_xlim(left=0, right=max(x))
@@ -177,4 +177,16 @@ class ChromatogramPanel(ChartPanelBase):
 		# figure.tight_layout()
 		self.canvas.draw()
 		
-		self.setup_ylim_refresher(y, x)
+		self.setup_ylim_refresher(intensity_array, x)
+	
+	def rescale_y(self, *_):
+		intensity_array, tic = self.experiment.tic_data
+		x = [time / 60 for time in tic.time_list]
+		
+		self.do_rescale_y(x, intensity_array)
+		
+	def rescale_x(self, *_):
+		intensity_array, tic = self.experiment.tic_data
+		x = [time / 60 for time in tic.time_list]
+		
+		self.do_rescale_x(x)

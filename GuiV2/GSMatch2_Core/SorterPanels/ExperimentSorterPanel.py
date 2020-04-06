@@ -10,7 +10,7 @@ wx.Panel for the New Project Dialog containing a wx.ListCtrl
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,18 +31,13 @@ wx.Panel for the New Project Dialog containing a wx.ListCtrl
 #
 #
 
-# stdlib
-
 # 3rd party
 import wx
 from wx.lib.mixins.listctrl import ColumnSorterMixin
 
-# this package
-
 
 # begin wxGlade: dependencies
 # end wxGlade
-
 # begin wxGlade: extracode
 # end wxGlade
 
@@ -60,7 +55,6 @@ class ExperimentSorterPanel(wx.Panel, ColumnSorterMixin):
 		self._itemDataMap = {}
 		self.default_column_headers = ["Name", "Filename", "Original Filename", "Original Filetype", "Date", "User"]
 
-	
 	def __set_properties(self):
 		# begin wxGlade: ExperimentSorterPanel.__set_properties
 		self.expr_list.AppendColumn(u"Name ⭡", format=wx.LIST_FORMAT_LEFT, width=200)
