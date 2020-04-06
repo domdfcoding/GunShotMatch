@@ -9,7 +9,7 @@ Dialog for configuring GunShotMatch preferences
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2017-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,16 +27,20 @@ Dialog for configuring GunShotMatch preferences
 #  MA 02110-1301, USA.
 #
 
+
+# stdlib
 import webbrowser
 
+# 3rd party
 import wx
-#from domdf_wxpython_tools.picker import dir_picker
+# from domdf_wxpython_tools.picker import dir_picker
 from domdf_wxpython_tools import DirBrowseCtrl
+from domdf_wxpython_tools.ColourPickerPanel import ColourPickerPanel
+from domdf_wxpython_tools.StylePickerPanel import StylePickerPanel
 
+# this package
 from GuiV2.GSMatch2_Core.Config import internal_config
 from GuiV2.icons import get_icon
-from domdf_wxpython_tools.StylePickerPanel import StylePickerPanel
-from domdf_wxpython_tools.ColourPickerPanel import ColourPickerPanel
 
 
 # begin wxGlade: dependencies
@@ -49,6 +53,28 @@ from domdf_wxpython_tools.ColourPickerPanel import ColourPickerPanel
 
 class PreferencesDialog(wx.Dialog):
 	def __init__(self, *args, **kwds):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param size: The dialog size. The value DefaultSize indicates a default
+		size, chosen by either the windowing system or wxWidgets, depending on
+		platform.
+		:type size: wx.Size
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
+		
 		# begin wxGlade: PreferencesDialog.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
 		wx.Dialog.__init__(self, *args, **kwds)
@@ -176,13 +202,11 @@ class PreferencesDialog(wx.Dialog):
 		self.msppath.SetValue(internal_config.msp_dir)
 		self.charts_path.SetValue(internal_config.charts_dir)
 	
-	def on_ok(self, event):
+	def on_ok(self, _):
 		"""
 		Handler for user pressing OK button
-		
-		:param event:
-		:type event:
 		"""
+		
 		print("OK pressed")
 		
 		# General Page
@@ -201,7 +225,7 @@ class PreferencesDialog(wx.Dialog):
 		internal_config.chart_styles = self.marker_picker.get_selection()
 		internal_config.chart_colours = self.colour_picker.get_selection()
 		
-		# todo: self.replot_chart()
+		# TODO: self.replot_chart()
 		
 		if self.IsModal():
 			self.EndModal(wx.ID_OK)

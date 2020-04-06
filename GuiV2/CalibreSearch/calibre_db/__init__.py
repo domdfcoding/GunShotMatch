@@ -1,11 +1,11 @@
 #  !/usr/bin/env python
 #   -*- coding: utf-8 -*-
 #
-#  filename.py
+#  __init__.py
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,12 +26,9 @@
 
 # stdlib
 import pathlib
-from pprint import pprint
 
 # 3rd party
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
 
 # Create engine
@@ -39,4 +36,8 @@ db_uri = f"sqlite:///{pathlib.Path(__file__).parent / 'calibres.db'}"
 
 engine = create_engine(db_uri)
 
+__all__ = [
+		"engine",
+		"db_uri"
+		]
 

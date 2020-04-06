@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -35,7 +35,10 @@ Base = declarative_base()
 
 
 class CalibreModel(Base):
-	"""Calibre data model"""
+	"""
+	Calibre data model
+	"""
+	
 	__tablename__ = "calibres"
 	# __table_args__ = {"schema": "example"}
 	
@@ -61,30 +64,6 @@ class CalibreModel(Base):
 	
 	def __str__(self):
 		return self.__repr__()
-
-# class Calibre:
-# 	def __init__(
-# 			self, name, id=None,
-# 			case_type_rimmed=None,
-# 			case_type_belted = None,
-# 			case_type_bottleneck = None,
-# 			case_type_rebated = None,
-# 			bullet_diameter = None,
-# 			neck_diameter = None,
-# 			shoulder_diameter = None,
-# 			base_diameter = None,
-# 			rim_diameter = None,
-# 			rim_thickness = None,
-# 			case_length = None,
-# 			cartridge_length = None,
-# 			):
-#
-# 	if id:
-# 		self.id = int(id)
-# 	else
-# 		self.id = None
-#
-#
 
 
 # Create All Tables

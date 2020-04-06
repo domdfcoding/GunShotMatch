@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -43,8 +43,25 @@ from GuiV2 import CalibreSearch
 class CalibreSearchDialog(wx.Dialog):
 	def __init__(
 			self, parent, id=wx.ID_ANY, title="Calibre Search", pos=wx.DefaultPosition,
-			 style=wx.DEFAULT_DIALOG_STYLE, name=wx.DialogNameStr
+			style=wx.DEFAULT_DIALOG_STYLE, name=wx.DialogNameStr
 			):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
 		
 		args = (parent, id, title, pos)
 		kwds = {
@@ -61,8 +78,8 @@ class CalibreSearchDialog(wx.Dialog):
 		self.__do_layout()
 		# end wxGlade
 	
-		self.Bind(wx.EVT_BUTTON, self.OnCancel, id=wx.ID_CANCEL)
-		self.Bind(wx.EVT_BUTTON, self.OnSelect, id=wx.ID_ADD)
+		self.Bind(wx.EVT_BUTTON, self.on_cancel, id=wx.ID_CANCEL)
+		self.Bind(wx.EVT_BUTTON, self.on_select, id=wx.ID_ADD)
 
 	def __set_properties(self):
 		# begin wxGlade: CalibreSearchDialog.__set_properties
@@ -83,13 +100,13 @@ class CalibreSearchDialog(wx.Dialog):
 		self.SetMaxSize(self.CalibreSearchPanel.GetMaxSize())
 		self.Refresh()
 	
-	def OnSelect(self, event):
+	def on_select(self, _):
 		if self.IsModal():
 			self.EndModal(wx.ID_ADD)
 		else:
 			self.Destroy()
 	
-	def OnCancel(self, event):
+	def on_cancel(self, _):
 		if self.IsModal():
 			self.EndModal(wx.ID_CANCEL)
 		else:
@@ -98,6 +115,5 @@ class CalibreSearchDialog(wx.Dialog):
 	def GetSelection(self):
 		return self.CalibreSearchPanel.GetSelection()
 	
-
-
 # end of class CalibreSearchDialog
+

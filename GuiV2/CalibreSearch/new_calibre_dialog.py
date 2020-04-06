@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -38,6 +38,23 @@ class NewCalibreDialog(wx.Dialog):
 			self, parent, id=wx.ID_ANY, title="Calibre Search", pos=wx.DefaultPosition,
 			style=wx.DEFAULT_DIALOG_STYLE, name=wx.DialogNameStr
 			):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
 		
 		args = (parent, id, title, pos)
 		kwds = {
@@ -62,8 +79,8 @@ class NewCalibreDialog(wx.Dialog):
 
 		self._do_layout()
 	
-		self.Bind(wx.EVT_BUTTON, self.OnCancel, id=wx.ID_CANCEL)
-		self.Bind(wx.EVT_BUTTON, self.OnAdd, id=wx.ID_OK)
+		self.Bind(wx.EVT_BUTTON, self.on_cancel, id=wx.ID_CANCEL)
+		self.Bind(wx.EVT_BUTTON, self.on_add, id=wx.ID_OK)
 	
 	def _do_layout(self):
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -90,7 +107,7 @@ class NewCalibreDialog(wx.Dialog):
 		self.Layout()
 		self.Refresh()
 	
-	def OnAdd(self, event):
+	def on_add(self, event):
 		# TODO: Validation
 		
 		if self.IsModal():
@@ -98,7 +115,7 @@ class NewCalibreDialog(wx.Dialog):
 		else:
 			self.Destroy()
 	
-	def OnCancel(self, event):
+	def on_cancel(self, event):
 		if self.IsModal():
 			self.EndModal(wx.ID_CANCEL)
 		else:

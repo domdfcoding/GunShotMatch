@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #
 #  CalibreInfoPanel.py
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -45,9 +45,26 @@ from GuiV2.CalibreSearch.calibre_db.model import CalibreModel
 
 
 class CalibreInfoPanel(wx.Panel):
-	def __init__(self, parent, id=wx.ID_ANY,
-			pos=wx.DefaultPosition, size=wx.DefaultSize,
-			style=wx.TAB_TRAVERSAL, name=wx.PanelNameStr):
+	def __init__(
+			self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition,
+			size=wx.DefaultSize, style=wx.TAB_TRAVERSAL, name="CalibreInfoPanel"
+			):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
 		
 		args = (parent, id, pos, size)
 		kwds = {
@@ -77,8 +94,8 @@ class CalibreInfoPanel(wx.Panel):
 		self.__do_layout()
 		# end wxGlade
 	
-		self.name_value.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
-		self.other_names_value.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+		self.name_value.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
+		self.other_names_value.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
 
 	def __set_properties(self):
 		# begin wxGlade: CalibreInfoPanel.__set_properties
@@ -288,7 +305,6 @@ class CalibreInfoPanel(wx.Panel):
 		else:
 			self.name_value.SetBackgroundColour(self.GetBackgroundColour())
 			self.other_names_value.SetBackgroundColour(self.GetBackgroundColour())
-			
 	
 	def IsEditable(self):
 		for widget in {
@@ -312,7 +328,8 @@ class CalibreInfoPanel(wx.Panel):
 				return False
 		return True
 	
-	def OnKeyDown(self, event):
+	@staticmethod
+	def on_key_down(event):
 		if event.GetKeyCode() == wx.WXK_TAB:
 			flags = wx.NavigationKeyEvent.IsForward
 			if event.ShiftDown():
@@ -324,5 +341,3 @@ class CalibreInfoPanel(wx.Panel):
 			event.Skip()
 
 # end of class CalibreInfoPanel
-
-

@@ -5,10 +5,10 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  Based on the wxPython Demo by Robin Dunn
-#  Copyright (c) 1999-2018 by Total Control Software
+#  Copyright © 1999-2018 by Total Control Software
 #  Licenced under the wxWindows Licence
 #
 #
@@ -29,11 +29,14 @@
 #
 #
 
+# stdlib
 import os
 import re
+from decimal import Decimal
 
+# 3rd party
+from mathematical.utils import rounders
 
-# ---------------------------------------------------------------------------
 
 def replace_capitals(string):
 	"""
@@ -77,3 +80,35 @@ def convert_path_sep(path):
 	if path.startswith('/'):
 		split_path = '/' + split_path
 	return split_path
+
+
+# The conversion factor between inches and mm
+_conversion_factor = Decimal("25.4")
+
+
+def inch(mm):
+	"""
+	Convert mm to inches
+
+	:param mm: The size in mm
+	:type mm: str, int, float or decimal.Decimal
+
+	:return: The size in inches
+	:rtype: str
+	"""
+	
+	return str(rounders(Decimal(mm) / _conversion_factor, "0.000"))
+
+
+def mm(inch):
+	"""
+	Convert inches to mm
+
+	:param inch: The size in inch
+	:type inch: str, int, float or decimal.Decimal
+
+	:return: The size in mm
+	:rtype: str
+	"""
+	
+	return str(rounders(Decimal(inch) * _conversion_factor, "0.0000"))

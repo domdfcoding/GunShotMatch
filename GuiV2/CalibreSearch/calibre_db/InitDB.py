@@ -1,11 +1,14 @@
 #  !/usr/bin/env python
 #   -*- coding: utf-8 -*-
 #
-#  filename.py
+#  InitDB.py
+"""
+Script to initialise the calibre database
+"""
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,31 +26,20 @@
 #  MA 02110-1301, USA.
 #
 
-import pathlib
-
-(pathlib.Path(__file__).parent / 'calibres.db').unlink()
 
 # stdlib
-from decimal import Decimal
+import pathlib
 from pprint import pprint
 
 # 3rd party
-from mathematical.utils import rounders
 from sqlalchemy.orm import sessionmaker
+
+(pathlib.Path(__file__).parent / 'calibres.db').unlink()
 
 # this package
 from GuiV2.CalibreSearch.calibre_db import engine
 from GuiV2.CalibreSearch.calibre_db.model import CalibreModel
-
-_conversion_factor = Decimal("25.4")
-
-
-def inch(mm):
-	return str(rounders(Decimal(mm) / _conversion_factor, "0.000"))
-
-
-def mm(inch):
-	return str(rounders(Decimal(inch) * _conversion_factor, "0.0000"))
+from GuiV2.CalibreSearch.utils import mm, inch
 
 
 Session = sessionmaker(bind=engine)
@@ -68,6 +60,7 @@ J = [0, False, False, True]
 K = [0, True, True, True]
 L = [0, True, False, True]
 TODO = [0, False, False, False]
+
 
 calibre_data = {
 		'Rifles': [
@@ -853,6 +846,7 @@ session.commit()
 
 records = session.query(CalibreModel).all()
 print(records)
+
 for record in records:
 	print(record)
 	print(dir(record))
@@ -872,6 +866,5 @@ for record in records:
 Abbreviations
 
 Government -> Govt
-
 
 """

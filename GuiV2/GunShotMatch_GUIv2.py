@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -36,17 +36,15 @@ __email__ = "dominic@davis-foster.co.uk"
 # stdlib
 import sys
 
-sys.path.append("..")
-
 # 3rd party
 import wx
-import wx.html2
-import wx.richtext
 
 # this package
-from GuiV2.GSMatch2_Core.GunShotMatch import GunShotMatch
-from GuiV2.GSMatch2_Core.GUI import WelcomeDialog
+sys.path.append("..")
 from GuiV2.GSMatch2_Core.Config import internal_config
+from GuiV2.GSMatch2_Core.GUI import WelcomeDialog
+from GuiV2.GSMatch2_Core.GunShotMatch import GunShotMatch
+from GuiV2.GSMatch2_Core.launcher_tools import launch_app
 
 
 # begin wxGlade: dependencies
@@ -54,10 +52,6 @@ from GuiV2.GSMatch2_Core.Config import internal_config
 
 # begin wxGlade: extracode
 # end wxGlade
-
-
-#if platform.system() == "Windows":
-#	wx.html2.WebView.MSWSetEmulationLevel(level=wx.html2.WEBVIEW_EMU_IE11)
 
 
 class GSM_App(wx.App):
@@ -73,7 +67,8 @@ class GSM_App(wx.App):
 			if internal_config.exit_on_closing_welcome_dialog and not self.filename:
 				return True
 		
-		self.GunShotMatch = GunShotMatch(None, wx.ID_ANY, "")
+		self.GunShotMatch = GunShotMatch(None, wx.ID_ANY)
+		
 		if self.filename:
 			self.GunShotMatch.open_project(self.filename)
 
@@ -81,7 +76,7 @@ class GSM_App(wx.App):
 		self.GunShotMatch.Show()
 		
 		return True
-		
+	
 	def show_welcome_dialog(self, *args, **kwargs):
 		with WelcomeDialog(None, wx.ID_ANY, *args, **kwargs) as dlg:
 			# dlg.CenterOnScreen(wx.VERTICAL)
@@ -93,24 +88,18 @@ class GSM_App(wx.App):
 				self.filename = selected_project
 			else:
 				dlg.Destroy()
-		
+
 # end of class GSM_App
 
 
-if __name__ == "__main__":
-	print("###")
-	print(wx.Colour(wx.SYS_COLOUR_BACKGROUND))
-	print(wx.Colour(240, 240, 240))
-	print("###")
-	
-	if sys.platform == "win32":
-		import ctypes
-		myappid = "GunShotMatchGUI"
-		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-		
-	GunShotMatch = GSM_App(False)
-	GunShotMatch.MainLoop()
+def main():
+	return launch_app(
+			name="GunShotMatch_GUIv2",
+			pidname="GunShotMatch",
+			appid="GunShotMatchGUI",
+			wxapp=GSM_App,
+			redirect=False)
 
-	print("Goodbye :)")
-	
-	sys.exit(0)
+
+if __name__ == "__main__":
+	sys.exit(main())

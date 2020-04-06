@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,24 +32,41 @@ from GuiV2 import CalibreSearch
 
 class CalibreSearchFrame(wx.Frame):
 	
-	def __init__(self, parent, id=wx.ID_ANY, title="Calibre Search", pos=wx.DefaultPosition, style=wx.MINIMIZE_BOX | wx.MAXIMIZE_BOX | wx.CAPTION | wx.CLOSE_BOX | wx.CLIP_CHILDREN | wx.NO_FULL_REPAINT_ON_RESIZE, name=wx.FrameNameStr):
+	def __init__(
+			self, parent, id=wx.ID_ANY, title="Calibre Search", pos=wx.DefaultPosition,
+			style=wx.MINIMIZE_BOX | wx.MAXIMIZE_BOX | wx.CAPTION | wx.CLOSE_BOX | wx.CLIP_CHILDREN | wx.NO_FULL_REPAINT_ON_RESIZE,
+			name=wx.FrameNameStr
+			):
+		"""
+		:param parent: The window parent. This may be, and often is, None. If it is not None, the frame will be minimized when its parent is minimized and restored when it is restored (although it will still be possible to minimize
+		:type parent: wx.Window
+		:param id: The window identifier. It may take a value of -1 to indicate a default value.
+		:type id: wx.WindowID, optional
+		:param title: The caption to be displayed on the frame’s title bar.
+		:type title: str, optional
+		:param pos: The window position. The value DefaultPosition indicates a default position, chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param style: The window style. See wx.Frame class description.
+		:type style: int, optional
+		:param name: The name of the window. This parameter is used to associate a name with the item, allowing the application user to set Motif resource values for individual windows.
+		:type name: str, optional
+		"""
 		
-		wx.Frame.__init__(self, parent, id=id, title=title, pos=pos, style=style)
+		wx.Frame.__init__(self, parent, id=id, title=title, pos=pos, style=style, name=name)
 		
 		self.CalibreSearchPanel = CalibreSearch.SearchPanel(self)
 		
 		self.SetSize(self.CalibreSearchPanel.GetSize())
 		self.SetMinSize(self.CalibreSearchPanel.GetSize())
 
-		
 		grid_sizer = wx.GridSizer(1, 1, 0, 0)
 		grid_sizer.Add(self.CalibreSearchPanel, 1, wx.EXPAND, 0)
 		self.SetSizer(grid_sizer)
 		self.Layout()
 		
-		self.Bind(wx.EVT_CLOSE, self.OnCloseWindow)
-		self.Bind(wx.EVT_ICONIZE, self.OnIconfiy)
-		self.Bind(wx.EVT_MAXIMIZE, self.OnMaximize)
+		self.Bind(wx.EVT_CLOSE, self.on_close_window)
+		self.Bind(wx.EVT_ICONIZE, self.on_iconfiy)
+		self.Bind(wx.EVT_MAXIMIZE, self.on_maximize)
 		
 		# self.CalibreSearchPanel.buttons.show_select_cancel_grid(False)
 		# cur_min_size = self.GetMinSize()
@@ -57,23 +74,23 @@ class CalibreSearchFrame(wx.Frame):
 		# self.SetMinSize((cur_min_size.x, cur_min_size.y-34))
 		# self.SetSize((size.x, size.y-34))
 		
-		#self.Centre(wx.BOTH)
+		# self.Centre(wx.BOTH)
 		
-		wx.GetApp().Bind(wx.EVT_ACTIVATE_APP, self.OnAppActivate)
+		wx.GetApp().Bind(wx.EVT_ACTIVATE_APP, self.on_app_activate)
 	
-	def OnCloseWindow(self, _):
+	def on_close_window(self, _):
 		self.Destroy()
 	
-	def OnIconfiy(self, evt):
-		print(f"OnIconfiy: {evt.IsIconized()}")
+	def on_iconfiy(self, evt):
+		print(f"on_iconfiy: {evt.IsIconized()}")
 		evt.Skip()
 	
-	def OnMaximize(self, evt):
-		print("OnMaximize")
+	def on_maximize(self, evt):
+		print("on_maximize")
 		evt.Skip()
 
-	def OnAppActivate(self, evt):
-		print(f"OnAppActivate: {evt.GetActive()}")
+	def on_app_activate(self, evt):
+		print(f"on_app_activate: {evt.GetActive()}")
 		evt.Skip()
 
 
