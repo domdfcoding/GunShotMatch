@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,20 +32,17 @@ import getpass
 import socket
 
 # 3rd party
+import wx
 from domdf_wxpython_tools import file_dialog, file_dialog_multiple
 from domdf_wxpython_tools.picker import file_picker
 
 # this package
-from GuiV2.GSMatch2_Core.utils import lookup_filetype
+from GuiV2.GSMatch2_Core import Experiment, Method, Project, SorterPanels, utils
 from GuiV2.GSMatch2_Core.Config import internal_config
-from GuiV2.GSMatch2_Core import SorterPanels
-from GuiV2.GSMatch2_Core.IDs import *
-from GuiV2.GSMatch2_Core import Experiment
 from GuiV2.GSMatch2_Core.GUI.validators import ProjectAmmoValidator, ProjectMethodValidator, ProjectNameValidator
+from GuiV2.GSMatch2_Core.IDs import *
 from GuiV2.GSMatch2_Core.io import load_info_json
-from GuiV2.GSMatch2_Core import Method
-from GuiV2.GSMatch2_Core import Project
-from GuiV2.GSMatch2_Core import utils
+from GuiV2.GSMatch2_Core.utils import lookup_filetype
 
 '''
 # begin wxGlade: dependencies
@@ -58,6 +55,28 @@ from ExperimentSorterPanel import ExperimentSorterPanel
 
 
 class NewProjectDialog(wx.Dialog, Method.MethodPickerMixin):
+	"""
+	:param parent: Can be None, a frame or another dialog box.
+	:type parent: wx.Window
+	:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+	:type id: wx.WindowID
+	:param title: The title of the dialog.
+	:type title: str
+	:param pos: The dialog position. The value DefaultPosition indicates a
+	default position, chosen by either the windowing system or wxWidgets,
+	depending on platform.
+	:type pos: wx.Point
+	:param size: The dialog size. The value DefaultSize indicates a default
+	size, chosen by either the windowing system or wxWidgets, depending on
+	platform.
+	:type size: wx.Size
+	:param style: The window style.
+	:type style: int
+	:param name: Used to associate a name with the window, allowing the
+	application user to set Motif resource values for individual dialog boxes.
+	:type name: str
+	"""
+	
 	def __init__(self, *args, **kwds):
 		# begin wxGlade: NewProjectDialog.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
@@ -99,7 +118,7 @@ class NewProjectDialog(wx.Dialog, Method.MethodPickerMixin):
 		self.Bind(wx.EVT_BUTTON, self.on_create, id=self.ok_button)
 		self.SetExtraStyle(wx.WS_EX_VALIDATE_RECURSIVELY)
 		self.filename = None
-		#self.experiment_list = []
+		# self.experiment_list = []
 		
 		self.project = Project.Project.new_empty()
 
@@ -208,24 +227,25 @@ class NewProjectDialog(wx.Dialog, Method.MethodPickerMixin):
 	def on_ammo_change(self, _):
 		internal_config.last_ammo = self.ammo_picker.GetValue()
 	
-	def on_new_ammo(self, event):  # wxGlade: NewProjectDialog.<event_handler>
+	@staticmethod
+	def on_new_ammo(_):  # wxGlade: NewProjectDialog.<event_handler>
 		utils.ammo_editor()
 	
-	def on_edit_ammo(self, event):  # wxGlade: NewProjectDialog.<event_handler>
+	def on_edit_ammo(self, _):  # wxGlade: NewProjectDialog.<event_handler>
 		utils.ammo_editor(self.ammo_picker.GetValue())
 	
 	# Experiments
 	
-	def on_new_experiment(self, event):  # wxGlade: NewProjectDialog.<event_handler>
+	def on_new_experiment(self, _):  # wxGlade: NewProjectDialog.<event_handler>
 		with Experiment.NewExperimentDialog(self, wx.ID_ANY) as dlg:
 			print(dlg.ShowModal())
 			
 			for expr_filename in dlg.filenames:
-				#if expr_filename in self.experiment_list:
+				# if expr_filename in self.experiment_list:
 				if expr_filename in self.project.experiment_file_list:
 					self.flag_duplicate(expr_filename)
 					continue
-				#self.experiment_list.append(expr_filename)
+				# self.experiment_list.append(expr_filename)
 				self.project.add_experiment(expr_filename)
 			
 			self.update_expr_list()
@@ -233,12 +253,12 @@ class NewProjectDialog(wx.Dialog, Method.MethodPickerMixin):
 	def update_expr_list(self):
 		self.expr_list_panel.expr_list.DeleteAllItems()
 		
-		#if self.experiment_list:
+		# if self.experiment_list:
 		if self.project.experiment_file_list:
 			
 			itemDataMap = {}
 			
-			#for row_idx, expr_filename in enumerate(self.experiment_list):
+			# for row_idx, expr_filename in enumerate(self.experiment_list):
 			for row_idx, expr_filename in enumerate(self.project.experiment_file_list):
 				
 				expr_properties = load_info_json(expr_filename)
@@ -257,34 +277,34 @@ class NewProjectDialog(wx.Dialog, Method.MethodPickerMixin):
 			self.expr_list_panel.itemDataMap = itemDataMap
 	
 	def flag_duplicate(self, filename):
-		# Show dialog that experiment is alsredy in list
+		# Show dialog that experiment is already in list
 		wx.MessageBox(f"The experiment '{filename}' is already selected.", 'Error', wx.OK | wx.ICON_ERROR, parent=self)
 	
-	def on_add_experiment(self, event):  # wxGlade: NewProjectDialog.<event_handler>
+	def on_add_experiment(self, _):  # wxGlade: NewProjectDialog.<event_handler>
 		# Ask the user which experiment(s) to open
 		filename_list = file_dialog_multiple(
 			self, "expr", "Open Experiment", "Experiment",
 			style=wx.FD_OPEN | wx.FD_MULTIPLE,
 			defaultDir=str(internal_config.last_experiment)
-		)
+			)
 		
 		if not filename_list:
 			return
-		print(249)
+		
 		for filename in filename_list:
 			try:
 				self.project.add_experiment(filename)
 			except ValueError:
-			#if filename in self.experiment_list:
+				# if filename in self.experiment_list:
 				self.flag_duplicate(filename)
 				continue
-			#self.experiment_list.append(filename)
+			# self.experiment_list.append(filename)
 		
 		self.update_expr_list()
 		
 		internal_config.last_experiment = filename_list[-1]
 	
-	def on_remove_experiment(self, event):  # wxGlade: NewProjectDialog.<event_handler>
+	def on_remove_experiment(self, _):  # wxGlade: NewProjectDialog.<event_handler>
 		self.project.remove_experiment(
 				self.expr_list_panel.expr_list.GetItemText(
 						self.expr_list_panel.expr_list.GetFirstSelected(),
@@ -294,7 +314,7 @@ class NewProjectDialog(wx.Dialog, Method.MethodPickerMixin):
 		
 		self.update_expr_list()
 	
-	def on_clear_experiments(self, event):  # wxGlade: NewProjectDialog.<event_handler>
+	def on_clear_experiments(self, _):  # wxGlade: NewProjectDialog.<event_handler>
 		self.experiment_list = []
 		self.update_expr_list()
 		
@@ -332,18 +352,18 @@ class NewProjectDialog(wx.Dialog, Method.MethodPickerMixin):
 			self.project.ammo_details.value = self.ammo_picker.GetValue()
 			
 			self.filename = self.project.store_new(filename)
-			#EVT_NEW_PROJECT_DIALOG_CLOSE.trigger()
+			# EVT_NEW_PROJECT_DIALOG_CLOSE.trigger()
 			self.EndModal(wx.ID_OK)
 		
 	def on_close(self, event):  # wxGlade: NewProjectDialog.<event_handler>
-		print(387)
-	
+		pass
 
 	def on_new_method(self, event):  # wxGlade: NewProjectDialog.<event_handler>
 		print("Event handler 'on_new_method' not implemented!")
 		event.Skip()
+		
 	def on_edit_method(self, event):  # wxGlade: NewProjectDialog.<event_handler>
 		print("Event handler 'on_edit_method' not implemented!")
 		event.Skip()
+		
 # end of class NewProjectDialog
-

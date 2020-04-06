@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  The methods on_property_changed, on_property_selected and
 #  on_property_rightclick from the wxPython "PropertyGrid" demo.
@@ -32,17 +32,16 @@
 #
 
 
-# stdlib
-
-
 # 3rd party
+import wx
 import wx.adv
-from wx.propgrid import PropertyGrid
 from pubsub import pub
+from wx.propgrid import PropertyGrid
 
 # This project
-from GuiV2.GSMatch2_Core.GUI.constants import *
 from GuiV2.GSMatch2_Core import Project
+from GuiV2.GSMatch2_Core.GUI.constants import *
+
 
 _ = wx.GetTranslation
 
@@ -56,8 +55,28 @@ import wx.propgrid
 
 class ProjectInfoPanel(wx.Panel):
 	def __init__(self, parent, project, *args, **kwds):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param project:
+		:type project:
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
+		
 		self.parent = parent
 		self.project = project
+		
 		# begin wxGlade: ProjectInfoPanel.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.TAB_TRAVERSAL
 		wx.Panel.__init__(self, *args, **kwds)
@@ -199,7 +218,6 @@ class ProjectInfoPanel(wx.Panel):
 				self.project,
 				input_filename=input_filename,
 				output_filename=output_filename,
-				title="Project Report"
 				)
 
 

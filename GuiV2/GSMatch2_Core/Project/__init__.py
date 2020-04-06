@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,32 +23,43 @@
 #  MA 02110-1301, USA.
 #
 
-from GuiV2.GSMatch2_Core.Project.AlignmentDataPanel import AlignmentDataPanel, AlignmentFilterDialog
+from GuiV2.GSMatch2_Core.Project.AlignmentDataPanel import AlignmentDataPanel
+from GuiV2.GSMatch2_Core.Project.AlignmentFilterDialog import AlignmentFilterDialog
+from GuiV2.GSMatch2_Core.Project.compounds_data_panel import CompoundsDataPanel
 from GuiV2.GSMatch2_Core.Project.consolidate import ConsolidatedPeak, ConsolidatedSearchResult, ConsolidateEncoder
-from GuiV2.GSMatch2_Core.Project.exporters import AlignmentPDFExporter, InfoPDFExporter
+from GuiV2.GSMatch2_Core.Project.DataViewer import DataViewer
+from GuiV2.GSMatch2_Core.Project.exporters import AlignmentPDFExporter, ConsolidatePDFExporter, InfoPDFExporter
 from GuiV2.GSMatch2_Core.Project.NewProjectDialog import NewProjectDialog
+from GuiV2.GSMatch2_Core.Project.pdf_reports import ProjectReportPDFExporter
 from GuiV2.GSMatch2_Core.Project.project import (
-	align_in_separate_process, consolidate_in_separate_process,
-	identify_in_separate_process, Project,
+	align_in_separate_process, consolidate_in_separate_process, identify_in_separate_process, load, new, new_empty,
+	Project,
 	)
 from GuiV2.GSMatch2_Core.Project.project_data_panel import ProjectDataPanel
 from GuiV2.GSMatch2_Core.Project.ProjectInfoPanel import ProjectInfoPanel
 from GuiV2.GSMatch2_Core.SorterPanels import ExperimentSorterPanel
 
 __all__ = [
-		"Project",
-		"ExperimentSorterPanel",
-		"NewProjectDialog",
-		"ProjectDataPanel",
-		"ProjectInfoPanel",
 		"AlignmentDataPanel",
 		"AlignmentFilterDialog",
-		"InfoPDFExporter",
-		"AlignmentPDFExporter",
-		"align_in_separate_process",
-		"identify_in_separate_process",
-		"consolidate_in_separate_process",
+		"CompoundsDataPanel",
+		"ConsolidatedPeak",
 		"ConsolidatedSearchResult",
 		"ConsolidateEncoder",
-		"ConsolidatedPeak",
+		"DataViewer",
+		"AlignmentPDFExporter",
+		"ConsolidatePDFExporter",
+		"InfoPDFExporter",
+		"NewProjectDialog",
+		"ProjectReportPDFExporter",
+		"align_in_separate_process",
+		"consolidate_in_separate_process",
+		"identify_in_separate_process",
+		"load",
+		"new",
+		"new_empty",
+		"Project",
+		"ProjectDataPanel",
+		"ProjectInfoPanel",
+		"ExperimentSorterPanel",
 		]
