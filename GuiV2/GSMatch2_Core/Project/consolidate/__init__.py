@@ -1,11 +1,11 @@
 #  !/usr/bin/env python
 #   -*- coding: utf-8 -*-
 #
-#  filename.py
+#  __init__.py
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,3 +23,24 @@
 #  MA 02110-1301, USA.
 #
 
+
+from .encoder import ConsolidateEncoder
+from .peak import ConsolidatedPeak
+from .peak_filter import ConsolidatePeakFilter
+from .results_panel import ConsolidatedResultsPanel
+from .search_result import ConsolidatedSearchResult
+from .sort_filter_dialog import ConsolidatedSortFilterDialog, ID_Sort_AvgHit, ID_Sort_Freq, Sort_AvgHit, Sort_Freq
+
+
+__all__ = [
+		"ConsolidateEncoder",
+		"ConsolidatedPeak",
+		"ConsolidatePeakFilter",
+		"ConsolidatedResultsPanel",
+		"ConsolidatedSearchResult",
+		"ConsolidatedSortFilterDialog",
+		"ID_Sort_AvgHit",
+		"ID_Sort_Freq",
+		"Sort_AvgHit",
+		"Sort_Freq",
+		]

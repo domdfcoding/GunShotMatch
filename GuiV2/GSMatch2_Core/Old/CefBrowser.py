@@ -1,11 +1,11 @@
 #  !/usr/bin/env python
 #   -*- coding: utf-8 -*-
 #
-#  filename.py
+#  CefBrowser.py
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,9 +23,12 @@
 #  MA 02110-1301, USA.
 #
 
+
+# stdlib
 import platform
 import sys
 
+# 3rd party
 import wx
 from cefpython3 import cefpython as cef
 
@@ -55,6 +58,7 @@ def init_cefpython(settings=None):
 	
 	return cef
 
+
 def scale_window_size_for_high_dpi(width, height):
 	"""Scale window size for high DPI devices. This func can be
 	called on all operating systems, but scales only for Windows.
@@ -74,6 +78,24 @@ def scale_window_size_for_high_dpi(width, height):
 
 class BrowserPanel(wx.Panel):
 	def __init__(self, url, *args, **kwargs):
+		"""
+		:param url:
+		:type url:
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
 		
 		self.timer = None
 		self.timer_id = 1
@@ -93,18 +115,18 @@ class BrowserPanel(wx.Panel):
 		
 		wx.Panel.__init__(self, *args, **kwargs)
 		
-		self.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
-		self.Bind(wx.EVT_SIZE, self.OnSize)
+		self.Bind(wx.EVT_SET_FOCUS, self.on_set_focus)
+		self.Bind(wx.EVT_SIZE, self.on_size)
 		
 		self.create_timer()
 	
 	def embed_browser(self, parent=None):
-		if parent is None:
-			parent = self
+		# if parent is None:
+		# 	parent = self
 			
 		window_info = cef.WindowInfo()
-		(width, height) = self.GetClientSize().Get()
-#		assert parent.GetHandle(), "Window handle not available"
+		# (width, height) = self.GetClientSize().Get()
+		# assert parent.GetHandle(), "Window handle not available"
 		# window_info.SetAsChild(parent.GetHandle(),
 		# 					   [0, 0, width, height])
 		self.browser = cef.CreateBrowserSync(window_info, url=self.url)
@@ -115,15 +137,18 @@ class BrowserPanel(wx.Panel):
 			raise ValueError("'embed_browser' must be called first")
 		self.browser.LoadUrl(url)
 	
-	def OnSetFocus(self, _):
+	def on_set_focus(self, _):
 		if not self.browser:
 			return
 		if platform.system() == "Windows":
-			cef.WindowUtils.OnSetFocus(self.GetHandle(),
-									   0, 0, 0)
+			cef.WindowUtils.OnSetFocus(
+					self.GetHandle(),
+					0, 0, 0,
+					)
+			
 		self.browser.SetFocus(True)
 	
-	def OnSize(self, _):
+	def on_size(self, _):
 		if not self.browser:
 			return
 		
@@ -131,8 +156,11 @@ class BrowserPanel(wx.Panel):
 		self.timer.Stop()
 		
 		if platform.system() == "Windows":
-			cef.WindowUtils.OnSize(self.GetHandle(),
-								   0, 0, 0)
+			cef.WindowUtils.OnSize(
+					self.GetHandle(),
+					0, 0, 0,
+					)
+			
 		elif platform.system() == "Linux":
 			(x, y) = (0, 0)
 			(width, height) = self.GetSize().Get()
@@ -164,11 +192,11 @@ class BrowserPanel(wx.Panel):
 		wx.Panel.Destroy(self)
 		wx.CallAfter(cef.Shutdown)
 
+
 class FocusHandler(object):
 	def OnGotFocus(self, browser, **_):
 		# Temporary fix for focus issues on Linux (Issue #284).
-		if (platform.system() == "Linux"):
-			print("[wxpython.py] FocusHandler.OnGotFocus:"
-				  " keyboard focus fix (Issue #284)")
+		if platform.system() == "Linux":
+			print("[wxpython.py] FocusHandler.OnGotFocus: keyboard focus fix (Issue #284)")
 			browser.SetFocus(True)
 

@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -201,46 +201,6 @@ def format_matches(
 				ws.column_dimensions[column].width = width_dict[column]
 
 
-def write_peak(file_object, peak, ms):
-	"""
-	Write the given peak and mass spectrum to the file
-	
-	:param file_object: file object to write data to
-	:type file_object: :class:`io.TextIOWrapper
-	:param peak:
-	:type peak:
-	:param ms:
-	:type ms:
-	"""
-	
-	file_object.write("{};{};{};;".format(
-		peak["hits"][0]["Name"], peak["hits"][0]["CAS"],
-		peak["hits"][0]["Count"]
-	))
-	file_object.write("{};{};{};;".format(
-		peak["average_rt"], numpy.nanstd(peak["rt_data"]),
-		numpy.nanstd(peak["rt_data"]) / peak["average_rt"]
-	))
-	file_object.write("{};{};{};;".format(
-		peak["average_peak_area"], numpy.nanstd(peak["area_data"]),
-		numpy.nanstd(peak["area_data"]) / peak["average_peak_area"]
-	))
-	file_object.write("{};{};{};;".format(
-		peak["hits"][0]["average_MF"], numpy.nanstd(peak["hits"][0]["mf_data"]),
-		numpy.nanstd(peak["hits"][0]["mf_data"]) / peak["hits"][0]["average_MF"]
-	))
-	file_object.write("{};{};{};;".format(
-		peak["hits"][0]["average_RMF"], numpy.nanstd(peak["hits"][0]["rmf_data"]),
-		numpy.nanstd(peak["hits"][0]["rmf_data"]) / peak["hits"][0]["average_RMF"]
-	))
-	file_object.write("{};{};{};;".format(
-		peak["hits"][0]["average_hit"], numpy.nanstd(peak["hits"][0]["hit_num_data"]),
-		numpy.nanstd(peak["hits"][0]["hit_num_data"]) / peak["hits"][0]["average_hit"]
-	))
-	file_object.write("{};{};{};;".format(
-		numpy.mean(ms), numpy.std(ms), numpy.std(ms) / numpy.mean(ms)
-	))
-	file_object.write("\n")
 
 
 

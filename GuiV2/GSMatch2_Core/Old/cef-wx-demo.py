@@ -1,11 +1,11 @@
 #  !/usr/bin/env python
 #   -*- coding: utf-8 -*-
 #
-#  filename.py
+#  cef-wx-demo.py
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,11 +23,16 @@
 #  MA 02110-1301, USA.
 #
 
-import wx
-import platform
-import appdirs
+# stdlib
 import pathlib
-from CefBrowser import init_cefpython, scale_window_size_for_high_dpi, BrowserPanel, FocusHandler
+import platform
+
+# 3rd party
+import appdirs
+import wx
+
+# this package
+from CefBrowser import BrowserPanel, init_cefpython
 
 
 cef = init_cefpython()

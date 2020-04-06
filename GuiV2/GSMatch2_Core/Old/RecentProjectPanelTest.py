@@ -7,7 +7,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -49,6 +49,28 @@ from domdf_wxpython_tools.panel_listctrl import PanelListCtrl, PanelListItem
 
 class RecentTest(wx.Dialog):
 	def __init__(self, *args, **kwds):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param size: The dialog size. The value DefaultSize indicates a default
+		size, chosen by either the windowing system or wxWidgets, depending on
+		platform.
+		:type size: wx.Size
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
+		
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
 		wx.Dialog.__init__(self, *args, **kwds)
 		self.SetSize((400, 300))
@@ -167,7 +189,7 @@ class RecentTest(wx.Dialog):
 class RecentProjectItem(PanelListItem):
 	def __init__(
 			self, parent, project_name, filename, id=wx.ID_ANY,
-			style=wx.TAB_TRAVERSAL, name=wx.PanelNameStr,
+			style=wx.TAB_TRAVERSAL, name="RecentProjectItem",
 			left_padding=32, max_path_length=31
 			):
 		
@@ -209,7 +231,7 @@ class RecentProjectItem(PanelListItem):
 		if wx.Platform == "__WXMSW__":
 			css_file = "/GuiV2/GSMatch2_Core/RecentProjects.css"
 		else:
-			css_file = "/home/domdf/GunShotMatch/GunShotMatch/GuiV2/GSMatch2_Core/RecentProjects.css"
+			css_file = "/GuiV2/GSMatch2_Core/GUI/RecentProjects.css"
 		
 		PanelListItem.__init__(
 				self, parent, text_dict, css_file, id=id, style=style,

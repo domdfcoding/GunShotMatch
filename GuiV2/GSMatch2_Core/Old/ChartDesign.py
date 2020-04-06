@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  Based on "style_picker.py" from "domdf_wxpython_tools" by the above authour
 #  github.com/domdfcoding/domdf_wxpython_tools
@@ -27,46 +27,55 @@
 #
 
 
-
-# stdlib
-import sys
-
 # 3rd party
 import wx
+from domdf_wxpython_tools import ColourPickerPanel, StylePickerPanel
 
-# this package
-from domdf_wxpython_tools import StylePickerPanel
-from domdf_wxpython_tools import ColourPickerPanel
+from GuiV2.GSMatch2_Core.utils import create_button
 
 
 class StylePicker(wx.Panel):
 	def __init__(
 			self, parent, title="Choose Styles", label="Choose Styles: ",
-			selection_choices=None, *args, **kwds
+			selection_choices=None, *args, **kwds,
 			):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param title:
+		:type title: str
+		:param label:
+		:type label: str
+		:param selection_choices:
+		:type selection_choices:
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
+		
 		self.title = title
 		
-		args = (parent,) + args
-
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
-		wx.Panel.__init__(self, *args, **kwds)
+		wx.Panel.__init__(self, parent, *args, **kwds)
 		self.StylePickerPanel = StylePickerPanel(self, label, selection_choices)
 		self.button_panel = wx.Panel(self, wx.ID_ANY)
-		self.reset_btn = wx.Button(self.button_panel, wx.ID_ANY, "Reset")
-		self.apply_btn = wx.Button(self.button_panel, wx.ID_ANY, "Apply")
+		self.reset_btn = create_button(self.button_panel, label="Reset", handler=self.reset)
+		self.apply_btn = create_button(self.button_panel, label="Apply", handler=self.apply)
 		
-		self.__set_properties()
-		self.__do_layout()
-		
-		self.Bind(wx.EVT_BUTTON, self.reset, self.reset_btn)
-		self.Bind(wx.EVT_BUTTON, self.apply, self.apply_btn)
+		self._do_layout()
 		
 		# TODO: default value for style_list
-	
-	def __set_properties(self):
-		pass
 
-	def __do_layout(self):
+	def _do_layout(self):
 		parent_sizer = wx.FlexGridSizer(2, 1, 0, 0)
 		button_grid = wx.GridSizer(1, 2, 0, 5)
 		parent_sizer.Add(self.StylePickerPanel, 1, wx.EXPAND, 0)
@@ -99,21 +108,15 @@ class ColourPicker(StylePicker):
 		self.title = title
 		self.picker_choices = picker_choices
 		
-		args = (parent,) + args
-		
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
-		wx.Panel.__init__(self, *args, **kwds)
+		wx.Panel.__init__(self, parent, *args, **kwds)
 		self.StylePickerPanel = ColourPickerPanel(self, label, selection_choices)
 		self.button_panel = wx.Panel(self, wx.ID_ANY)
-		self.reset_btn = wx.Button(self.button_panel, wx.ID_ANY, "Reset")
-		self.apply_btn = wx.Button(self.button_panel, wx.ID_ANY, "Apply")
+		self.reset_btn = create_button(self.button_panel, label="Reset", handler=self.reset)
+		self.apply_btn = create_button(self.button_panel, label="Apply", handler=self.apply)
 		
-		self.__set_properties()
-		self.__do_layout()
+		self._do_layout()
 		
-		self.Bind(wx.EVT_BUTTON, self.reset, self.reset_btn)
-		self.Bind(wx.EVT_BUTTON, self.apply, self.apply_btn)
-	
 		# TODO: default value for colour_list
 	
 	def apply(self, event):
@@ -124,10 +127,7 @@ class ColourPicker(StylePicker):
 				]
 		event.Skip()
 	
-	def __set_properties(self):
-		pass
-	
-	def __do_layout(self):
+	def _do_layout(self):
 		parent_sizer = wx.FlexGridSizer(2, 1, 0, 0)
 		button_grid = wx.GridSizer(1, 2, 0, 5)
 		parent_sizer.Add(self.StylePickerPanel, 1, wx.EXPAND, 0)
@@ -138,4 +138,3 @@ class ColourPicker(StylePicker):
 		self.SetSizer(parent_sizer)
 		parent_sizer.Fit(self)
 		self.Layout()
-
