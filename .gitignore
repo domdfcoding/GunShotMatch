@@ -120,3 +120,6 @@ WatersRaw
 **/.idea
 *.pyc
 *.dll
+
+**/.cache
+GuiV2/icons/
