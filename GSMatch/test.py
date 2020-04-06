@@ -1,9 +1,9 @@
 """Test for PubChemPy"""
 
-import utils.pubchempy as pcp
+from chemistry_tools.lookup import get_compounds
 from decimal import Decimal
 
-comp = pcp.get_compounds("diphenylamine", 'name')[0]
+comp = get_compounds("diphenylamine", 'name')[0]
 
 import pprint
 pprint.pprint(comp._physical_properties)

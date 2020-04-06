@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -33,14 +33,16 @@ import wx
 
 import pandas
 
-from domdf_wxpython_tools.icons import get_toolbar_icon
-from domdf_wxpython_tools.utils import toggle, collapse_label, coming_soon
-from domdf_wxpython_tools.dialogs import file_dialog, file_dialog_multiple
-from domdf_wxpython_tools.style_picker import style_picker, colour_picker
+from domdf_wxpython_tools import get_toolbar_icon
+from domdf_wxpython_tools import toggle, collapse_label, coming_soon
+from domdf_wxpython_tools import file_dialog, file_dialog_multiple
+from domdf_wxpython_tools import StylePickerDialog, ColourPickerDialog
 
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
+from matplotlib.backends.backend_wxagg import (
+	FigureCanvasWxAgg as FigureCanvas,
+	NavigationToolbar2WxAgg as NavigationToolbar,
+)
 
 from mathematical.data_frames import df_count
 
@@ -700,7 +702,7 @@ class ChartViewer(wx.Frame):
 		
 		print(self.save_button.GetSize())
 	
-	def close_dialog(self, event):  # wxGlade: ChartViewer.<event_handler>
+	def close_dialog(self, _):  # wxGlade: ChartViewer.<event_handler>
 		self.Destroy()
 	
 	def prepare_chart(self):
@@ -723,47 +725,71 @@ class ChartViewer(wx.Frame):
 		self.chart.fig = self.chart_figure
 		self.chart.ax = self.chart_axes
 	
-	def on_close(self, event):  # here
-		
+	def on_close(self, _):
+		"""
+		Handler for closing the chart viewer
+		"""
 		# Add in case for chart has been changed but not saved
 		
-		self.Destroy()  # you may also do:  event.Skip()
+		# you may also do:  event.Skip() since the default event handler does call Destroy(), too
+		self.Destroy()
 	
-	# since the default event handler does call Destroy(), too
 	
 	"""Check Button Functions"""
 	
-	def toggle_percentage(self, *args):
+	def toggle_percentage(self, *_):
+		"""
+		Toggle the percentage checkbox
+		"""
+		
 		if toggle(self.percentage_checkbox):
 			self.replot_chart()
 	
-	def toggle_logarithmic(self, *args):
+	def toggle_logarithmic(self, *_):
+		"""
+		Toggle the logarithmic checkbox
+		"""
+		
 		if toggle(self.use_log_checkbox):
 			self.update_log()
 	
-	def toggle_raw_data_button(self, *args):
+	def toggle_raw_data_button(self, *_):
+		"""
+		Toggle the show_raw_data checkbox
+		"""
+
 		if toggle(self.show_raw_data_checkbox):
 			self.replot_chart()
 
-	def toggle_outliers_button(self, *args):
+	def toggle_outliers_button(self, *_):
+		"""
+		Toggle the show_outliers checkbox
+		"""
+
 		if toggle(self.show_outliers_checkbox):
 			self.toggle_outliers()
 	
-	def toggle_legend(self, *args):
+	def toggle_legend(self, *_):
+		"""
+		Toggle the legend checkbox
+		"""
+
 		if toggle(self.legend_checkbox):
 			self.update_legend()
 	
 	"""Update Functions"""
 	
-	def update_percentage(self, event):  # wxGlade: ChartViewer.<event_handler>
+	def update_percentage(self, _):  # wxGlade: ChartViewer.<event_handler>
 		
-		for control in [self.y_ax_max_label, self.y_ax_min_label,
-						self.y_ax_max_value, self.y_ax_min_value]:
+		for control in [
+			self.y_ax_max_label, self.y_ax_min_label,
+			self.y_ax_max_value, self.y_ax_min_value
+		]:
 			control.Enable(not self.percentage_checkbox.GetValue())
 		
 		self.replot_chart()
 	
-	def update_legend(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def update_legend(self, *_):  # wxGlade: ChartViewer.<event_handler>
 		
 		self.leg_x_pos_value.Enable(self.legend_checkbox.GetValue())
 		self.leg_y_pos_value.Enable(self.legend_checkbox.GetValue())
@@ -780,12 +806,12 @@ class ChartViewer(wx.Frame):
 			# self.chart.ax.get_legend().remove()
 			# self.chart.fig.get_legend().remove()
 			self.legend.remove()
-		#	self.chart_figure.canvas.draw_idle()
+			# self.chart_figure.canvas.draw_idle()
 		except AttributeError:  # If there is no legend
-			#traceback.print_exc()
+			# traceback.print_exc()
 			pass
 		except ValueError:  # If there is no legend
-			#traceback.print_exc()
+			# traceback.print_exc()
 			pass
 
 		if self.legend_checkbox.GetValue():
@@ -802,39 +828,39 @@ class ChartViewer(wx.Frame):
 
 		self.chart_figure.canvas.draw_idle()
 		
-		"""if self.legend_checkbox.GetValue():
-
-			self.leg_x_pos_value.Enable(True)
-			self.leg_y_pos_value.Enable(True)
-			if self.chart_type == "box_whisker":
-				self.leg_cols_label.Enable(True)
-				self.leg_cols_value.Enable(True)
-			self.leg_x_pos_label.Enable(True)
-			self.leg_y_pos_label.Enable(True)
-			self.Layout()
-
-			# Add legend to Chart
-			self.chart.create_legend((self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()))
-			self.chart_figure.canvas.draw_idle()
-
-
-		else:
-			self.leg_cols_value.Enable(False)
-			self.leg_x_pos_value.Enable(False)
-			self.leg_y_pos_value.Enable(False)
-			self.leg_cols_label.Enable(False)
-			self.leg_x_pos_label.Enable(False)
-			self.leg_y_pos_label.Enable(False)
-			self.Layout()
-
-			# Remove legend
-			try:
-				self.chart.ax.get_legend().remove()
-				self.chart_figure.canvas.draw_idle()
-			except AttributeError:  # If there is no legend
-				pass"""
+		# if self.legend_checkbox.GetValue():
+		#
+		# 	self.leg_x_pos_value.Enable(True)
+		# 	self.leg_y_pos_value.Enable(True)
+		# 	if self.chart_type == "box_whisker":
+		# 		self.leg_cols_label.Enable(True)
+		# 		self.leg_cols_value.Enable(True)
+		# 	self.leg_x_pos_label.Enable(True)
+		# 	self.leg_y_pos_label.Enable(True)
+		# 	self.Layout()
+		#
+		# 	# Add legend to Chart
+		# 	self.chart.create_legend((self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()))
+		# 	self.chart_figure.canvas.draw_idle()
+		#
+		#
+		# else:
+		# 	self.leg_cols_value.Enable(False)
+		# 	self.leg_x_pos_value.Enable(False)
+		# 	self.leg_y_pos_value.Enable(False)
+		# 	self.leg_cols_label.Enable(False)
+		# 	self.leg_x_pos_label.Enable(False)
+		# 	self.leg_y_pos_label.Enable(False)
+		# 	self.Layout()
+		#
+		# 	# Remove legend
+		# 	try:
+		# 		self.chart.ax.get_legend().remove()
+		# 		self.chart_figure.canvas.draw_idle()
+		# 	except AttributeError:  # If there is no legend
+		# 		pass
 	
-	def update_log(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def update_log(self, *_):  # wxGlade: ChartViewer.<event_handler>
 		
 		self.log_base_label.Enable(self.use_log_checkbox.GetValue())
 		self.log_base_value.Enable(self.use_log_checkbox.GetValue())
@@ -847,36 +873,39 @@ class ChartViewer(wx.Frame):
 		
 		self.recalculate_data()
 		
-		"""if self.use_log_checkbox.GetValue():
-			self.log_base_label.Enable(True)
-			self.log_base_value.Enable(True)
-			self.Layout()
-			self.use_log = self.log_base_value.GetValue()
-		else:
-			self.log_base_label.Enable(False)
-			self.log_base_value.Enable(False)
-			self.Layout()
-			self.use_log = False
-		self.recalculate_data()"""
+		# if self.use_log_checkbox.GetValue():
+		# 	self.log_base_label.Enable(True)
+		# 	self.log_base_value.Enable(True)
+		# 	self.Layout()
+		# 	self.use_log = self.log_base_value.GetValue()
+		# else:
+		# 	self.log_base_label.Enable(False)
+		# 	self.log_base_value.Enable(False)
+		# 	self.Layout()
+		# 	self.use_log = False
+		# self.recalculate_data()
 	
-	def toggle_outliers(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def toggle_outliers(self, *_):  # wxGlade: ChartViewer.<event_handler>
 		if self.show_outliers_checkbox.IsEnabled():
 			self.outlier_mode_choice.Enable(self.show_outliers_checkbox.GetValue())
 			self.outlier_mode_label.Enable(self.show_outliers_checkbox.GetValue())
 			self.Layout()
 			self.replot_chart()
 		
-		"""if self.show_outliers_checkbox.IsEnabled():
-			if self.show_outliers_checkbox.GetValue():
-				self.outlier_mode_choice.Enable(True)
-				self.outlier_mode_label.Enable(True)
-			else:
-				self.outlier_mode_choice.Enable(False)
-				self.outlier_mode_label.Enable(False)
-			self.Layout()
-			self.replot_chart()"""
+		# if self.show_outliers_checkbox.IsEnabled():
+		# 	if self.show_outliers_checkbox.GetValue():
+		# 		self.outlier_mode_choice.Enable(True)
+		# 		self.outlier_mode_label.Enable(True)
+		# 	else:
+		# 		self.outlier_mode_choice.Enable(False)
+		# 		self.outlier_mode_label.Enable(False)
+		# 	self.Layout()
+		# 	self.replot_chart()
 	
-	def update_borders(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def update_borders(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Update the chart borders to the settings chosen by the user
+		"""
 		self.chart_figure.subplots_adjust(
 			self.left_border_value.GetValue(),
 			self.bottom_border_value.GetValue(),
@@ -885,7 +914,10 @@ class ChartViewer(wx.Frame):
 		)
 		self.chart_figure.canvas.draw_idle()
 	
-	def apply_tight_layout(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def apply_tight_layout(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Apply tight_layout to the figure and update the settings to the new values
+		"""
 		self.chart.fig.tight_layout()
 		self.chart_figure.canvas.draw_idle()
 		
@@ -895,7 +927,11 @@ class ChartViewer(wx.Frame):
 		self.bottom_border_value.SetValue(self.chart.fig.subplotpars.bottom)
 		self.top_border_value.SetValue(self.chart.fig.subplotpars.top)
 	
-	def recalculate_data(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def recalculate_data(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Recalculate the data for the chart
+		"""
+		
 		self.projects = [self.sample_list_viewer.GetString(item) for item in range(self.sample_list_viewer.GetCount())]
 		
 		if self.projects == []:
@@ -942,7 +978,11 @@ class ChartViewer(wx.Frame):
 		# print(outlier_mode)
 		self.replot_chart()
 	
-	def replot_chart(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def replot_chart(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Redraw the data points on the chart
+		"""
+		
 		self.projects = [self.sample_list_viewer.GetString(item) for item in range(self.sample_list_viewer.GetCount())]
 		
 		self.chart_axes.clear()
@@ -951,7 +991,7 @@ class ChartViewer(wx.Frame):
 		self.toolbar = NavigationToolbar(self.chart_canvas)
 		self.toolbar.Hide()
 		
-		if self.projects == []:
+		if not self.projects:
 			return
 		
 		# print(self.chart_type)
@@ -995,32 +1035,52 @@ class ChartViewer(wx.Frame):
 		self.x_ax_min_value.SetValue(x_lims[0])
 		self.x_ax_max_value.SetValue(x_lims[1])
 	
-	def do_update_chart(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def do_update_chart(self, *_):  # wxGlade: ChartViewer.<event_handler>
 		print("Update Chart not implemented")
 	
-	def on_splitter_moved(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def on_splitter_moved(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Update the chart width and height settings after the splitter has been changed by the user
+		"""
+
 		self.figure_width_value.SetValue(self.ChartViewer_v_splitter.GetSashPosition())
 		self.figure_height_value.SetValue(self.ChartViewer_h_splitter.GetSashPosition())
 	
 	# self.ChartViewer_Settings_Panel.SetSize((275, self.GetSize()[1]-70))
 	
-	def on_splitter_changed(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def on_splitter_changed(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Update the splitter on the chart after it has been changed by the user
+		"""
+
 		self.ChartViewer_h_splitter.SetSashPosition(self.figure_height_value.GetValue(), True)
 		self.ChartViewer_v_splitter.SetSashPosition(self.figure_width_value.GetValue(), True)
 	
-	def update_ylim(self, event):  # wxGlade: ChartViewer.<event_handler>
+	def update_ylim(self, _):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Update the ylim on the chart after it has been changed by the user
+		"""
+		
 		self.chart.ax.set_ylim(self.y_ax_min_value.GetValue(), self.y_ax_max_value.GetValue())
 		self.chart_figure.canvas.draw_idle()
 		# TODO: Respect setting when switching to percentage, log etc.
 	
-	def update_xlim(self, event):  # wxGlade: ChartViewer.<event_handler>
+	def update_xlim(self, _):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Update the xlim on the chart after it has been changed by the user
+		"""
+		
 		self.chart.ax.set_xlim(self.x_ax_min_value.GetValue(), self.x_ax_max_value.GetValue())
 		self.chart_figure.canvas.draw_idle()
 		# TODO: Respect setting when switching to percentage, log etc.
 	
 	"""Save, load and reset"""
 	
-	def do_reset(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def do_reset(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Reset the chart properties
+		"""
+		
 		self.colours = default_colours
 		self.percentage_checkbox.SetValue(False)
 		# TODO Width value was set somewhere else
@@ -1056,7 +1116,11 @@ class ChartViewer(wx.Frame):
 		self.Layout()
 		self.chart_figure.canvas.draw_idle()
 	
-	def do_save(self, *args):  # wxGlade: ChartViewer.<event_handler>
+	def do_save(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Saves the chart in the location chosen by the user
+			with the selected filetypes
+		"""
 		
 		filetypes = []
 		if self.png_checkbox.GetValue():
@@ -1070,7 +1134,7 @@ class ChartViewer(wx.Frame):
 			wx.MessageBox("Please choose one or more filetypes", "Error", wx.ICON_ERROR | wx.OK)
 			return
 		
-		pathname = file_dialog(self, "*", "Save Chart", "", defaultDir=self.parent.Config.RESULTS_DIRECTORY)
+		pathname = file_dialog(self, "*", "Save Chart", "", defaultDir=self.parent.Config.results_dir)
 		
 		if pathname is None:
 			return
@@ -1110,33 +1174,73 @@ class ChartViewer(wx.Frame):
 			traceback.print_exc()
 	
 	def save_settings(self, file):
-		file.write(f"colours;{','.join(self.colours)}\n")
-		file.write(f"percentage;{self.percentage_checkbox.GetValue()}\n")
-		file.write(f"width;{self.width_value.GetValue()}\n")
-		file.write(f"use_log;{self.use_log_checkbox.GetValue()}\n")
-		file.write(f"log_base;{self.log_base_value.GetValue()}\n")
-		file.write(f"raw_data;{self.show_raw_data_checkbox.GetValue()}\n")
-		file.write(f"outliers;{self.show_outliers_checkbox.GetValue()}\n")
-		file.write(
-			f"outlier_mode;{self.outlier_mode_choice.GetString(self.outlier_mode_choice.GetSelection()).lower()}\n")
-		file.write(f"error_bar;{self.error_bar_choice.GetString(self.error_bar_choice.GetSelection()).lower()}\n")
-		file.write(f"styles;{','.join(self.styles)}\n")
-		file.write(f"legend;{self.legend_checkbox.GetValue()}\n")
-		file.write(f"leg_cols;{self.leg_cols_value.GetValue()}\n")
-		file.write(f"leg_x_pos;{self.leg_x_pos_value.GetValue()}\n")
-		file.write(f"leg_y_pos;{self.leg_y_pos_value.GetValue()}\n")
-		file.write(f"fig_width;{self.figure_width_value.GetValue()}\n")
-		file.write(f"fig_height;{self.figure_height_value.GetValue()}\n")
-		file.write(f"top_border;{self.top_border_value.GetValue()}\n")
-		file.write(f"bottom_border;{self.bottom_border_value.GetValue()}\n")
-		file.write(f"left_border;{self.left_border_value.GetValue()}\n")
-		file.write(f"right_border;{self.right_border_value.GetValue()}\n")
-		file.write(f"y_lim_max;{self.y_ax_max_value.GetValue()}\n")
-		file.write(f"y_lim_min;{self.y_ax_min_value.GetValue()}\n")
-		file.write(f"x_lim_max;{self.x_ax_max_value.GetValue()}\n")
-		file.write(f"x_lim_min;{self.x_ax_min_value.GetValue()}\n")
+		"""
+		Saves the settings to the given file
+		
+		:param file:
+		:type file:
+		"""
+		
+		file.write(f"""colours;{','.join(self.colours)}
+percentage;{self.percentage_checkbox.GetValue()}
+width;{self.width_value.GetValue()}
+use_log;{self.use_log_checkbox.GetValue()}
+log_base;{self.log_base_value.GetValue()}
+raw_data;{self.show_raw_data_checkbox.GetValue()}
+outliers;{self.show_outliers_checkbox.GetValue()}
+f"outlier_mode;{self.outlier_mode_choice.GetString(self.outlier_mode_choice.GetSelection()).lower()}
+error_bar;{self.error_bar_choice.GetString(self.error_bar_choice.GetSelection()).lower()}
+styles;{','.join(self.styles)}
+legend;{self.legend_checkbox.GetValue()}
+leg_cols;{self.leg_cols_value.GetValue()}
+leg_x_pos;{self.leg_x_pos_value.GetValue()}
+leg_y_pos;{self.leg_y_pos_value.GetValue()}
+fig_width;{self.figure_width_value.GetValue()}
+fig_height;{self.figure_height_value.GetValue()}
+top_border;{self.top_border_value.GetValue()}
+bottom_border;{self.bottom_border_value.GetValue()}
+left_border;{self.left_border_value.GetValue()}
+right_border;{self.right_border_value.GetValue()}
+y_lim_max;{self.y_ax_max_value.GetValue()}
+y_lim_min;{self.y_ax_min_value.GetValue()}
+x_lim_max;{self.x_ax_max_value.GetValue()}
+x_lim_min;{self.x_ax_min_value.GetValue()}
+""")
+		
+		# file.write(f"colours;{','.join(self.colours)}\n")
+		# file.write(f"percentage;{self.percentage_checkbox.GetValue()}\n")
+		# file.write(f"width;{self.width_value.GetValue()}\n")
+		# file.write(f"use_log;{self.use_log_checkbox.GetValue()}\n")
+		# file.write(f"log_base;{self.log_base_value.GetValue()}\n")
+		# file.write(f"raw_data;{self.show_raw_data_checkbox.GetValue()}\n")
+		# file.write(f"outliers;{self.show_outliers_checkbox.GetValue()}\n")
+		# file.write(
+		# 	f"outlier_mode;{self.outlier_mode_choice.GetString(self.outlier_mode_choice.GetSelection()).lower()}\n")
+		# file.write(f"error_bar;{self.error_bar_choice.GetString(self.error_bar_choice.GetSelection()).lower()}\n")
+		# file.write(f"styles;{','.join(self.styles)}\n")
+		# file.write(f"legend;{self.legend_checkbox.GetValue()}\n")
+		# file.write(f"leg_cols;{self.leg_cols_value.GetValue()}\n")
+		# file.write(f"leg_x_pos;{self.leg_x_pos_value.GetValue()}\n")
+		# file.write(f"leg_y_pos;{self.leg_y_pos_value.GetValue()}\n")
+		# file.write(f"fig_width;{self.figure_width_value.GetValue()}\n")
+		# file.write(f"fig_height;{self.figure_height_value.GetValue()}\n")
+		# file.write(f"top_border;{self.top_border_value.GetValue()}\n")
+		# file.write(f"bottom_border;{self.bottom_border_value.GetValue()}\n")
+		# file.write(f"left_border;{self.left_border_value.GetValue()}\n")
+		# file.write(f"right_border;{self.right_border_value.GetValue()}\n")
+		# file.write(f"y_lim_max;{self.y_ax_max_value.GetValue()}\n")
+		# file.write(f"y_lim_min;{self.y_ax_min_value.GetValue()}\n")
+		# file.write(f"x_lim_max;{self.x_ax_max_value.GetValue()}\n")
+		# file.write(f"x_lim_min;{self.x_ax_min_value.GetValue()}\n")
 	
 	def load_settings(self, file):
+		"""
+		Loads the settings from the given file
+		
+		:param file:
+		:type file:
+		"""
+		
 		for row in file.readlines():
 			row = row.rstrip("\r\n").split(";")
 
@@ -1205,10 +1309,17 @@ class ChartViewer(wx.Frame):
 				self.x_ax_min_value.SetValue(float(row[1]))
 	
 	def do_load(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Loads the settings from the file selected by the user
+		
+		:param event:
+		:type event:
+		"""
+		
 		pathname = file_dialog(
 			self, "settings", "Load Settings", "Settings",
 			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-			defaultDir=self.parent.Config.RESULTS_DIRECTORY
+			defaultDir=self.parent.Config.results_dir
 		)
 		
 		if pathname is None:
@@ -1228,16 +1339,24 @@ class ChartViewer(wx.Frame):
 	
 	"""Configuration Popups"""
 	
-	def configure_colours(self, *args):  # wxGlade: ChartViewer.<event_handler>
-		dlg = colour_picker(self, selection_choices=self.colours)
+	def configure_colours(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Opens the ColourPickerDialog to allow the user to choose the colours for the chart
+		"""
+		
+		dlg = ColourPickerDialog(self, selection_choices=self.colours)
 		res = dlg.ShowModal()
 		if res == wx.ID_OK:
 			self.colours = dlg.colour_list
 			dlg.Destroy()
 			self.replot_chart()
 	
-	def configure_styles(self, *args):  # wxGlade: ChartViewer.<event_handler>
-		dlg = style_picker(self, selection_choices=self.styles)
+	def configure_styles(self, *_):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Opens the StylePickerDialog to allow the user to choose the styles for the chart
+		"""
+		
+		dlg = StylePickerDialog(self, selection_choices=self.styles)
 		res = dlg.ShowModal()
 		if res == wx.ID_OK:
 			self.styles = dlg.style_list
@@ -1247,6 +1366,13 @@ class ChartViewer(wx.Frame):
 	"""Collapse Functions"""
 	
 	def collapse_general(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the general section of the options
+		
+		:param event:
+		:type event:
+		"""
+		
 		if not self.general_panel.Hide():
 			self.general_panel.Show()
 			self.general_header.SetLabel(collapse_label("General", False))
@@ -1256,6 +1382,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 	
 	def collapse_legend(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the legend section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.legend_panel.Hide():
 			self.legend_panel.Show()
 			self.legend_header.SetLabel(collapse_label("Legend", False))
@@ -1265,6 +1398,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 	
 	def collapse_size(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the size section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.size_panel.Hide():
 			self.size_panel.Show()
 			self.size_header.SetLabel(collapse_label("Size", False))
@@ -1274,6 +1414,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 	
 	def collapse_borders(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the borders section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.borders_panel.Hide():
 			self.borders_panel.Show()
 			self.borders_header.SetLabel(collapse_label("Borders", False))
@@ -1283,6 +1430,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 	
 	def collapse_ylim(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the ylim section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.ylim_panel.Hide():
 			self.ylim_panel.Show()
 			self.ylim_header.SetLabel(collapse_label("y-Axis", False))
@@ -1292,6 +1446,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 	
 	def collapse_filetypes(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the filetypes section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.filetypes_panel.Hide():
 			self.filetypes_panel.Show()
 			self.filetypes_header.SetLabel(collapse_label("Filetypes", False))
@@ -1301,6 +1462,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 
 	def collapse_xlim(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the xlim section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.xlim_panel.Hide():
 			self.xlim_panel.Show()
 			self.xlim_header.SetLabel(collapse_label("x-Axis", False))
@@ -1310,6 +1478,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 		
 	def collapse_data(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the data section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.data_panel.Hide():
 			self.data_panel.Show()
 			self.data_header.SetLabel(collapse_label("Data", False))
@@ -1319,6 +1494,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 
 	def collapse_log(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the logarithm section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.log_panel.Hide():
 			self.log_panel.Show()
 			self.log_header.SetLabel(collapse_label("Logarithmic", False))
@@ -1328,6 +1510,13 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 	
 	def collapse_samples(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Collapse the samples section of the options
+
+		:param event:
+		:type event:
+		"""
+		
 		if not self.samples_panel.Hide():
 			self.samples_panel.Show()
 			self.samples_header.SetLabel(collapse_label("Samples", False))
@@ -1339,31 +1528,58 @@ class ChartViewer(wx.Frame):
 	"""Sample List Viewer Buttons"""
 	
 	def on_sample_up(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Move the selected sample up
+
+		:param event:
+		:type event:
+		"""
+
 		self.sample_move(-1)
 		event.Skip()
 
 	def on_sample_down(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Move the selected sample down
+		
+		:param event:
+		:type event:
+		"""
+		
 		self.sample_move(1)
 		event.Skip()
 		
-	def sample_move(self, dir=1):
+	def sample_move(self, direction=1):
+		"""
+		Move the selected sample in the given direction
+		
+		:param direction: The direction to move the sample, 1 = Down, -1 = Up
+		:type direction: int, optional
+		"""
 		selection = self.sample_list_viewer.GetSelection()
 		selection_string = self.sample_list_viewer.GetString(selection)
-		if self.sample_list_viewer.GetCount() == selection + dir or selection + dir < 0:
+		if self.sample_list_viewer.GetCount() == selection + direction or selection + direction < 0:
 			return
 		
 		self.sample_list_viewer.Delete(selection)
-		self.sample_list_viewer.InsertItems([selection_string], selection + dir)
-		self.sample_list_viewer.SetSelection(selection + dir)
+		self.sample_list_viewer.InsertItems([selection_string], selection + direction)
+		self.sample_list_viewer.SetSelection(selection + direction)
 		
 		self.projects = [self.sample_list_viewer.GetString(item) for item in range(self.sample_list_viewer.GetCount())]
 		self.recalculate_data()
 		self.replot_chart()
 
-	def on_sample_add(self, event):  # wxGlade: ChartViewer.<event_handler>
-		selected_projects = file_dialog_multiple(self, "info", "Choose a Project to Open", "info files",
-									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE,
-									   defaultDir=self.parent._parent.Config.RESULTS_DIRECTORY)
+	def on_sample_add(self, _):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Adds the sample chosen by the user to the chart
+		"""
+		
+		selected_projects = file_dialog_multiple(
+			self, "info", "Choose a Project to Open", "info files",
+			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE,
+			defaultDir=self.parent._parent.Config.results_dir
+		)
+		
 		if selected_projects is None:
 			return
 		
@@ -1375,6 +1591,12 @@ class ChartViewer(wx.Frame):
 		self.replot_chart()
 		
 	def add_sample(self, selected_project):
+		"""
+		Adds a sample to the chart
+		
+		:param selected_project:
+		:type selected_project:
+		"""
 		
 		pretty_name = os.path.splitext(os.path.split(selected_project)[-1])[0]
 		
@@ -1387,8 +1609,15 @@ class ChartViewer(wx.Frame):
 		self.load_data(selected_project, pretty_name)
 		
 	def load_data(self, selected_project, pretty_name):
-
-		# Load Chart Data
+		"""
+		Load Chart Data
+		
+		:param selected_project:
+		:type selected_project:
+		:param pretty_name:
+		:type pretty_name:
+		"""
+		
 		self.chart_data = pandas.concat([
 			self.chart_data,
 			pandas.read_csv(
@@ -1409,8 +1638,13 @@ class ChartViewer(wx.Frame):
 		self.chart_data['Compound Names'] = self.chart_data.index
 
 	def compound_order(self):
-
-		# determine order of compounds on graph
+		"""
+		Determine the order of compounds on graph
+		
+		:return:
+		:rtype:
+		"""
+		
 		for compound in self.chart_data.index.values:
 			self.chart_data["Count"] = self.chart_data.apply(df_count, args=(
 				[f"{sample} Peak Area" for sample in self.projects],), axis=1)
@@ -1420,6 +1654,12 @@ class ChartViewer(wx.Frame):
 		self.chart_data.fillna(0, inplace=True)
 		
 	def on_sample_remove(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Removes the selected sample from the chart
+		
+		:param event:
+		:type event:
+		"""
 		selection = self.sample_list_viewer.GetSelection()
 		if selection == -1:
 			return
@@ -1430,8 +1670,7 @@ class ChartViewer(wx.Frame):
 		
 		self.sample_list_viewer.Delete(self.sample_list_viewer.GetSelection())
 		
-		self.projects = [self.sample_list_viewer.GetString(item) for item in
-							range(self.sample_list_viewer.GetCount())]
+		self.projects = [self.sample_list_viewer.GetString(item) for item in range(self.sample_list_viewer.GetCount())]
 		
 		# Reload Chart Data
 		self.chart_data = pandas.DataFrame()
@@ -1445,9 +1684,15 @@ class ChartViewer(wx.Frame):
 		event.Skip()
 		
 	def do_save_settings(self, event):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Saves the chart settings to the file chosen by the user
+		
+		:param event:
+		:type event:
+		"""
 		pathname = file_dialog(
 			self, "settings", "Save Settings", "Settings",
-			defaultDir=self.parent.Config.RESULTS_DIRECTORY
+			defaultDir=self.parent.Config.results_dir
 		)
 		
 		if pathname is None:
@@ -1462,11 +1707,15 @@ class ChartViewer(wx.Frame):
 		
 		event.skip()
 
-	def move_legend(self, event):  # wxGlade: ChartViewer.<event_handler>
+	def move_legend(self, _):  # wxGlade: ChartViewer.<event_handler>
+		"""
+		Handler for moving legend to the previously set x and y positions
+		"""
+		
 		if self.legend_checkbox.GetValue():
 			self.legend.set_bbox_to_anchor((self.leg_x_pos_value.GetValue(), self.leg_y_pos_value.GetValue()))
 			self.chart_figure.canvas.draw_idle()
 		else:
 			pass
+		
 # end of class ChartViewer
-

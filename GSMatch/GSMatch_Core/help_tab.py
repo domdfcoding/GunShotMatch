@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ import webbrowser
 import wx
 import wx.html2
 
-from domdf_wxpython_tools.icons import get_toolbar_icon
+from domdf_wxpython_tools import get_toolbar_icon
 
 # this package
 from GSMatch.GSMatch_Core.constants import help_home_url, github_url, readme_path
@@ -47,6 +47,23 @@ from GSMatch.GSMatch_Core.constants import help_home_url, github_url, readme_pat
 
 class help_tab(wx.Panel):
 	def __init__(self, *args, **kwds):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
+		
 		# begin wxGlade: help_tab.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.TAB_TRAVERSAL
 		wx.Panel.__init__(self, *args, **kwds)
@@ -146,7 +163,7 @@ class help_tab(wx.Panel):
 		self.help_focus_thief.SetFocus()
 		event.Skip()
 	
-	def on_help_go(self, event):  # wxGlade: help_tab.<event_handler>
+	def on_help_go(self, _):  # wxGlade: help_tab.<event_handler>
 		print(self.help_url_text_ctrl.GetValue())
 		url = self.help_url_text_ctrl.GetValue()
 		if not url.startswith('http'):

@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -30,12 +30,14 @@ import csv
 import json
 import types
 import traceback
+import platform
 
 # 3rd party
 import numpy
 
 import wx
 import wx.html2
+from wx.lib.mixins.listctrl import ColumnSorterMixin
 
 import matplotlib
 from matplotlib.figure import Figure
@@ -43,9 +45,9 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 
 from domdf_wxpython_tools import list_dialog
-from domdf_wxpython_tools.icons import get_toolbar_icon
-from domdf_wxpython_tools.utils import coming_soon
-from domdf_wxpython_tools.dialogs import file_dialog
+from domdf_wxpython_tools import get_toolbar_icon
+from domdf_wxpython_tools import coming_soon
+from domdf_wxpython_tools import file_dialog
 
 from mathematical.utils import rounders
 
@@ -55,21 +57,39 @@ from pyms.GCMS.Class import IonChromatogram
 
 # this package
 from GSMatch.GSMatch_Core import border_config, ChartViewer, threads
-from GSMatch.GSMatch_Core.My_Axes import My_Axes
+from domdf_wxpython_tools.projections import XPanAxes
 #from GSMatch.GSMatch_Core.ChromatogramDisplay import Display
+from GSMatch.GSMatch_Core.ListSorterPanel import ListSorterPanel
 
-
-# begin wxGlade: dependencies
-# end wxGlade
+"""# begin wxGlade: dependencies
+# from ListSorterPanel import ListSorterPanel
+# end wxGlade"""
 
 # begin wxGlade: extracode
 # end wxGlade
 
-matplotlib.projections.register_projection(My_Axes)
+matplotlib.projections.register_projection(XPanAxes)
 
 
 class browse_tab(wx.Panel):
 	def __init__(self, parent, *args, **kwds):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
+		
 		self._parent = parent
 		# begin wxGlade: browse_tab.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.TAB_TRAVERSAL
@@ -107,15 +127,13 @@ class browse_tab(wx.Panel):
 		
 		# create the figure with a single plot and create a canvas with the figure
 		self.chromatogram_figure = Figure()
-		self.chromatogram_axes = self.chromatogram_figure.add_subplot(111, projection="My_Axes")  # 1x1 grid, first subplot
+		self.chromatogram_axes = self.chromatogram_figure.add_subplot(111, projection="XPanAxes")  # 1x1 grid, first subplot
 		
 		self.chromatogram_canvas = FigureCanvas(self.chromatogram_parent_panel, wx.ID_ANY, self.chromatogram_figure)
-		self.browse_project_comparison = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
 		self.browse_project_data = wx.Panel(self.browse_project_notebook, wx.ID_ANY)
 		self.dv_main_panel = wx.Panel(self.browse_project_data, wx.ID_ANY, style=wx.BORDER_SUNKEN)
 		self.data_viewer_v_splitter = wx.SplitterWindow(self.dv_main_panel, wx.ID_ANY, style=wx.SP_3D | wx.SP_BORDER | wx.SP_LIVE_UPDATE)
-		self.dv_list_panel = wx.Panel(self.data_viewer_v_splitter, wx.ID_ANY)
-		self.data_viewer_list = wx.ListCtrl(self.dv_list_panel, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
+		self.dv_list_panel = ListSorterPanel(self.data_viewer_v_splitter, wx.ID_ANY)
 		self.dv_data_panel = wx.Panel(self.data_viewer_v_splitter, wx.ID_ANY)
 		self.data_viewer_h_splitter = wx.SplitterWindow(self.dv_data_panel, wx.ID_ANY, style=wx.SP_3D | wx.SP_BORDER | wx.SP_LIVE_UPDATE)
 		self.dv_spec_panel = wx.Panel(self.data_viewer_h_splitter, wx.ID_ANY)
@@ -125,7 +143,7 @@ class browse_tab(wx.Panel):
 		
 		# create the figure with a single plot and create a canvas with the figure
 		self.dv_reference_spec_figure = Figure()
-		self.dv_reference_spec_axes = self.dv_reference_spec_figure.add_subplot(111, projection="My_Axes")  # 1x1 grid, first subplot
+		self.dv_reference_spec_axes = self.dv_reference_spec_figure.add_subplot(111, projection="XPanAxes")  # 1x1 grid, first subplot
 		
 		self.dv_reference_spec_canvas = FigureCanvas(self.dv_reference_panel, wx.ID_ANY, self.dv_reference_spec_figure)
 		self.dv_reference_toolbar = wx.Panel(self.data_viewer_reference, wx.ID_ANY, style=wx.BORDER_SUNKEN)
@@ -142,7 +160,8 @@ class browse_tab(wx.Panel):
 		
 		# create the figure with a single plot and create a canvas with the figure
 		self.dv_samples_spec_figure = Figure()
-		self.dv_samples_spec_axes = self.dv_samples_spec_figure.add_subplot(111, projection="My_Axes")  # 1x1 grid, first subplot
+		self.dv_samples_spec_axes = self.dv_samples_spec_figure.add_subplot(111, projection="XPanAxes")  # 1x1 grid, first subplot
+		
 		
 		self.dv_samples_spec_canvas = FigureCanvas(self.dv_samples_panel, wx.ID_ANY, self.dv_samples_spec_figure)
 		self.dv_samples_toolbar = wx.Panel(self.data_viewer_samples, wx.ID_ANY, style=wx.BORDER_SUNKEN)
@@ -159,7 +178,7 @@ class browse_tab(wx.Panel):
 		
 		# create the figure with a single plot and create a canvas with the figure
 		self.dv_head2tail_spec_figure = Figure()
-		self.dv_head2tail_spec_axes = self.dv_head2tail_spec_figure.add_subplot(111, projection="My_Axes")  # 1x1 grid, first subplot
+		self.dv_head2tail_spec_axes = self.dv_head2tail_spec_figure.add_subplot(111, projection="XPanAxes")  # 1x1 grid, first subplot
 		
 		self.dv_head2tail_spec_canvas = FigureCanvas(self.dv_head2tail_panel, wx.ID_ANY, self.dv_head2tail_spec_figure)
 		self.dv_head2tail_toolbar = wx.Panel(self.data_viewer_head2tail, wx.ID_ANY, style=wx.BORDER_SUNKEN)
@@ -196,7 +215,6 @@ class browse_tab(wx.Panel):
 		self.Bind(wx.EVT_BUTTON, self.show_box_whisker_chart, self.box_whisker_button)
 		self.Bind(wx.EVT_BUTTON, self.show_peak_area_chart, self.peak_area_button)
 		self.Bind(wx.EVT_BUTTON, self.show_chromatogram, self.chromatogram_button)
-		self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.do_select_peak, self.data_viewer_list)
 		self.Bind(wx.EVT_BUTTON, self.dv_do_save_reference, self.dv_reference_save_btn)
 		self.Bind(wx.EVT_BUTTON, self.dv_on_samples_previous, self.dv_samples_previous_btn)
 		self.Bind(wx.EVT_BUTTON, self.dv_on_samples_next, self.dv_samples_next_btn)
@@ -206,10 +224,11 @@ class browse_tab(wx.Panel):
 		self.Bind(wx.EVT_BUTTON, self.dv_do_save_head2tail, self.dv_head2tail_save_btn)
 		self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_browse_tab_change, self.browse_project_notebook)
 		# end wxGlade
+		self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.do_select_peak, self.dv_list_panel.data_viewer_list)
+
 		
-		threads.myEVT_DATA_VIEWER2.set_receiver(self)
-		threads.myEVT_DATA_VIEWER2.Bind(self.Data_Viewer_Ready)
-		#self.Bind(threads.EVT_DATA_VIEWER, self.Data_Viewer_Ready)
+		threads.myEVT_DATA_VIEWER.set_receiver(self)
+		threads.myEVT_DATA_VIEWER.Bind(self.Data_Viewer_Ready)
 	
 		self.display_chromatogram()
 	
@@ -267,15 +286,12 @@ class browse_tab(wx.Panel):
 		self.peak_area_button.SetMinSize((200, 200))
 		self.chromatogram_button.SetMinSize((200, 200))
 		self.chromatogram_canvas.SetMinSize((1, 1))
-		self.data_viewer_list.AppendColumn("Time", format=wx.LIST_FORMAT_LEFT, width=80)
-		self.data_viewer_list.AppendColumn("Name", format=wx.LIST_FORMAT_LEFT, width=400)
-		self.data_viewer_list.AppendColumn("CAS", format=wx.LIST_FORMAT_LEFT, width=80)
 		self.dv_reference_focus_thief.SetMinSize((1, 1))
 		self.dv_reference_previous_btn.SetMinSize((38, 38))
-		self.dv_reference_previous_btn.SetToolTip("Go back")
+		self.dv_reference_previous_btn.SetToolTip("Previous Sample")
 		self.dv_reference_previous_btn.Enable(False)
 		self.dv_reference_next_btn.SetMinSize((38, 38))
-		self.dv_reference_next_btn.SetToolTip("Go forward")
+		self.dv_reference_next_btn.SetToolTip("Next Sample")
 		self.dv_reference_next_btn.Enable(False)
 		self.dv_reference_png_button.SetMinSize((45, -1))
 		self.dv_reference_svg_button.SetMinSize((45, -1))
@@ -284,9 +300,9 @@ class browse_tab(wx.Panel):
 		self.dv_reference_toolbar.SetMaxSize((10000000,40))
 		self.dv_samples_focus_thief.SetMinSize((1, 1))
 		self.dv_samples_previous_btn.SetMinSize((38, 38))
-		self.dv_samples_previous_btn.SetToolTip("Go back")
+		self.dv_samples_previous_btn.SetToolTip("Previous Sample")
 		self.dv_samples_next_btn.SetMinSize((38, 38))
-		self.dv_samples_next_btn.SetToolTip("Go forward")
+		self.dv_samples_next_btn.SetToolTip("Next Sample")
 		self.dv_samples_png_button.SetMinSize((45, -1))
 		self.dv_samples_svg_button.SetMinSize((45, -1))
 		self.dv_samples_pdf_button.SetMinSize((45, -1))
@@ -294,9 +310,9 @@ class browse_tab(wx.Panel):
 		self.dv_samples_toolbar.SetMaxSize((10000000,40))
 		self.dv_head2tail_focus_thief.SetMinSize((1, 1))
 		self.dv_head2tail_previous_btn.SetMinSize((38, 38))
-		self.dv_head2tail_previous_btn.SetToolTip("Go back")
+		self.dv_head2tail_previous_btn.SetToolTip("Previous Sample")
 		self.dv_head2tail_next_btn.SetMinSize((38, 38))
-		self.dv_head2tail_next_btn.SetToolTip("Go forward")
+		self.dv_head2tail_next_btn.SetToolTip("Next Sample")
 		self.dv_head2tail_png_button.SetMinSize((45, -1))
 		self.dv_head2tail_svg_button.SetMinSize((45, -1))
 		self.dv_head2tail_pdf_button.SetMinSize((45, -1))
@@ -323,7 +339,6 @@ class browse_tab(wx.Panel):
 		dv_reference_main_sizer = wx.BoxSizer(wx.VERTICAL)
 		dv_reference_toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		dv_reference_sizer = wx.BoxSizer(wx.VERTICAL)
-		dv_list_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		browse_project_chromatogram_sizer = wx.BoxSizer(wx.VERTICAL)
 		chromatogram_main_sizer = wx.BoxSizer(wx.VERTICAL)
 		browse_project_charts_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -400,10 +415,6 @@ class browse_tab(wx.Panel):
 		browse_project_chromatogram_sizer.Add(self.chromatogram_parent_panel, 1, wx.EXPAND, 10)
 		self.browse_project_chromatogram.SetSizer(browse_project_chromatogram_sizer)
 		data_viewer_sizer.Add((0, 0), 0, 0, 0)
-		dv_list_sizer.Add(self.data_viewer_list, 1, wx.EXPAND | wx.LEFT | wx.TOP, 5)
-		dv_list_line = wx.StaticLine(self.dv_list_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
-		dv_list_sizer.Add(dv_list_line, 0, wx.EXPAND, 0)
-		self.dv_list_panel.SetSizer(dv_list_sizer)
 		dv_reference_sizer.Add(self.dv_reference_spec_canvas, 1, wx.EXPAND, 0)
 		self.dv_reference_panel.SetSizer(dv_reference_sizer)
 		dv_reference_main_sizer.Add(self.dv_reference_panel, 1, wx.EXPAND, 10)
@@ -480,15 +491,12 @@ class browse_tab(wx.Panel):
 		self.browse_project_data.SetSizer(data_viewer_sizer)
 		self.browse_project_notebook.AddPage(self.browse_project_charts, "Charts")
 		self.browse_project_notebook.AddPage(self.browse_project_chromatogram, "Chromatogram")
-		self.browse_project_notebook.AddPage(self.browse_project_comparison, "Compare")
 		self.browse_project_notebook.AddPage(self.browse_project_data, "Data")
-		browse_project_tab_sizer.Add(self.browse_project_notebook, 1, wx.EXPAND, 0)
+		browse_project_tab_sizer.Add(self.browse_project_notebook, 3, wx.EXPAND, 0)
 		self.SetSizer(browse_project_tab_sizer)
 		browse_project_tab_sizer.Fit(self)
 		self.Layout()
 		# end wxGlade
-	
-	"""Browse Project Tab"""
 	
 	def on_close_project(self, event):  # wxGlade: browse_tab.<event_handler>
 		self.current_project_name = None
@@ -513,50 +521,54 @@ class browse_tab(wx.Panel):
 		
 		event.Skip()
 	
-	"""Browse Project > Charts Tab Buttons"""
+	"""Charts Tab Buttons"""
 	
 	def show_radar_chart(self, event):  # wxGlade: browse_tab.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(self,
-												   chart_type="radar",
-												   initial_samples=[self.current_project],
-												   # chart_data=self.chart_data,
-												   # pretty_names = [self.current_project_name],
-												   # sample_lists={self.current_project_name: self.current_prefixList}
-												   )
+		self.ChartViewer = ChartViewer.ChartViewer(
+			self,
+			chart_type="radar",
+			initial_samples=[self.current_project],
+			# chart_data=self.chart_data,
+			# pretty_names = [self.current_project_name],
+			# sample_lists={self.current_project_name: self.current_prefixList}
+		)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def show_mean_peak_area_chart(self, event):  # wxGlade: browse_tab.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(self,
-												   chart_type="mean_peak_area",
-												   initial_samples=[self.current_project],
-												   # chart_data=self.chart_data,
-												   # pretty_names = [self.current_project_name],
-												   # sample_lists={self.current_project_name: self.current_prefixList}
-												   )
+		self.ChartViewer = ChartViewer.ChartViewer(
+			self,
+			chart_type="mean_peak_area",
+			initial_samples=[self.current_project],
+			# chart_data=self.chart_data,
+			# pretty_names = [self.current_project_name],
+			# sample_lists={self.current_project_name: self.current_prefixList}
+		)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def show_box_whisker_chart(self, event):  # wxGlade: browse_tab.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="box_whisker",
-												   # chart_data=self.chart_data,
-												   initial_samples=[self.current_project],
-												   # pretty_names = [self.current_project_name],
-												   # sample_lists={self.current_project_name: self.current_prefixList}
-												   )
+		self.ChartViewer = ChartViewer.ChartViewer(
+			self, chart_type="box_whisker",
+			# chart_data=self.chart_data,
+			initial_samples=[self.current_project],
+			# pretty_names = [self.current_project_name],
+			# sample_lists={self.current_project_name: self.current_prefixList}
+		)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()
 	
 	def show_peak_area_chart(self, event):  # wxGlade: browse_tab.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type="peak_area",
-												   initial_samples=[self.current_project],
-												   # chart_data=self.chart_data,
-												   # pretty_names = [self.current_project_name],
-												   # sample_lists={self.current_project_name: self.current_prefixList}
-												   )
+		self.ChartViewer = ChartViewer.ChartViewer(
+			self, chart_type="peak_area",
+			initial_samples=[self.current_project],
+			# chart_data=self.chart_data,
+			# pretty_names = [self.current_project_name],
+			# sample_lists={self.current_project_name: self.current_prefixList}
+		)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()
@@ -601,8 +613,12 @@ class browse_tab(wx.Panel):
 		# print(event.GetEventObject() == self.OpenSample) # to handle multiple buttons calling same event
 		self.focus_thief.SetFocus()
 		
-		dlg = list_dialog.list_dialog(self, title="Choose Sample", label="Choose a sample: ",
-									  choices=self.browser_sample_list)
+		dlg = list_dialog.list_dialog(
+			self,
+			title="Choose Sample",
+			label="Choose a sample: ",
+			choices=self.browser_sample_list
+		)
 		res = dlg.ShowModal()
 		if res == wx.ID_OK:
 			if self.browse_get_tab() == 1:
@@ -723,7 +739,7 @@ class browse_tab(wx.Panel):
 		pathname = os.path.splitext(file_dialog(
 			self, "*", "Save Chart", "",
 			# defaultDir=self.Config.get("main", "resultspath")))[0]
-			defaultDir=self._parent.Config.RESULTS_DIRECTORY))[0]
+			defaultDir=self._parent.Config.results_dir))[0]
 		
 		# Do any of the files already exist?
 		try:
@@ -749,7 +765,7 @@ class browse_tab(wx.Panel):
 	# Display Function
 	def display_chromatogram(self, sample_name=None):
 		"""
-			Chromatogram Diaplay
+		Chromatogram Display
 
 		:param sample_name:
 		:type sample_name:
@@ -790,7 +806,7 @@ class browse_tab(wx.Panel):
 		if sample_name:
 			self.chromatogram_axes.clear()
 			# ExprDir = self.Config.get("main", "exprdir")
-			ExprDir = self._parent.Config.EXPERIMENTS_DIRECTORY
+			ExprDir = self._parent.Config.expr_dir
 			
 			with open(os.path.join(ExprDir, "{}_tic.dat".format(sample_name))) as tic_file:
 				ticreader = csv.reader(tic_file, delimiter=" ")
@@ -837,7 +853,7 @@ class browse_tab(wx.Panel):
 		def update_ylim(*args):
 				# print(*args)
 				# print(str(*args).startswith("MPL MouseEvent")) # Pan
-			if (str(*args).startswith("My_AxesSubplot") and not self.Zoom_Btn.IsEnabled()) or (
+			if (str(*args).startswith("XPanAxesSubplot") and not self.Zoom_Btn.IsEnabled()) or (
 					str(*args).startswith("MPL MouseEvent") and not self.Pan_Btn.IsEnabled()):  # Zoom, Pan
 					# print("updated xlims: ", axes.get_xlim())
 				min_x_index = (numpy.abs(x - self.chromatogram_axes.get_xlim()[0])).argmin()
@@ -873,22 +889,28 @@ class browse_tab(wx.Panel):
 	"""Data Viewer"""
 	
 	def populate_data_viewer(self):
-		self.data_viewer_list.DeleteAllItems()
+		self.dv_list_panel.data_viewer_list.DeleteAllItems()
 		
-		for peak in self.browser_peak_data:
+		itemDataMap = {}
+		
+		for row_idx, peak in enumerate(self.browser_peak_data):
 			print(list(peak))
 			print(list(peak["hits"][0]))
-			self.data_viewer_list.Append(
-				[rounders(peak["average_rt"], "0.000"), peak["hits"][0]["Name"], peak["hits"][0]["CAS"]])
-	
+			data = (rounders(peak["average_rt"], "0.000"), peak["hits"][0]["Name"], peak["hits"][0]["CAS"], rounders(peak["hits"][0]["average_MF"], "0"))
+			self.dv_list_panel.data_viewer_list.Append(data)
+			itemDataMap[row_idx] = data
+			self.dv_list_panel.data_viewer_list.SetItemData(row_idx, row_idx)
+		
+		self.dv_list_panel.itemDataMap = itemDataMap
+		
 	def do_select_peak(self, event):  # wxGlade: browse_tab.<event_handler>
-		dv_selection = self.data_viewer_list.GetFocusedItem()
+		dv_selection = self.dv_list_panel.data_viewer_list.GetFocusedItem()
 		self.dv_selection_data = self.browser_peak_data[dv_selection]
 		
 		CAS = self.dv_selection_data["hits"][0]["CAS"]
 		
 		data_path = os.path.join(
-				self._parent.Config.CSV_DIRECTORY,
+				self._parent.Config.csv_dir,
 				"{}_peak_data.json".format(
 					self.current_project_name)
 			).replace("&", "%26")
@@ -908,6 +930,7 @@ class browse_tab(wx.Panel):
 	
 	def Data_Viewer_Ready(self, *args):
 		if self.dv_html.GetCurrentURL() != self.dv_url:
+			print(self.dv_url)
 			self.dv_html.LoadURL(self.dv_url)
 		
 	def on_browse_tab_change(self, event):  # wxGlade: browse_tab.<event_handler>
@@ -954,7 +977,7 @@ class browse_tab(wx.Panel):
 		self.display_chromatogram(self.browser_sample_list[self.browser_sample_idx])
 		
 		with open(os.path.join(
-					self._parent.Config.CSV_DIRECTORY,
+					self._parent.Config.csv_dir,
 					"{}_peak_data.json".format(
 						self.current_project_name)
 				), "r") as jsonfile:

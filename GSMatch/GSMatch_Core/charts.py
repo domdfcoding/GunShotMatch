@@ -5,16 +5,16 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #
 #  mean_peak_area, mean_peak_area_multiple and peak_area adapted from
 #  		https://python-graph-gallery.com/13-percent-stacked-barplot/
-# 		Copyright (C) 2017 The python graph gallery
+# 		Copyright © 2017 The python graph gallery
 #
 #  radar_chart adapted from
 #  		https://python-graph-gallery.com/391-radar-chart-with-several-individuals/
-# 		Copyright (C) 2017 The python graph gallery
+# 		Copyright © 2017 The python graph gallery
 #
 # 	PlotSpectrum adapted from SpectrumSimilarity.R
 # 		Part of OrgMassSpecR
@@ -48,28 +48,22 @@
 
 # stdlib
 import os
-
 from copy import deepcopy
 from itertools import cycle
 
 # 3rd party
-import numpy
-import pandas
-
 import matplotlib
-from matplotlib import pyplot as plt
 import matplotlib.ticker as ticker
 import matplotlib.transforms as transforms
-
+import numpy
+import pandas
+from chemistry_tools.spectrum_similarity import normalize
 from mathematical.utils import magnitude
-
+from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+
 # from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
-
-# this package
-from utils.SpectrumSimilarity import normalize
 
 __author__ = "Dominic Davis-Foster"
 __copyright__ = "Copyright 2019 Dominic Davis-Foster"
@@ -78,65 +72,77 @@ __license__ = "GPLv3"
 __version__ = "0.1.0"
 __email__ = "dominic@davis-foster.co.uk"
 
-default_colours = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22',
-				   '#17becf']
+default_colours = [
+		'#1f77b4',
+		'#ff7f0e',
+		'#2ca02c',
+		'#d62728',
+		'#9467bd',
+		'#8c564b',
+		'#e377c2',
+		'#7f7f7f',
+		'#bcbd22',
+		'#17becf'
+		]
+
 default_filetypes = ["png", "pdf", "svg"]
+
 bw_default_styles = [
-	"D",  # diamond
-	"s",  # square
-	"X",  # bold cross
-	"^",  # triangle
-	"d",  # diamond
-	"h",  # hexagon
-	"o",  # dot
-	"v",  # down triangle
-	"<",  # left triangle
-	">",  # right triangle
-]
+		"D",  # diamond
+		"s",  # square
+		"X",  # bold cross
+		"^",  # triangle
+		"d",  # diamond
+		"h",  # hexagon
+		"o",  # dot
+		"v",  # down triangle
+		"<",  # left triangle
+		">",  # right triangle
+		]
 
 bw_default_colours_a = [
-	"DarkRed",
-	"DeepSkyBlue",
-	"Green",
-	"Purple",
-	"Black",
-	"Sienna",
-	"MediumTurquoise",
-	"DarkOliveGreen",
-	"m",
-	"DarkSlateBlue",
-	"OrangeRed",
-	"CadetBlue",
-	"Olive",
-	"Red",
-	"Blue",
-	"PaleVioletRed",
-	"Teal",
-	"y",
-	"RoyalBlue",
-]
+		"DarkRed",
+		"DeepSkyBlue",
+		"Green",
+		"Purple",
+		"Black",
+		"Sienna",
+		"MediumTurquoise",
+		"DarkOliveGreen",
+		"m",
+		"DarkSlateBlue",
+		"OrangeRed",
+		"CadetBlue",
+		"Olive",
+		"Red",
+		"Blue",
+		"PaleVioletRed",
+		"Teal",
+		"y",
+		"RoyalBlue",
+		]
 
 bw_default_colours_b = [
-	"PaleVioletRed",
-	"DeepSkyBlue",
-	"y",
-	"Green",
-	"OrangeRed",
-	"MediumTurquoise",
-	"m",
-	"Red",
-	"Olive",
-	"CadetBlue",
-	"Sienna",
-	"Purple",
-	"Blue",
-	"DarkRed",
-	"DarkSlateBlue",
-	"DarkOliveGreen",
-	"RoyalBlue",
-	"Black",
-	"Teal",
-]
+		"PaleVioletRed",
+		"DeepSkyBlue",
+		"y",
+		"Green",
+		"OrangeRed",
+		"MediumTurquoise",
+		"m",
+		"Red",
+		"Olive",
+		"CadetBlue",
+		"Sienna",
+		"Purple",
+		"Blue",
+		"DarkRed",
+		"DarkSlateBlue",
+		"DarkOliveGreen",
+		"RoyalBlue",
+		"Black",
+		"Teal",
+		]
 
 bw_default_colours = bw_default_colours_b[:]
 
@@ -175,8 +181,10 @@ class BoxWhisker(Chart):
 		self.all_values = []
 	
 	def setup_data(self, peak_areas, sample_list, outlier_mode="2stdev"):
-		from mathematical.data_frames import df_mean, df_median, df_stdev, df_data_points, df_count, df_outliers, MAD, \
-			QUARTILES, STDEV2
+		from mathematical.data_frames import (
+			df_mean, df_median, df_stdev, df_data_points, df_count, df_outliers, MAD,
+			QUARTILES, STDEV2,
+			)
 		from mathematical.utils import remove_zero
 		
 		# print(f"###{sample_list}###")
@@ -184,9 +192,9 @@ class BoxWhisker(Chart):
 		for compound in peak_areas.index.values:
 			# print([sample for sample in sample_list])
 			peak_areas["Count"] = peak_areas.apply(
-				df_count,
-				args=([f"{sample[0]} Peak Area" for sample in sample_list],),
-				axis=1)
+					df_count,
+					args=([f"{sample[0]} Peak Area" for sample in sample_list],),
+					axis=1)
 		
 		peak_areas['Compound Names'] = peak_areas.index
 		peak_areas = peak_areas.sort_values(['Count', 'Compound Names'])
@@ -194,9 +202,9 @@ class BoxWhisker(Chart):
 		for sample in sample_list:
 			# Put all data points in one list
 			peak_areas[f"{sample[0]} Data Points"] = peak_areas.apply(
-				df_data_points,
-				args=(sample[1],),
-				axis=1)
+					df_data_points,
+					args=(sample[1],),
+					axis=1)
 			
 			# Calculate y-axis limits
 			data_points = ([item for sublist in peak_areas[f"{sample[0]} Data Points"] for item in sublist])
@@ -220,17 +228,17 @@ class BoxWhisker(Chart):
 			
 			# Calculate Mean, Median and Standard Deviation from Data Excluding Outliers
 			peak_areas[f"{sample[0]} Mean Excluding Outliers"] = peak_areas.apply(
-				df_mean,
-				args=(f"{sample[0]} Data Excluding Outliers",),
-				axis=1)
+					df_mean,
+					args=(f"{sample[0]} Data Excluding Outliers",),
+					axis=1)
 			peak_areas[f"{sample[0]} Median Excluding Outliers"] = peak_areas.apply(
-				df_median,
-				args=(f"{sample[0]} Data Excluding Outliers",),
-				axis=1)
+					df_median,
+					args=(f"{sample[0]} Data Excluding Outliers",),
+					axis=1)
 			peak_areas[f"{sample[0]} Stdev Excluding Outliers"] = peak_areas.apply(
-				df_stdev,
-				args=(f"{sample[0]} Data Excluding Outliers",),
-				axis=1)
+					df_stdev,
+					args=(f"{sample[0]} Data Excluding Outliers",),
+					axis=1)
 		
 		self.peak_areas = peak_areas
 		self.sample_list = sample_list
@@ -255,10 +263,10 @@ class BoxWhisker(Chart):
 		self.datapoint_spacing = column_width / (len(self.peak_areas) + 1)
 		
 		self.datapoint_offset = list(np.arange(
-			(0 - (column_width / 2)) + self.datapoint_spacing,
-			(0 + (column_width / 2)),
-			self.datapoint_spacing
-		))
+				(0 - (column_width / 2)) + self.datapoint_spacing,
+				(0 + (column_width / 2)),
+				self.datapoint_spacing
+				))
 		
 		if len(colours) % len(styles) == 0:
 			colours = colours[:-1]
@@ -306,12 +314,12 @@ class BoxWhisker(Chart):
 						
 						if err_bar == "stdev":
 							self.ax.errorbar(
-								offset_x_pos, mean, yerr=stdev,
-								linestyle="None", color=colour, capsize=3)
+									offset_x_pos, mean, yerr=stdev,
+									linestyle="None", color=colour, capsize=3)
 						elif err_bar == "range":
 							self.ax.errorbar(
-								offset_x_pos, mean, yerr=range_values,
-								linestyle="None", color=colour, capsize=3)
+									offset_x_pos, mean, yerr=range_values,
+									linestyle="None", color=colour, capsize=3)
 						
 						# plot outliers
 						for outlier in outliers:
@@ -337,12 +345,12 @@ class BoxWhisker(Chart):
 						
 						if err_bar == "stdev":
 							self.ax.errorbar(
-								offset_x_pos, mean, yerr=stdev,
-								linestyle="None", color=colour, capsize=3)
+									offset_x_pos, mean, yerr=stdev,
+									linestyle="None", color=colour, capsize=3)
 						elif err_bar == "range":
 							self.ax.errorbar(
-								offset_x_pos, mean, yerr=range_values,
-								linestyle="None", color=colour, capsize=3)
+									offset_x_pos, mean, yerr=range_values,
+									linestyle="None", color=colour, capsize=3)
 						
 						# plot raw data
 						if show_raw_data:
@@ -359,7 +367,7 @@ class BoxWhisker(Chart):
 		self.ax.grid(axis="x", which='major', linestyle='-')
 		
 		x_vals = list(
-			numpy.arange(self.column_width, (self.column_width * (len(self.sample_list) + 1)), self.column_width))
+				numpy.arange(self.column_width, (self.column_width * (len(self.sample_list) + 1)), self.column_width))
 		x_vals = numpy.array(x_vals)
 		
 		# Thin Vertical Lines Between Samples
@@ -413,8 +421,8 @@ class BoxWhisker(Chart):
 				# print(ax.transAxes.inverted().transform((0,1)))
 				# plt.text(minor_x_val, 1.01, group, horizontalalignment="center",transform=transforms.blended_transform_factory(ax.transData, ax.transAxes))
 				self.ax.text(
-					minor_x_val, 1.01, group, horizontalalignment="center",
-					transform=transforms.blended_transform_factory(self.ax.transData, self.ax.transAxes))
+						minor_x_val, 1.01, group, horizontalalignment="center",
+						transform=transforms.blended_transform_factory(self.ax.transData, self.ax.transAxes))
 			
 			# plt.title("Ammunition", fontsize=12, y=1.03)
 			self.ax.set_title("Ammunition", fontsize=12, y=1.03)
@@ -445,30 +453,30 @@ class BoxWhisker(Chart):
 			colour = next(colour_cycle)
 			marker = next(style_cycle)
 			legend_elements.append(Line2D(
-				[0], [0], marker=marker, color='w', label=compound,
-				markerfacecolor=colour, markersize=10, linestyle="None"
-			))
+					[0], [0], marker=marker, color='w', label=compound,
+					markerfacecolor=colour, markersize=10, linestyle="None"
+					))
 		
 		if self.show_outliers:
 			legend_elements.append(Line2D(
-				[0], [0], marker="x", color="k", label="Outlier",
-				markerfacecolor="k", markersize=10, linestyle="None"
-			))
+					[0], [0], marker="x", color="k", label="Outlier",
+					markerfacecolor="k", markersize=10, linestyle="None"
+					))
 		if self.show_raw_data:
 			legend_elements.append(Line2D(
-				[0], [0], marker="x", color="k", label="Raw Data",
-				markerfacecolor="grey", alpha=0.3, markersize=10, linestyle="None"
-			))
+					[0], [0], marker="x", color="k", label="Raw Data",
+					markerfacecolor="grey", alpha=0.3, markersize=10, linestyle="None"
+					))
 		if self.err_bar == "stdev":
 			legend_elements.append(Line2D(
-				[0], [0], marker=None, color=None, label="Error Bars Indicate ± σ",
-				markerfacecolor=None, alpha=0, markersize=0, linestyle="None"
-			))
+					[0], [0], marker=None, color=None, label="Error Bars Indicate ± σ",
+					markerfacecolor=None, alpha=0, markersize=0, linestyle="None"
+					))
 		elif self.err_bar == "range":
 			legend_elements.append(Line2D(
-				[0], [0], marker=None, color=None, label="Error Bars Indicate Range",
-				markerfacecolor=None, alpha=0, markersize=0, linestyle="None"
-			))
+					[0], [0], marker=None, color=None, label="Error Bars Indicate Range",
+					markerfacecolor=None, alpha=0, markersize=0, linestyle="None"
+					))
 		
 		# plt.legend(handles=legend_elements, loc="center", scatterpoints=1, ncol=leg_cols, title="Legend")
 		# return self.ax.legend(handles=legend_elements, bbox_to_anchor=legend, scatterpoints=1, ncol=leg_cols, title="Legend",  bbox_transform=self.fig.transFigure)
@@ -510,16 +518,16 @@ class MeanPeakArea(Chart):
 		# From raw value to percentage
 		for sample_idx, sample in enumerate(sample_list):
 			peak_areas["{} Percentage Peak Area".format(sample)] = peak_areas.apply(
-				df_percentage,
-				args=("{} Peak Area".format(sample), (peak_areas["{} Peak Area".format(sample)].sum())),
-				axis=1)
+					df_percentage,
+					args=("{} Peak Area".format(sample), (peak_areas["{} Peak Area".format(sample)].sum())),
+					axis=1)
 			peak_areas["{} Percentage Standard Deviation".format(sample)] = peak_areas.apply(
-				df_percentage,
-				args=(
-					"{} Standard Deviation".format(sample),
-					(peak_areas["{} Standard Deviation".format(sample)].sum())
-				),
-				axis=1)
+					df_percentage,
+					args=(
+							"{} Standard Deviation".format(sample),
+							(peak_areas["{} Standard Deviation".format(sample)].sum())
+							),
+					axis=1)
 		
 		self.peak_areas = peak_areas
 		self.sample_list = sample_list
@@ -547,31 +555,31 @@ class MeanPeakArea(Chart):
 		
 		bar_position = 0
 		error_bar_offset = list(np.arange(
-			(bar_position - (bar_width / 2)) + err_bar_spacing,
-			(bar_position + (bar_width / 2)),
-			err_bar_spacing
-		))[:len(self.peak_areas)]
+				(bar_position - (bar_width / 2)) + err_bar_spacing,
+				(bar_position + (bar_width / 2)),
+				err_bar_spacing
+				))[:len(self.peak_areas)]
 		
 		for sample_idx, sample in enumerate(self.sample_list):
 			colour_cycle = cycle(colours)
 			
 			self.peak_areas["{} Error Bar Offset".format(sample)] = pd.Series(
-				[x + bar_position for x in error_bar_offset],
-				index=self.peak_areas.index)
+					[x + bar_position for x in error_bar_offset],
+					index=self.peak_areas.index)
 			bottom = 0
 			for row_idx, row in self.peak_areas.iterrows():
 				peak_area = row["{} {}Peak Area".format(sample, "Percentage " if percentage else '')]
 				standard_deviation = row["{} {}Standard Deviation".format(sample, "Percentage " if percentage else '')]
 				
 				self.ax.bar(
-					bar_position, peak_area, bottom=bottom, color=next(colour_cycle),
-					width=bar_width, label=row["Compound Names"], zorder=3)
+						bar_position, peak_area, bottom=bottom, color=next(colour_cycle),
+						width=bar_width, label=row["Compound Names"], zorder=3)
 				
 				if err_bar == "stdev":
 					self.ax.plot(
-						(row["{} Error Bar Offset".format(sample)], row["{} Error Bar Offset".format(sample)]),
-						((bottom + peak_area) - standard_deviation, (bottom + peak_area) + standard_deviation),
-						"black", zorder=3)
+							(row["{} Error Bar Offset".format(sample)], row["{} Error Bar Offset".format(sample)]),
+							((bottom + peak_area) - standard_deviation, (bottom + peak_area) + standard_deviation),
+							"black", zorder=3)
 				bottom += peak_area
 			
 			x_tick_positions.append(bar_position)
@@ -601,7 +609,7 @@ class MeanPeakArea(Chart):
 			for row_idx, row in self.peak_areas.iterrows():
 				legend_colour = next(colour_cycle)
 				legend_elements.append(
-					Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
+						Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
 			
 			return self.fig.legend(handles=legend_elements[::-1], loc=9, bbox_to_anchor=legend, ncol=1)
 
@@ -616,13 +624,13 @@ class PeakArea(Chart):
 		
 		for prefix in prefixList:
 			peak_areas["Percentage {}".format(prefix)] = peak_areas.apply(
-				df_percentage,
-				args=(prefix, (peak_areas[prefix].sum())),
-				axis=1)
+					df_percentage,
+					args=(prefix, (peak_areas[prefix].sum())),
+					axis=1)
 			if use_log:
 				peak_areas["Log {}".format(prefix)] = peak_areas.apply(df_log, args=([prefix], use_log), axis=1)
 				peak_areas["Log Percentage {}".format(prefix)] = peak_areas.apply(df_percentage, args=(
-					"Log {}".format(prefix), (peak_areas["Log {}".format(prefix)].sum())), axis=1)
+						"Log {}".format(prefix), (peak_areas["Log {}".format(prefix)].sum())), axis=1)
 		
 		self.peak_areas = peak_areas
 		self.prefixList = prefixList
@@ -649,11 +657,12 @@ class PeakArea(Chart):
 			peak_area = []
 			for prefix in self.prefixList:
 				peak_area.append(
-					row["{}{}{}".format("Log " if self.use_log else '', "Percentage " if percentage else '', prefix)])
+						row["{}{}{}".format("Log " if self.use_log else '', "Percentage " if percentage else '',
+											prefix)])
 			
 			self.ax.bar(
-				x_vals, peak_area, bottom=bottom, color=next(colour_cycle),
-				width=bar_width, label=row["Compound Names"], zorder=3)
+					x_vals, peak_area, bottom=bottom, color=next(colour_cycle),
+					width=bar_width, label=row["Compound Names"], zorder=3)
 			
 			bottom = list(map(add, bottom, peak_area))
 		
@@ -683,7 +692,7 @@ class PeakArea(Chart):
 			for row_idx, row in self.peak_areas.iterrows():
 				legend_colour = next(colour_cycle)
 				legend_elements.append(
-					Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
+						Patch(facecolor=legend_colour, edgecolor=legend_colour, label=row["Compound Names"]))
 			# print(legend)
 			return self.fig.legend(handles=legend_elements[::-1], bbox_to_anchor=legend, ncol=1)
 
@@ -824,7 +833,7 @@ def PlotSpectrum(spec, label=None, xlim=(50, 1200), mode="display", color="red",
 					save_successful = True
 				except RuntimeError as e:
 					pass
-			
+	
 	return plt.close()
 
 
@@ -832,7 +841,7 @@ def peak_area_wrapper(
 		peak_areas, lot_name, prefixList, percentage=True,
 		colours=None, figsize=(12, 6), bar_width=0.85,
 		legend=(1, 1), mode="display", filetypes=None, use_log=False
-):
+		):
 	if colours is None:
 		colours = default_colours[:]
 	
@@ -858,7 +867,7 @@ def mean_peak_area_wrapper(
 		peak_areas, sample_list, percentage=False,
 		colours=None, figsize=None, bar_width=2,
 		legend=(0.5, -0.06), mode="display", filetypes=None
-):
+		):
 	if colours is None:
 		colours = default_colours[:]
 	
@@ -883,7 +892,7 @@ def mean_peak_area_wrapper(
 def radar_chart_wrapper(
 		peak_areas, sample_list, colours=None, figsize=(10, 10),
 		legend=(0.15, 0.07), mode="display", filetypes=None, use_log=False
-):
+		):
 	if colours is None:
 		colours = default_colours[:]
 	
@@ -920,7 +929,7 @@ def box_whisker_wrapper(
 		err_bar="range", outlier_mode="2stdev", leg_cols=1, mode="display",
 		figsize=None, column_width=4, styles=None, colours=None,
 		filetypes=None, groupings=None, legend=True,
-):
+		):
 	if colours is None:
 		colours = bw_default_colours[:]
 	
@@ -1007,9 +1016,9 @@ class PrincipalComponentAnalysis(Chart):
 		for target in self.targets:
 			indicesToKeep = self.finalDf['target'] == target
 			self.ax.scatter(
-				self.finalDf.loc[indicesToKeep, 'principal component 1'],
-				self.finalDf.loc[indicesToKeep, 'principal component 2'],
-				c=next(colour_cycle), s=50, alpha=0.8, lw=2)
+					self.finalDf.loc[indicesToKeep, 'principal component 1'],
+					self.finalDf.loc[indicesToKeep, 'principal component 2'],
+					c=next(colour_cycle), s=50, alpha=0.8, lw=2)
 		
 		self.ax.grid()
 		self.ax.set_axisbelow(True)
@@ -1037,7 +1046,7 @@ class PrincipalComponentAnalysis(Chart):
 def pca_wrapper(
 		data, features, targets, colours=None, mode="display",
 		filetypes=None, figsize=(8, 8)
-):
+		):
 	if colours is None:
 		colours = default_colours[:]
 	
@@ -1062,20 +1071,20 @@ if __name__ == "__main__":
 	chart_data = pandas.read_csv("../Results/CSV/ELEY_SUBTRACT_CHART_DATA.csv", sep=";", index_col=0)
 	
 	samples_to_compare = [
-		("Eley Contact", [
-			"ELEY_1_SUBTRACT",
-			"ELEY_2_SUBTRACT",
-			"ELEY_3_SUBTRACT",
-			"ELEY_4_SUBTRACT",
-			"ELEY_5_SUBTRACT"
-		]),
-		# ("ELEY_CASE_SUBTRACT","Eley Case"),
-		# ("WINCHESTER_SUBTRACT","Winchester Pistol"),
-		# ("WINCHESTER_CASE_SUBTRACT","Winchester Case"),
-		# ("GECO_SUBTRACT","Geco"),
-		# ("GECO_CASE_SUBTRACT","Geco Case"),
-		# ("ELEY_SHOTGUN_SUBTRACT", "Eley Hawk"),
-	]  # must be in order you want them on the graph
+			("Eley Contact", [
+					"ELEY_1_SUBTRACT",
+					"ELEY_2_SUBTRACT",
+					"ELEY_3_SUBTRACT",
+					"ELEY_4_SUBTRACT",
+					"ELEY_5_SUBTRACT"
+					]),
+			# ("ELEY_CASE_SUBTRACT","Eley Case"),
+			# ("WINCHESTER_SUBTRACT","Winchester Pistol"),
+			# ("WINCHESTER_CASE_SUBTRACT","Winchester Case"),
+			# ("GECO_SUBTRACT","Geco"),
+			# ("GECO_CASE_SUBTRACT","Geco Case"),
+			# ("ELEY_SHOTGUN_SUBTRACT", "Eley Hawk"),
+			]  # must be in order you want them on the graph
 	
 	box_whisker_wrapper(chart_data, samples_to_compare)
 	
@@ -1084,24 +1093,26 @@ if __name__ == "__main__":
 	sys.exit()
 	
 	data = pandas.DataFrame(
-		{"Compound": ["Diphenylamine", "Ethyl Centralite", "1,2-benzenedicarbonitrile", "Quinoline", "Naphthalene"],
-		 "ELEY_SUBTRACT Peak Area": [260511.3, 41310.2, 39843.5, 143740.0, 1145116.7, ],
-		 "ELEY_SUBTRACT Standard Deviation": [185532.9, 27770.7, 22458.0, 81281.1, 437638.9, ],
-		 "MAGTECH_SUBTRACT Peak Area": [260511.3, 41310.2, 39843.5, 143740.0, 1145116.7, ],
-		 "MAGTECH_SUBTRACT Standard Deviation": [185532.9, 27770.7, 22458.0, 81281.1, 437638.9, ],
-		 "CBC_SUBTRACT Peak Area": [143740.0, 1145116.7, 260511.3, 41310.2, 39843.5],
-		 "CBC_SUBTRACT Standard Deviation": [185532.9, 27770.7, 22458.0, 81281.1, 437638.9, ]
-		 })
+			{
+					"Compound": ["Diphenylamine", "Ethyl Centralite", "1,2-benzenedicarbonitrile", "Quinoline",
+								 "Naphthalene"],
+					"ELEY_SUBTRACT Peak Area": [260511.3, 41310.2, 39843.5, 143740.0, 1145116.7, ],
+					"ELEY_SUBTRACT Standard Deviation": [185532.9, 27770.7, 22458.0, 81281.1, 437638.9, ],
+					"MAGTECH_SUBTRACT Peak Area": [260511.3, 41310.2, 39843.5, 143740.0, 1145116.7, ],
+					"MAGTECH_SUBTRACT Standard Deviation": [185532.9, 27770.7, 22458.0, 81281.1, 437638.9, ],
+					"CBC_SUBTRACT Peak Area": [143740.0, 1145116.7, 260511.3, 41310.2, 39843.5],
+					"CBC_SUBTRACT Standard Deviation": [185532.9, 27770.7, 22458.0, 81281.1, 437638.9, ]
+					})
 	
 	radar_chart(data, ["ELEY_SUBTRACT", "CBC_SUBTRACT"], use_log=10)
 	mean_peak_area_multiple(data, ["ELEY_SUBTRACT"])
 	mean_peak_area_multiple(data, ["ELEY_SUBTRACT", "MAGTECH_SUBTRACT", "CBC_SUBTRACT"])
 	
 	peak_area(pandas.DataFrame({
-		"Compound": ["Diphenylamine", "Ethyl Centralite", "1,2-benzenedicarbonitrile", "Quinoline", "Naphthalene"],
-		"ELEY_1_SUBTRACT": [260511.3, 41310.2, 49843.5, 143740.0, 1045116.7, ],
-		"ELEY_2_SUBTRACT": [280511.3, 31310.2, 39843.5, 143740.0, 1145116.7, ],
-		"ELEY_3_SUBTRACT": [300511.3, 51310.2, 30843.5, 143740.0, 1245116.7, ],
-		"ELEY_4_SUBTRACT": [200511.3, 45310.2, 59843.5, 143740.0, 1345116.7, ],
-		"ELEY_5_SUBTRACT": [220511.3, 40310.2, 32003.5, 143740.0, 1445116.7, ]
-	}), percentage=False)
+			"Compound": ["Diphenylamine", "Ethyl Centralite", "1,2-benzenedicarbonitrile", "Quinoline", "Naphthalene"],
+			"ELEY_1_SUBTRACT": [260511.3, 41310.2, 49843.5, 143740.0, 1045116.7, ],
+			"ELEY_2_SUBTRACT": [280511.3, 31310.2, 39843.5, 143740.0, 1145116.7, ],
+			"ELEY_3_SUBTRACT": [300511.3, 51310.2, 30843.5, 143740.0, 1245116.7, ],
+			"ELEY_4_SUBTRACT": [200511.3, 45310.2, 59843.5, 143740.0, 1345116.7, ],
+			"ELEY_5_SUBTRACT": [220511.3, 40310.2, 32003.5, 143740.0, 1445116.7, ]
+			}), percentage=False)

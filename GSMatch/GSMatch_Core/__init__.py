@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,10 +31,10 @@
 #
 # mean_peak_area, mean_peak_area_multiple and peak_area adapted from
 #     https://python-graph-gallery.com/13-percent-stacked-barplot/
-#     Copyright (C) 2017 The python graph gallery
+#     Copyright © 2017 The python graph gallery
 #
 # radar_chart adapted from https://python-graph-gallery.com/391-radar-chart-with-several-individuals/
-#     Copyright (C) 2017 The python graph gallery
+#     Copyright © 2017 The python graph gallery
 #
 # PlotSpectrum adapted from SpectrumSimilarity.R
 #     Part of OrgMassSpecR
@@ -43,35 +43,31 @@
 #
 # utils.ChromatogramDisplay:
 #     Adapted from PyMS in 2019 by Dominic Davis-Foster
-#     Copyright (C) 2005-2012 Vladimir Likic
+#     Copyright © 2005-2012 Vladimir Likic
 #     Available under the GNU GPL Version 2
 # -----
 
 
-
 __all__ = [
-	"AboutDialog",
-	"border_config",
-	"browse_tab",
-	"ChartViewer",
-	"ChromatogramDisplay",
-	"compare_tab",
-	"Comparison",
-	"constants",
-	"Config",
-	"help_tab",
-	"Launcher",
-	"launcher_tab",
-	"My_Axes",
-	"paths_dialog",
-	"thread_boilerplates",
-	"threads",
-]
+		"AboutDialog",
+		"border_config",
+		"browse_tab",
+		"ChartViewer",
+		"compare_tab",
+		"constants",
+		"Config",
+		"help_tab",
+		"Launcher",
+		"launcher_tab",
+		"paths_dialog",
+		"thread_boilerplates",
+		"threads",
+		]
 
 
 from GSMatch.GSMatch_Core.Config import GSMConfig
 
-from . import constants, My_Axes, PeakAlignment
+from . import constants, PeakAlignment
 
 
 def read_peaks_json(jsonfile):

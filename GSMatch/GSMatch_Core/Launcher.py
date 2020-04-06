@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2017-2019.  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -38,9 +38,9 @@ from multiprocessing import Process
 from domdf_python_tools import str2tuple, list2str
 from domdf_python_tools.paths import maybe_make, relpath
 
-from domdf_wxpython_tools.utils import coming_soon
-from domdf_wxpython_tools.dialogs import file_dialog
-from domdf_wxpython_tools.icons import get_toolbar_icon
+from domdf_wxpython_tools import coming_soon
+from domdf_wxpython_tools import file_dialog
+from domdf_wxpython_tools import get_toolbar_icon
 
 import wx
 import wx.richtext
@@ -54,8 +54,8 @@ from .help_tab import help_tab
 from .compare_tab import compare_tab
 from .browse_tab import browse_tab
 
-from .threads import StatusThread, myEVT_STATUS2, myEVT_CONVERSION2, EVT_CONVERSION_LOG, myEVT_PROJECT, \
-	EVT_PROJECT_LOG, myEVT_COMPARISON2, ConversionThread, ProjectThread, QueueThread, \
+from .threads import StatusThread, myEVT_STATUS, myEVT_CONVERSION, EVT_CONVERSION_LOG, myEVT_PROJECT, \
+	EVT_PROJECT_LOG, myEVT_COMPARISON, ConversionThread, ProjectThread, QueueThread, \
 	conversion_thread_running, project_thread_running
 
 
@@ -66,14 +66,17 @@ import wx.grid
 # begin wxGlade: extracode
 # end wxGlade
 
+
 def run_flask():
+	sys.stderr = sys.stdout
 	from data_viewer_server import app
 	app.run()
 	
 
-
 class Launcher(wx.Frame):
 	def __init__(self, *args, **kwds):
+		# Rest message for statusbar
+		self.rest_message = "Ready"
 		
 		# Menu Bar IDs
 		self.menu_radar_id = wx.NewId()
@@ -196,7 +199,6 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.on_project_log_save, self.project_log_save_btn)
 		# end wxGlade
 		
-	
 		if sys.platform == "win32":
 			self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.notebook_1_handler_win32, self.notebook_1)
 		else:
@@ -218,18 +220,21 @@ class Launcher(wx.Frame):
 		self.on_pretty_name_clear()
 		self.pretty_name_value.Clear()
 		# for name in self.pretty_name_list:
-		#	self.pretty_name_value.Append(name)
+		# 	self.pretty_name_value.Append(name)
 		
 		self.pretty_name_value.AutoComplete([name for name in self.pretty_name_list])
 		
 		self.project_queue_grid.DeleteRows(0, 10)
 		self.on_load_queue(pathname="lib/queue.csv")
 		
+		self.SetIcon(wx.Icon("lib/icons/GunShotMatch.ico"))
+
 		# Window Size and Position
 		self.SetMinSize((1140, 750))
 		self.SetSize((1140, 750))
 		self.Center()
-		self.SetIcon(wx.Icon("lib/icons/GunShotMatch.ico"))
+		
+		# Load Internal Configuration
 		internal_config = ConfigParser.ConfigParser()
 		internal_config.read("lib/gsmatch.ini")
 		position = internal_config.get("MAIN", "position").split(",")
@@ -237,28 +242,27 @@ class Launcher(wx.Frame):
 		if not any(x > y for x, y in zip(position, wx.GetDisplaySize())):
 			self.Move(*position)
 		
-		
 		# Thread Setup
 		# self.Bind(EVT_QUEUE, self.OnQueueDone)
 		self.status_buffer = []
 		self.worker = StatusThread(self, 1)
 		self.worker.start()
 		
-		myEVT_STATUS2.set_receiver(self)
-		myEVT_STATUS2.Bind(self.OnStatus)
+		myEVT_STATUS.set_receiver(self)
+		myEVT_STATUS.Bind(self.on_status)
 		
-		myEVT_CONVERSION2.set_receiver(self)
-		myEVT_CONVERSION2.Bind(self.OnImportDone)
+		myEVT_CONVERSION.set_receiver(self)
+		myEVT_CONVERSION.Bind(self.on_import_done)
 		
-		self.Bind(EVT_CONVERSION_LOG, self.OnImportLog)
+		self.Bind(EVT_CONVERSION_LOG, self.on_import_log)
 		
 		myEVT_PROJECT.set_receiver(self)
-		myEVT_PROJECT.Bind(self.OnProjectDone)
+		myEVT_PROJECT.Bind(self.on_project_done)
 		
-		self.Bind(EVT_PROJECT_LOG, self.OnProjectLog)
+		self.Bind(EVT_PROJECT_LOG, self.on_project_log)
 		
-		myEVT_COMPARISON2.set_receiver(self)
-		myEVT_COMPARISON2.Bind(self.OnComparisonDone)
+		myEVT_COMPARISON.set_receiver(self)
+		myEVT_COMPARISON.Bind(self.on_comparison_done)
 		
 		self.flask = Process(target=run_flask)
 		self.flask.start()
@@ -399,7 +403,7 @@ class Launcher(wx.Frame):
 		import_picker_label = wx.StaticText(self.import_picker_panel, wx.ID_ANY, ".RAW Files to Import")
 		import_picker_sizer.Add(import_picker_label, 0, wx.BOTTOM, 18)
 		import_picker_sizer.Add(self.check_list_box_1, 1, wx.BOTTOM | wx.EXPAND, 7)
-		import_picker_sizer.Add(self.import_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
+		import_picker_sizer.Add(self.import_btn, 0, wx.ALIGN_RIGHT | wx.RIGHT, 9)
 		self.import_picker_panel.SetSizer(import_picker_sizer)
 		import_tab_sizer.Add(self.import_picker_panel, 4, wx.ALL | wx.EXPAND, 10)
 		import_log_label = wx.StaticText(self.import_log_panel, wx.ID_ANY, "Log:")
@@ -411,7 +415,7 @@ class Launcher(wx.Frame):
 		new_project_picker_label = wx.StaticText(self.new_project_picker_panel, wx.ID_ANY, "Samples to Process: ")
 		new_project_picker_sizer.Add(new_project_picker_label, 0, wx.BOTTOM, 18)
 		new_project_picker_sizer.Add(self.check_list_box_2, 1, wx.BOTTOM | wx.EXPAND, 7)
-		new_project_picker_sizer.Add(self.new_project_delete_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
+		new_project_picker_sizer.Add(self.new_project_delete_btn, 0, wx.ALIGN_RIGHT | wx.RIGHT, 9)
 		self.new_project_picker_panel.SetSizer(new_project_picker_sizer)
 		project_settings_sizer.Add(self.new_project_picker_panel, 5, wx.ALL | wx.EXPAND, 10)
 		bb_top_text = wx.StaticText(self.new_project_settings_panel, wx.ID_ANY, "Settings for Biller and Biemann Peak Detection")
@@ -526,12 +530,12 @@ class Launcher(wx.Frame):
 		new_project_settings_grid_sizer.Add(new_project_steps_sizer, 1, wx.EXPAND, 0)
 		new_project_v_line_8 = wx.StaticLine(self.new_project_settings_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
 		new_project_settings_grid_sizer.Add(new_project_v_line_8, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 2)
-		project_settings_button_sizer.Add(self.import_apply_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
-		project_settings_button_sizer.Add(self.default, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
-		project_settings_button_sizer.Add(self.reset, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
+		project_settings_button_sizer.Add(self.import_apply_btn, 0, wx.ALIGN_BOTTOM | wx.RIGHT, 9)
+		project_settings_button_sizer.Add(self.default, 0, wx.ALIGN_BOTTOM | wx.RIGHT, 9)
+		project_settings_button_sizer.Add(self.reset, 0, wx.ALIGN_BOTTOM | wx.RIGHT, 9)
 		new_project_button_sizer.Add(project_settings_button_sizer, 1, wx.ALIGN_RIGHT, 20)
-		project_settings_run_sizer.Add(self.queue_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT | wx.TOP, 9)
-		project_settings_run_sizer.Add(self.run_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT | wx.TOP, 9)
+		project_settings_run_sizer.Add(self.queue_btn, 0, wx.ALIGN_BOTTOM | wx.RIGHT | wx.TOP, 9)
+		project_settings_run_sizer.Add(self.run_btn, 0, wx.ALIGN_BOTTOM | wx.RIGHT | wx.TOP, 9)
 		new_project_button_sizer.Add(project_settings_run_sizer, 1, wx.ALIGN_RIGHT, 0)
 		new_project_settings_grid_sizer.Add(new_project_button_sizer, 1, wx.EXPAND, 0)
 		new_project_settings_v_sizer.Add(new_project_settings_grid_sizer, 1, wx.EXPAND, 0)
@@ -541,21 +545,21 @@ class Launcher(wx.Frame):
 		project_settings_sizer.Add(self.new_project_settings_panel, 5, wx.ALL | wx.EXPAND, 10)
 		self.new_project_settings.SetSizer(project_settings_sizer)
 		project_queue_label = wx.StaticText(self.project_queue_panel, wx.ID_ANY, "Queue:")
-		project_queue_sizer.Add(project_queue_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 5)
+		project_queue_sizer.Add(project_queue_label, 0, wx.EXPAND, 5)
 		project_queue_sizer.Add(self.project_queue_grid, 14, wx.BOTTOM | wx.EXPAND | wx.TOP, 4)
 		project_queue_btn_sizer.Add(self.project_queue_clear_btn, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 		project_queue_btn_sizer.Add(self.project_queue_delete_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
 		project_queue_btn_sizer.Add(self.project_queue_save_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 50)
 		project_queue_btn_sizer.Add(self.project_queue_load_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
-		project_queue_btn_sizer.Add(self.project_queue_run_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.LEFT, 50)
-		project_queue_sizer.Add(project_queue_btn_sizer, 1, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT, 0)
+		project_queue_btn_sizer.Add(self.project_queue_run_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 50)
+		project_queue_sizer.Add(project_queue_btn_sizer, 1, wx.ALIGN_RIGHT, 0)
 		self.project_queue_panel.SetSizer(project_queue_sizer)
 		project_queue_tab_sizer.Add(self.project_queue_panel, 1, wx.ALL | wx.EXPAND, 10)
 		self.new_project_queue.SetSizer(project_queue_tab_sizer)
 		project_log_label = wx.StaticText(self.project_log_panel, wx.ID_ANY, "Log:")
-		project_log_sizer.Add(project_log_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 5)
+		project_log_sizer.Add(project_log_label, 0, wx.EXPAND, 5)
 		project_log_sizer.Add(self.project_log_text_control, 4, wx.EXPAND | wx.TOP, 5)
-		project_log_sizer.Add(self.project_log_save_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT, 0)
+		project_log_sizer.Add(self.project_log_save_btn, 0, wx.ALIGN_RIGHT, 0)
 		self.project_log_panel.SetSizer(project_log_sizer)
 		project_log_tab_sizer.Add(self.project_log_panel, 1, wx.ALL | wx.EXPAND, 10)
 		self.new_project_log.SetSizer(project_log_tab_sizer)
@@ -564,7 +568,7 @@ class Launcher(wx.Frame):
 		self.new_project_notebook.AddPage(self.new_project_log, "Log")
 		new_project_tab_sizer.Add(self.new_project_notebook, 1, wx.EXPAND, 0)
 		self.New_Project.SetSizer(new_project_tab_sizer)
-		browse_project_tab_sizer.Add(self.browse_tab, 1, wx.EXPAND, 0)
+		browse_project_tab_sizer.Add(self.browse_tab, 2, wx.EXPAND, 0)
 		browse_project_tab_sizer.Add((0, 0), 0, 0, 0)
 		browse_project_tab_sizer.Add((0, 0), 0, 0, 0)
 		browse_project_tab_sizer.Add((0, 0), 0, 0, 0)
@@ -585,7 +589,7 @@ class Launcher(wx.Frame):
 		self.Layout()
 		# end wxGlade
 		
-		# Following code by Ray Pasco (c) 2005
+		# Following code by Ray Pasco © 2005
 		# http://wxpython-users.1045709.n5.nabble.com/Gauge-in-Statusbar-td2321906.html
 		# sbarfield = 1  # put progressbar (gauge) in this statusbar field
 		# self.maxcount = 1000  # arbitrary full-scale count
@@ -596,20 +600,36 @@ class Launcher(wx.Frame):
 		self.Bind(wx.EVT_CLOSE, self.on_close)
 	
 	def size_change(self, event):
-		# code to run whenever window resized
-		if type(event) == wx._core.SizeEvent:
+		"""
+		Handler for size change events; runs whenever the window is resized
+		
+		:param event:
+		:type event:
+		"""
+		
+		if isinstance(event, wx.SizeEvent):
 			event.Skip()
 	
 	def refresh_launcher(self, event):
-		self.launcher_tab.refresh_launcher()
+		"""
+		Redraw all elements on the launcher tab
+		
+		:param event:
+		:type event:
+		"""
+		
+		self.launcher_tab.refresh_launcher(event)
 	
 	def notebook_1_handler(self, event):  # wxGlade: Launcher.<event_handler>
 		# New Project Disable
 		if event.GetSelection() == 3 and self.browse_tab.current_project_name is None:
-			selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
-										   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-										   #defaultDir=self.Config.get("main", "resultspath"))
-										   defaultDir=self.Config.RESULTS_DIRECTORY)
+			selected_project = file_dialog(
+				self, "info", "Choose a Project to Open", "info files",
+				style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+				# defaultDir=self.Config.get("main", "resultspath"))
+				defaultDir=self.Config.results_dir
+			)
+			
 			if selected_project is None:
 				event.Veto()
 			else:
@@ -617,40 +637,48 @@ class Launcher(wx.Frame):
 	
 	# Double click on New Project
 	# elif event.GetSelection() == 2 and event.GetOldSelection() == 2:
-	#	self.new_project_notebook.SetSelection(0)
+	# 	self.new_project_notebook.SetSelection(0)
 	
 	# Double click on Browse Project
 	# elif event.GetSelection() == 3 and event.GetOldSelection() == 3:
-	#	self.browse_project_notebook.SetSelection(0)
+	# 	self.browse_project_notebook.SetSelection(0)
 
 	def notebook_1_handler_win32(self, event):
 		# Special case for Windows
 		old_selection = event.GetOldSelection()
 		if self.notebook_1.GetSelection() == 3:
-			selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
-										   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-										   #defaultDir=self.Config.get("main", "resultspath"))
-										   defaultDir=self.Config.RESULTS_DIRECTORY)
+			selected_project = file_dialog(
+				self,"info", "Choose a Project to Open", "info files",
+				style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+				# defaultDir=self.Config.get("main", "resultspath"))
+				defaultDir=self.Config.results_dir
+			)
+			
 			if selected_project is None:
 				self.notebook_1.SetSelection(old_selection)
 			else:
 				self.browse_tab.setup_project_browser(selected_project)
 
-
-	"""Menu Options"""
+	# Menu Options
 	
 	def on_menu_paths(self, event):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for "Menu" > "Paths" menu entry
+		:param event:
+		:type event:
+		"""
+		
 		paths_dlg = paths_dialog.paths_dialog(self)
 		paths_dlg.Layout()
 		if paths_dlg.ShowModal() == wx.ID_OK:
 			self.Config.nist_path = relpath(paths_dlg.nistpath.GetValue())
-			self.Config.RESULTS_DIRECTORY = relpath(paths_dlg.resultspath.GetValue())
-			self.Config.RAW_DIRECTORY = relpath(paths_dlg.rawpath.GetValue())
-			self.Config.CSV_DIRECTORY = relpath(paths_dlg.csvpath.GetValue())
-			self.Config.SPECTRA_DIRECTORY = relpath(paths_dlg.spectrapath.GetValue())
-			self.Config.CHARTS_DIRECTORY = relpath(paths_dlg.charts_path.GetValue())
-			self.Config.MSP_DIRECTORY = relpath(paths_dlg.msppath.GetValue())
-			self.Config.EXPERIMENTS_DIRECTORY = relpath(paths_dlg.expr_path.GetValue())
+			self.Config.results_dir = relpath(paths_dlg.resultspath.GetValue())
+			self.Config.raw_dir = relpath(paths_dlg.rawpath.GetValue())
+			self.Config.csv_dir = relpath(paths_dlg.csvpath.GetValue())
+			self.Config.spectra_dir = relpath(paths_dlg.spectrapath.GetValue())
+			self.Config.charts_dir = relpath(paths_dlg.charts_path.GetValue())
+			self.Config.msp_dir = relpath(paths_dlg.msppath.GetValue())
+			self.Config.expr_dir = relpath(paths_dlg.expr_path.GetValue())
 			
 			maybe_make(relpath(paths_dlg.msppath.GetValue()))
 			maybe_make(relpath(paths_dlg.resultspath.GetValue()))
@@ -664,50 +692,85 @@ class Launcher(wx.Frame):
 		self.rescan_files()
 		event.Skip()
 	
-	def on_menu_About(self, event):  # wxGlade: Launcher.<event_handler>
+	def on_menu_About(self, _):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for "Menu" > "About" menu entry
+		"""
+		
 		about_dlg = AboutDialog.AboutDialog(self)
 		about_dlg.ShowModal()
+		about_dlg.Destroy()
 	
-	def on_menu_Exit(self, event):  # wxGlade: Launcher.<event_handler>
+	def on_menu_Exit(self, _):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for "Menu" > "Exit" menu entry
+		"""
+		
 		self.Close()
 	
 	def on_menu_chart(self, event):  # wxGlade: Launcher.<event_handler>
-		lookup = {self.menu_radar_id: "radar",
-				  self.menu_bw_id: "box_whisker",
-				  self.menu_mean_pa_id: "mean_peak_area",
-				  self.menu_pa_id:"peak_area",
-				  self.menu_pca_id:"pca"}
+		"""
+		Handler for "ChartViewer" menu
+		
+		:param event:
+		:type event:
+		"""
+		
+		lookup = {
+			self.menu_radar_id: "radar",
+			self.menu_bw_id: "box_whisker",
+			self.menu_mean_pa_id: "mean_peak_area",
+			self.menu_pa_id: "peak_area",
+			self.menu_pca_id: "pca"
+		}
 		
 		self.ChartViewer = ChartViewer.ChartViewer(self, chart_type=lookup[event.GetId()])
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
 		event.Skip()
 		
-	
-	"""Status Bar"""
+	# Status Bar
 	
 	def status(self, message, timeout=3):
+		"""
+		Send a message to the statusbar
+		
+		:param message: Text to display on the statusbar
+		:type message: str
+		:param timeout: Duration to display the text for, in seconds
+		:type timeout: int
+		"""
+		
 		for i in range(timeout):
 			self.status_buffer.append(message)
-		self.OnStatus(0)
+		self.on_status(0)
 	
 	def reset_status(self):
-		self.statusbar.SetStatusText("Status: Ready", 0)
+		"""
+		Reset the status bar message to its rest value
+		"""
+		
+		self.statusbar.SetStatusText(f"Status: {self.rest_message}", 0)
 	
-	rest_message = "Ready"
-	
-	def OnStatus(self, evt):
+	def on_status(self, _):
+		"""
+		Handler for triggering updates to statusbar
+		"""
 		if len(self.status_buffer) > 0:
-			self.statusbar.SetStatusText("Status: {}".format(self.status_buffer.pop(0)), 0)
+			self.statusbar.SetStatusText(f"Status: {self.status_buffer.pop(0)}", 0)
 		else:
-			self.statusbar.SetStatusText("Status: {}".format(self.rest_message), 0)
+			self.reset_status()
 	
 	"""Rescan Functions"""
 	
-	def rescan_files(self, *args):  # wxGlade: Launcher.<event_handler>
-		#raw_dir = os.path.abspath(self.Config.get("main", "rawpath"))
-		raw_dir = os.path.abspath(self.Config.RAW_DIRECTORY)
-		#resultspath = os.path.abspath(self.Config.get("main", "resultspath"))
+	def rescan_files(self, *_):  # wxGlade: Launcher.<event_handler>
+		"""
+		Rescan the .RAW file directory and update the list of files
+		"""
+		
+		# raw_dir = os.path.abspath(self.Config.get("main", "rawpath"))
+		raw_dir = os.path.abspath(self.Config.raw_dir)
+		# resultspath = os.path.abspath(self.Config.get("main", "resultspath"))
 		maybe_make(raw_dir)
 		
 		# List of files in RAW directory for Import
@@ -733,34 +796,14 @@ class Launcher(wx.Frame):
 		for item in self.jcamp_list:
 			self.check_list_box_2.Append(item)
 	
-	# I think this code is unreachable DDF 20/5/19
-	def get_sample_list(self, *args):
-		selections_index = self.check_list_box_1.GetSelections() + list(self.check_list_box_1.GetCheckedItems())
-		selections_index.sort()
+	# Exit Functions
+	
+	def on_close(self, event):
+		"""
+		Handler for closing of Launcher window
+		"""
 		
-		selected = []
-		
-		for choice in self.sample_choices:
-			if self.sample_choices.index(choice) in selections_index:
-				selected.append(choice)
-		selected.sort()
-		self.sample_list = selected
-		return selected
-	
-	"""Open Project Picker"""
-	
-	def on_open_project_picker_clear(self, event):  # wxGlade: Launcher.<event_handler>
-		coming_soon()
-		event.Skip()
-	
-	def on_open_project_picker_open(self, event):  # wxGlade: Launcher.<event_handler>
-		coming_soon()
-		event.Skip()
-	
-	"""Exit Functions"""
-	
-	def on_close(self, event):  # here
-		self.save_config()
+		self.Config.save_config()
 		
 		self.on_save_queue(pathname="lib/queue.csv")
 		
@@ -788,14 +831,19 @@ class Launcher(wx.Frame):
 		
 		if event.CanVeto():
 			if any([conversion_thread_running, project_thread_running]):  # background worker still running
-				wx.MessageBox("A process is still running.\nPlease wait for it to finish.", "Please Wait",
-							  wx.ICON_ERROR | wx.OK)
+				wx.MessageBox(
+					"A process is still running.\nPlease wait for it to finish.",
+					"Please Wait",
+					wx.ICON_ERROR | wx.OK
+				)
 				event.Veto()
 				return
 			
-			if wx.MessageBox("Close GunShotMatch?",
-							 "Please confirm",
-							 wx.ICON_QUESTION | wx.YES_NO) != wx.YES:
+			if wx.MessageBox(
+					"Close GunShotMatch?",
+					"Please confirm",
+					wx.ICON_QUESTION | wx.YES_NO
+			) != wx.YES:
 				event.Veto()
 				return
 		
@@ -804,38 +852,39 @@ class Launcher(wx.Frame):
 		self.flask.terminate()
 		self.flask.join()
 		
-		#try:
-		#	requests.get("http://localhost:5000/shutdown")
-		#	self.flask.join()
-		#except:
-		#	traceback.print_exc()
+		# try:
+		# 	requests.get("http://localhost:5000/shutdown")
+		# 	self.flask.join()
+		# except:
+		# 	traceback.print_exc()
 		
-		
-		self.Destroy()  # you may also do:  event.Skip() since the default event handler does call Destroy(), too
+		# you may also do:  event.Skip() since the default event handler does call Destroy(), too
+		self.Destroy()
 	
-	def save_config(self):
-		#with open("config.ini", "w") as configfile:
-		#	self.Config.write(configfile)
-		self.Config.save_config()
-	
-	def on_exit(self, event):
+	def on_exit(self, _):
 		self.worker._stop()
 	
-
-	"""Import Tab Buttons"""
+	# Import Tab Buttons
 	
-	def do_import(self, event):  # wxGlade: Launcher.<event_handler>
+	def do_import(self, _):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for starting import of .RAW files
+		"""
+		
 		# Check if the thread is already running:
 		if conversion_thread_running:
-			wx.MessageBox("The conversion process is already running.\nPlease wait for it to finish.",
-						  "Please Wait",
-						  wx.ICON_ERROR | wx.OK)
+			wx.MessageBox(
+				"The conversion process is already running.\nPlease wait for it to finish.",
+				"Please Wait",
+				wx.ICON_ERROR | wx.OK
+			)
 			return
 		
 		# Files to import
 		file_list = list(set(
-			list(self.check_list_box_1.GetCheckedStrings()) + [self.check_list_box_1.GetString(item) for item in
-															   self.check_list_box_1.GetSelections()]))
+			list(self.check_list_box_1.GetCheckedStrings()) +
+			[self.check_list_box_1.GetString(item) for item in self.check_list_box_1.GetSelections()]
+		))
 		
 		file_list.sort()
 		
@@ -857,21 +906,32 @@ class Launcher(wx.Frame):
 		self.converter = ConversionThread(self, file_list)
 		self.converter.start()
 	
-	"""Import Tab Logging"""
+	# Import Tab Logging
 	
-	def OnImportDone(self, event):
+	def on_import_done(self, _):
+		"""
+		Handler for completion of import task
+		"""
 		self.rescan_files()
 		self.status("Import Complete", 5)
 	
-	def OnImportLog(self, evt):
-		self.import_log_text_control.AppendText(evt.log_text)
+	def on_import_log(self, event):
+		"""
+		Handler for import log events
+		:param event:
+		:type event:
+		"""
+		self.import_log_text_control.AppendText(event.log_text)
 	
-	# print(evt.log_text.encode("utf-8"))
+	# print(event.log_text.encode("utf-8"))
 	
 	"""New Project > Settings Tab Buttons"""
 	
-	def do_apply(self, *args):  # wxGlade: Launcher.<event_handler>
-		# Save the settings
+	def do_apply(self, *_):  # wxGlade: Launcher.<event_handler>
+		"""
+		Apply the settings for new projects
+		"""
+		
 		self.Config.bb_points = int(self.bb_points_value.GetValue())
 		self.Config.bb_scans = int(self.bb_scans_value.GetValue())
 		self.Config.noise_thresh = int(self.noise_thresh_value.GetValue())
@@ -884,52 +944,26 @@ class Launcher(wx.Frame):
 		self.Config.min_peaks = int(self.alignment_min_peaks_value.GetValue())
 		self.Config.mass_range = str2tuple(self.mass_range_value.GetValue())
 		
-		#self.Config.set("import", "bb_points", bb_points)
-		#self.Config.set("import", "bb_scans", bb_scans)
-		#self.Config.set("import", "noise_thresh", noise_thresh)
-		#self.Config.set("import", "target_range", "{},{}".format(*target_range))
-		#self.Config.set("import", "exclude_ions", base_peak_filter)
-		#self.Config.set("import", "tophat", tophat)
-		#self.Config.set("import", "tophat_unit", tophat_unit)
-		#self.Config.set("import", "mass_range", mass_range)
-		
-		#self.Config.set("alignment", "rt_modulation", rt_modulation)
-		#self.Config.set("alignment", "gap_penalty", gap_penalty)
-		#self.Config.set("alignment", "min_peaks", min_peaks)
-		
-		#self.Config.set("analysis", "do_quantitative", str(self.project_quantitative.GetValue()))
-		#self.Config.set("analysis", "do_qualitative", str(self.project_qualitative.GetValue()))
-		#self.Config.set("analysis", "do_merge", str(self.project_merge.GetValue()))
-		#self.Config.set("analysis", "do_counter", str(self.project_counter.GetValue()))
-		#self.Config.set("analysis", "do_spectra", str(self.project_spectra.GetValue()))
-		#self.Config.set("analysis", "do_charts", str(self.project_charts.GetValue()))
-		
 		self.Config.do_quantitative = self.project_quantitative.GetValue()
 		self.Config.do_qualitative = (self.project_qualitative.GetValue())
-		self.Config.do_merge =  (self.project_merge.GetValue())
+		self.Config.do_merge = (self.project_merge.GetValue())
 		self.Config.do_counter = (self.project_counter.GetValue())
 		self.Config.do_spectra = (self.project_spectra.GetValue())
 		self.Config.do_charts = (self.project_charts.GetValue())
 	
-	def do_reset(self, *args):  # wxGlade: Launcher.<event_handler>
+	def do_reset(self, *_):  # wxGlade: Launcher.<event_handler>
+		"""
+		Revert changes made to the settings for new projects to the last saved version
+		"""
 		# Read import settings
-		#self.bb_points_value.SetValue(self.Config.get("import", "bb_points"))
-		#self.bb_scans_value.SetValue(self.Config.get("import", "bb_scans"))
-		#self.noise_thresh_value.SetValue(self.Config.get("import", "noise_thresh"))
 		self.bb_points_value.SetValue(self.Config.bb_points)
 		self.bb_scans_value.SetValue(self.Config.bb_scans)
 		self.noise_thresh_value.SetValue(self.Config.noise_thresh)
-		#target_range = self.Config.get("import", "target_range").split(",")
 		target_range = self.Config.target_range
-		#self.target_range_min_value.SetValue(target_range[0]).strip())
-		#self.target_range_max_value.SetValue(target_range[1]).strip())
 		self.target_range_min_value.SetValue(str(target_range[0]))
 		self.target_range_max_value.SetValue(str(target_range[1]))
-		#self.base_peak_filter_value.SetValue(self.Config.get("import", "exclude_ions"))
-		#self.tophat_struct_value.SetValue(self.Config.get("import", "tophat"))
 		self.base_peak_filter_value.SetValue(list2str(self.Config.base_peak_filter))
 		self.tophat_struct_value.SetValue(self.Config.tophat)
-		#tophat_unit = self.Config.get("import", "tophat_unit")
 		tophat_unit = self.Config.tophat_unit
 		if tophat_unit == "m":
 			tophat_unit = 0
@@ -938,19 +972,7 @@ class Launcher(wx.Frame):
 		elif tophat_unit == "ms":
 			tophat_unit = 2
 		self.tophat_struct_units.SetSelection(tophat_unit)
-		#self.mass_range_value.SetValue(self.Config.get("import", "mass_range"))
-		
-		#self.alignment_Dw_value.SetValue(self.Config.get("alignment", "rt_modulation"))
-		#self.alignment_Gw_value.SetValue(self.Config.get("alignment", "gap_penalty"))
-		#self.alignment_min_peaks_value.SetValue(self.Config.get("alignment", "min_peaks"))
-		
-		#self.project_quantitative.SetValue(self.Config.getboolean("analysis", "do_quantitative"))
-		#self.project_qualitative.SetValue(self.Config.getboolean("analysis", "do_qualitative"))
-		#self.project_merge.SetValue(self.Config.getboolean("analysis", "do_merge"))
-		#self.project_counter.SetValue(self.Config.getboolean("analysis", "do_counter"))
-		#self.project_spectra.SetValue(self.Config.getboolean("analysis", "do_spectra"))
-		#self.project_charts.SetValue(self.Config.getboolean("analysis", "do_charts"))
-		
+
 		self.mass_range_value.SetValue(f"{self.Config.mass_range[0]},{self.Config.mass_range[1]}")
 		
 		self.alignment_Dw_value.SetValue(str(self.Config.rt_modulation))
@@ -964,8 +986,11 @@ class Launcher(wx.Frame):
 		self.project_spectra.SetValue(self.Config.do_spectra)
 		self.project_charts.SetValue(self.Config.do_charts)
 	
-	def do_default(self, *args):  # wxGlade: Launcher.<event_handler>
-		# Reset to default Settings
+	def do_default(self, *_):  # wxGlade: Launcher.<event_handler>
+		"""
+		Reset the settings for new projects to default values
+		"""
+		
 		Config = ConfigParser.ConfigParser()
 		Config.read("lib/default.ini")
 		self.bb_points_value.SetValue(Config.get("import", "bb_points"))
@@ -976,7 +1001,7 @@ class Launcher(wx.Frame):
 		self.target_range_max_value.SetValue(target_range[1].strip())
 		self.base_peak_filter_value.SetValue(Config.get("import", "exclude_ions"))
 		self.tophat_struct_value.SetValue(Config.get("import", "tophat"))
-		tophat_unit = self.Config.get("import", "tophat_unit")
+		tophat_unit = Config.get("import", "tophat_unit")
 		if tophat_unit == "m":
 			tophat_unit = 0
 		elif tophat_unit == "s":
@@ -998,37 +1023,29 @@ class Launcher(wx.Frame):
 		self.project_charts.SetValue(Config.getboolean("analysis", "do_charts"))
 	
 	def do_enqueue(self, event):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for adding item to queue
+		
+		:param event:
+		:type event:
+		"""
 		# self.do_apply()
 		# self.save_config()
 		
 		# Files to process
-		sample_list = list(set(
-			list(self.check_list_box_2.GetCheckedStrings()) + [self.check_list_box_2.GetString(item) for item in
-															   self.check_list_box_2.GetSelections()]))
-		sample_list.sort()
+		sample_list = self.parse_sample_list()
 		
 		if len(sample_list) < 2:
 			wx.MessageBox("Please choose two or more samples!", "Error", wx.ICON_ERROR | wx.OK)
 			return
 		
-		pretty_name = self.pretty_name_value.GetValue()
-		if pretty_name == '':
-			pretty_name = re.sub(r'\d+', '', str(os.path.splitext(sample_list[0])[0].rstrip("\n\r "))).replace("__",
-																											   "_")
-		else:
-			self.pretty_name_list[pretty_name] = ''
-			# self.pretty_name_value.Clear()
-			# for name in self.pretty_name_list:
-			#	self.pretty_name_value.Append(name)
-			self.pretty_name_value.AutoComplete([name for name in self.pretty_name_list])
-			self.on_pretty_name_clear()
-		print(pretty_name)
+		pretty_name = self.parse_pretty_name(sample_list)
 		
-		## Add sample_list to config file
+		# Add sample_list to config file
 		# self.Config.set("samples", "samples", ",".join(sample_list))
 		
 		# with open(f"configs/{pretty_name}.ini","w") as configfile:
-		#	self.Config.write(configfile)
+		# 	self.Config.write(configfile)
 		
 		# Clear Selections
 		for index in self.check_list_box_2.GetSelections():
@@ -1038,52 +1055,134 @@ class Launcher(wx.Frame):
 		# self.check_list_box_2.Select(0)
 		
 		self.project_queue_grid.AppendRows()
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 0, "Ready")
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 1, ",".join(sample_list))
-		# self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 2, f"configs/{pretty_name}.ini")
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 2, pretty_name)
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 3,
-											 str(self.bb_points_value.GetValue()))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 4,
-											 str(self.bb_scans_value.GetValue()))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 5,
-											 str(self.noise_thresh_value.GetValue()))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 6, ",".join(
-			(self.target_range_min_value.GetValue(), self.target_range_max_value.GetValue())))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 7,
-											 self.base_peak_filter_value.GetValue())
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 8,
-											 self.tophat_struct_value.GetValue())
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 9,
-											 ["m", "s", "ms"][self.tophat_struct_units.GetSelection()])
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 10,
-											 self.mass_range_value.GetValue())
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 11,
-											 self.alignment_Dw_value.GetValue())
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 12,
-											 self.alignment_Gw_value.GetValue())
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 13,
-											 self.alignment_min_peaks_value.GetValue())
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 14,
-											 str(self.project_quantitative.GetValue()))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 15,
-											 str(self.project_qualitative.GetValue()))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 16,
-											 str(self.project_merge.GetValue()))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 17,
-											 str(self.project_counter.GetValue()))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 18,
-											 str(self.project_spectra.GetValue()))
-		self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1, 19,
-											 str(self.project_charts.GetValue()))
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			0,
+			"Ready"
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			1,
+			",".join(sample_list)
+		)
+		# self.project_queue_grid.SetCellValue(
+		# 	self.project_queue_grid.GetNumberRows() - 1,
+		# 	2,
+		# 	f"configs/{pretty_name}.ini"
+		# )
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			2,
+			pretty_name
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			3,
+			str(self.bb_points_value.GetValue())
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			4,
+			str(self.bb_scans_value.GetValue())
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			5,
+			str(self.noise_thresh_value.GetValue())
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			6,
+			",".join((
+				self.target_range_min_value.GetValue(),
+				self.target_range_max_value.GetValue()
+			))
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			7,
+			self.base_peak_filter_value.GetValue()
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			8,
+			self.tophat_struct_value.GetValue()
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			9,
+			["m", "s", "ms"][self.tophat_struct_units.GetSelection()]
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			10,
+			self.mass_range_value.GetValue()
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			11,
+			self.alignment_Dw_value.GetValue()
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			12,
+			self.alignment_Gw_value.GetValue()
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			13,
+			self.alignment_min_peaks_value.GetValue()
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			14,
+			str(self.project_quantitative.GetValue())
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			15,
+			str(self.project_qualitative.GetValue())
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			16,
+			str(self.project_merge.GetValue())
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			17,
+			str(self.project_counter.GetValue())
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			18,
+			str(self.project_spectra.GetValue())
+		)
+		self.project_queue_grid.SetCellValue(
+			self.project_queue_grid.GetNumberRows() - 1,
+			19,
+			str(self.project_charts.GetValue())
+		)
 		
 		event.Skip()
 	
-	def do_new_project(self, *args):  # wxGlade: Launcher.<event_handler>
+	def do_new_project(self, *_):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for starting creation of new project
+		
+		:param _:
+		:type _:
+		:return:
+		:rtype:
+		"""
 		# Check if the thread is already running:
 		if project_thread_running:
-			wx.MessageBox("The project process is already running.\nPlease wait for it to finish.", "Please Wait",
-						  wx.ICON_ERROR | wx.OK)
+			wx.MessageBox(
+				"""The project process is already running.
+Please wait for it to finish.""",
+				"Please Wait",
+				wx.ICON_ERROR | wx.OK
+			)
 			return
 		
 		# Clear log
@@ -1092,14 +1191,10 @@ class Launcher(wx.Frame):
 		self.save_config()
 		
 		# Files to process
-		sample_list = list(set(
-			list(self.check_list_box_2.GetCheckedStrings()) + [self.check_list_box_2.GetString(item) for item in
-															   self.check_list_box_2.GetSelections()]))
-		sample_list.sort()
+		sample_list = self.parse_sample_list()
 		
 		if len(sample_list) < 2:
 			wx.MessageBox("Please choose two or more samples!", "Error", wx.ICON_ERROR | wx.OK)
-			# self.status("Please choose two or more samples!")
 			return
 		
 		self.new_project_notebook.ChangeSelection(2)
@@ -1108,18 +1203,7 @@ class Launcher(wx.Frame):
 		self.project_log_text_control.AppendText(", ".join(sample_list))
 		self.project_log_text_control.AppendText("\n\n")
 		
-		pretty_name = self.pretty_name_value.GetValue()
-		if pretty_name == '':
-			pretty_name = re.sub(r'\d+', '', str(os.path.splitext(sample_list[0])[0].rstrip("\n\r "))).replace("__",
-																											   "_")
-		else:
-			self.pretty_name_list[pretty_name] = ''
-			# self.pretty_name_value.Clear()
-			# for name in self.pretty_name_list:
-			#	self.pretty_name_value.Append(name)
-			self.pretty_name_value.AutoComplete([name for name in self.pretty_name_list])
-			self.on_pretty_name_clear()
-		print(pretty_name)
+		pretty_name = self.parse_pretty_name(sample_list)
 		
 		# Clear Selections
 		for index in self.check_list_box_2.GetSelections():
@@ -1133,7 +1217,42 @@ class Launcher(wx.Frame):
 		self.project = ProjectThread(self, sample_list, pretty_name, self.Config)
 		self.project.start()
 	
-	def on_pretty_name_clear(self, *args):  # wxGlade: Launcher.<event_handler>
+	def parse_sample_list(self):
+		sample_list = list(set(
+			list(self.check_list_box_2.GetCheckedStrings()) +
+			[self.check_list_box_2.GetString(item) for item in self.check_list_box_2.GetSelections()]
+		))
+		
+		sample_list.sort()
+		
+		return sample_list
+	
+	def parse_pretty_name(self, sample_list):
+		"""
+		Determine the pretty name for a set of samples and perform associated tasks
+		
+		:param sample_list:
+		:type sample_list:
+		
+		:return: pretty name
+		:rtype: str
+		"""
+		pretty_name = self.pretty_name_value.GetValue()
+		if pretty_name == '':
+			pretty_name = re.sub(r'\d+', '', str(os.path.splitext(sample_list[0])[0].rstrip("\n\r "))).replace("__",
+																											   "_")
+		else:
+			self.pretty_name_list[pretty_name] = ''
+			# self.pretty_name_value.Clear()
+			# for name in self.pretty_name_list:
+			# 	self.pretty_name_value.Append(name)
+			self.pretty_name_value.AutoComplete([name for name in self.pretty_name_list])
+			self.on_pretty_name_clear()
+		print(pretty_name)
+		return pretty_name
+	
+	
+	def on_pretty_name_clear(self, *_):  # wxGlade: Launcher.<event_handler>
 		self.pretty_name_value.SetValue('')
 		self.pretty_name_value.SetFocus()
 	
@@ -1150,6 +1269,14 @@ class Launcher(wx.Frame):
 		event.Skip()
 	
 	def on_save_queue(self, event=None, pathname=None):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for saving new project queue to CSV file
+		:param event:
+		:type event:
+		:param pathname:
+		:type pathname:
+		"""
+		
 		if not pathname:
 			pathname = file_dialog(self, "csv", "Save Queue", "csv files")
 		
@@ -1162,11 +1289,19 @@ class Launcher(wx.Frame):
 					
 					file.write("\n")
 		except IOError:
-			wx.LogError("Cannot save current data in file '%s'." % pathname)
+			wx.LogError("Cannot save current data in file '{pathname}'")
 	
 	def on_load_queue(self, event=None, pathname=None):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for loading new project queue from CSV file
+		:param event:
+		:type event:
+		:param pathname:
+		:type pathname:
+		"""
+		
 		if not pathname:
-			pathname = file_dialog(self, "csv", "Save Queue", "csv files", style=wx.FD_OPEN)
+			pathname = file_dialog(self, "csv", "Load Queue", "csv files", style=wx.FD_OPEN)
 		
 		try:
 			with open(pathname, 'r') as file:
@@ -1175,87 +1310,115 @@ class Launcher(wx.Frame):
 					self.project_queue_grid.AppendRows()
 					for col_idx, cell in enumerate(row):
 						if cell != '':
-							self.project_queue_grid.SetCellValue(self.project_queue_grid.GetNumberRows() - 1,
-																 col_idx,
-																 cell)
-		
+							self.project_queue_grid.SetCellValue(
+								self.project_queue_grid.GetNumberRows() - 1,
+								col_idx,
+								cell
+							)
 		
 		except IOError:
-			wx.LogError("Cannot open the file '%s'." % pathname)
+			wx.LogError(f"Cannot open the file '{pathname}'")
 	
 	def on_project_queue_run(self, event):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for starting new project queue
+		
+		:param event:
+		:type event:
+		"""
 		
 		self.queue = QueueThread(self)
 		self.queue.start()
 		
 		event.Skip()
 	
-	"""New Project > Log Tab"""
+	# New Project > Log Tab
 	
 	def on_project_log_save(self, event):  # wxGlade: Launcher.<event_handler>
+		"""
+		Handler for saving content of new project log window
+		
+		:param event:
+		:type event:
+		"""
 		pathname = file_dialog(self, "log", "Save log file", "log files")
 		
 		try:
 			with open(pathname, 'w') as file:
 				file.write(self.project_log_text_control.GetValue())
 		except IOError:
-			wx.LogError("Cannot save current data in file '%s'." % pathname)
+			wx.LogError(f"Cannot save current data in file '{pathname}'")
 			
 			event.Skip()
 	
-	def OnProjectDone(self, event):
+	def on_project_done(self, _):
+		"""
+		Handler for completion of new project creation
+		"""
 		self.status("Project Created", 5)
 	
-	def OnProjectLog(self, evt):
-		# print(evt.log_text.replace("\r\033[K",""))
-		self.project_log_text_control.AppendText(evt.log_text.replace("\r\033[K", ""))
+	def on_project_log(self, event):
+		"""
+		Handler for log events during creation of project
+		
+		:param event:
+		:type event:
+		"""
+		# print(event.log_text.replace("\r\033[K",""))
+		# print(event.log_text.encode("utf-8"))
+		self.project_log_text_control.AppendText(event.log_text.replace("\r\033[K", ""))
 	
-	# print(evt.log_text.encode("utf-8"))
-	
-	def OnComparisonDone(self, event):
+	def on_comparison_done(self, _):
+		"""
+		Handler for completion of comparison task
+		"""
 		self.status("Comparison Complete", 5)
 
-	def Data_Viewer_Ready(self, *args):
-		if self.dv_html.GetCurrentURL() != self.dv_url:
-			self.dv_html.LoadURL(self.dv_url)
-		
 	def do_delete(self, event):  # wxGlade: Launcher.<event_handler>
-		dlg = wx.MessageDialog(self, "Are you sure want to delete this sample?\nThis cannot be undone!", caption="Confirm Deletion",
-					  style=wx.YES_NO | wx.NO_DEFAULT | wx.CENTRE | wx.ICON_EXCLAMATION, pos=wx.DefaultPosition)
-		dlg.SetYesNoLabels("Confirm",wx.ID_CANCEL)
+		"""
+		Handler for deleting data file
+		
+		:param event:
+		:type event:
+		"""
+		
+		dlg = wx.MessageDialog(
+			self,
+			"""Are you sure want to delete this sample?
+This cannot be undone!""",
+			caption="Confirm Deletion",
+			style=wx.YES_NO | wx.NO_DEFAULT | wx.CENTRE | wx.ICON_EXCLAMATION,
+			pos=wx.DefaultPosition
+		)
+		
+		dlg.SetYesNoLabels("Confirm", wx.ID_CANCEL)
 		res = dlg.ShowModal()
 		if res == wx.ID_YES:
 			print("The file should now be deleted")
 		event.Skip()
 
-
 # end of class Launcher
 
 
-
-"""# Load Chart Data
-self.comparison_chart_data = pandas.concat(
-	[self.chart_data,
-	 pandas.read_csv(f"Results/CSV/{self.comparison_project}_CHART_DATA.csv", sep=";",
-					 index_col=0)
-	 ], axis=1, sort=False)
-
-with open(selected_project, "r") as f:
-	self.comparison_prefixList = [x.rstrip("\r\n") for x in f.readlines()]
-
-self.comparison_chart_data.drop("Compound Names", axis=1, inplace=True)
-self.comparison_chart_data['Compound Names'] = self.comparison_chart_data.index
-
-# determine order of compounds on graph
-for compound in self.comparison_chart_data.index.values:
-	self.comparison_chart_data["Count"] = self.comparison_chart_data.apply(df_count, args=(
-		[f"{sample} Peak Area" for sample in [self.current_project_name, self.comparison_project]],),
-																		   axis=1)
-
-self.comparison_chart_data['Compound Names'] = self.comparison_chart_data.index
-self.comparison_chart_data = self.comparison_chart_data.sort_values(['Count', 'Compound Names'])
-self.comparison_chart_data.fillna(0, inplace=True)"""
-
-
-
-
+# # Load Chart Data
+# self.comparison_chart_data = pandas.concat(
+# 	[self.chart_data,
+# 	 pandas.read_csv(f"Results/CSV/{self.comparison_project}_CHART_DATA.csv", sep=";",
+# 					 index_col=0)
+# 	 ], axis=1, sort=False)
+#
+# with open(selected_project, "r") as f:
+# 	self.comparison_prefixList = [x.rstrip("\r\n") for x in f.readlines()]
+#
+# self.comparison_chart_data.drop("Compound Names", axis=1, inplace=True)
+# self.comparison_chart_data['Compound Names'] = self.comparison_chart_data.index
+#
+# # determine order of compounds on graph
+# for compound in self.comparison_chart_data.index.values:
+# 	self.comparison_chart_data["Count"] = self.comparison_chart_data.apply(df_count, args=(
+# 		[f"{sample} Peak Area" for sample in [self.current_project_name, self.comparison_project]],),
+# 																		   axis=1)
+#
+# self.comparison_chart_data['Compound Names'] = self.comparison_chart_data.index
+# self.comparison_chart_data = self.comparison_chart_data.sort_values(['Count', 'Compound Names'])
+# self.comparison_chart_data.fillna(0, inplace=True)

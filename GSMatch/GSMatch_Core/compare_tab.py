@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -25,19 +25,18 @@
 #
 
 # stdlib
-import configparser as ConfigParser
+import configparser
 
 # 3rd party
 import wx
 import wx.html2
 
-from domdf_wxpython_tools.dialogs import file_dialog
-from domdf_wxpython_tools.icons import get_toolbar_icon
-from domdf_wxpython_tools.LogCtrl import Log
+from domdf_wxpython_tools import file_dialog
+from domdf_wxpython_tools import get_toolbar_icon
+from domdf_wxpython_tools import LogCtrl as Log
 
 # this package
-from GSMatch.GSMatch_Core import ChartViewer
-from GSMatch.GSMatch_Core import pretty_name_from_info
+from GSMatch.GSMatch_Core import ChartViewer, pretty_name_from_info
 from GSMatch.GSMatch_Core.threads import ComparisonThread, EVT_COMPARISON_LOG
 
 
@@ -50,6 +49,23 @@ from GSMatch.GSMatch_Core.threads import ComparisonThread, EVT_COMPARISON_LOG
 
 class compare_tab(wx.Panel):
 	def __init__(self, parent, *args, **kwds):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
+		
 		self._parent = parent
 		# begin wxGlade: compare_tab.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.TAB_TRAVERSAL
@@ -94,8 +110,7 @@ class compare_tab(wx.Panel):
 		self.Bind(wx.EVT_BUTTON, self.comparison_show_mean_peak_area, self.comparison_mean_pa_button)
 		self.Bind(wx.EVT_BUTTON, self.comparison_show_pca, self.comparison_pca_btn)
 		
-		#self.Bind(EVT_COMPARISON, self.OnComparisonDone)
-		self.Bind(EVT_COMPARISON_LOG, self.OnComparisonLog)
+		self.Bind(EVT_COMPARISON_LOG, self.on_comparison_log)
 		#self.comparison_log_text_control.Bind(wx.EVT_KEY_DOWN, self.onKeyPress)
 
 		self.comparison_right_project = None
@@ -193,9 +208,9 @@ class compare_tab(wx.Panel):
 		comparison_settings_sizer.Add(self.significance_level_value, 0, 0, 0)
 		comparison_line_4 = wx.StaticLine(self.comparison_panel, wx.ID_ANY)
 		comparison_settings_sizer.Add(comparison_line_4, 0, wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
-		comparison_settings_button_sizer.Add(self.comparison_apply_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
-		comparison_settings_button_sizer.Add(self.comparison_default_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
-		comparison_settings_button_sizer.Add(self.comparison_reset_btn, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.RIGHT, 9)
+		comparison_settings_button_sizer.Add(self.comparison_apply_btn, 0, wx.ALIGN_BOTTOM | wx.RIGHT, 9)
+		comparison_settings_button_sizer.Add(self.comparison_default_btn, 0, wx.ALIGN_BOTTOM | wx.RIGHT, 9)
+		comparison_settings_button_sizer.Add(self.comparison_reset_btn, 0, wx.ALIGN_BOTTOM | wx.RIGHT, 9)
 		comparison_settings_sizer.Add(comparison_settings_button_sizer, 1, wx.ALIGN_RIGHT, 20)
 		comparison_settings_grid.Add(comparison_settings_sizer, 1, wx.EXPAND, 0)
 		static_line_8 = wx.StaticLine(self.comparison_panel, wx.ID_ANY, style=wx.LI_VERTICAL)
@@ -226,14 +241,18 @@ class compare_tab(wx.Panel):
 		self.Layout()
 		# end wxGlade
 
-	
-	def on_left_comparison_browse(self, event):  # wxGlade: compare_tab.<event_handler>
+	def comparison_browse_dialog(self):
 		selected_project = file_dialog(
 			self, "info", "Choose a Project to Open", "info files",
 			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
 			# defaultDir=self.Config.get("main", "resultspath"))
-			defaultDir=self._parent.Config.RESULTS_DIRECTORY
+			defaultDir=self._parent.Config.results_dir
 		)
+		
+		return selected_project
+
+	def on_left_comparison_browse(self, _):  # wxGlade: compare_tab.<event_handler>
+		selected_project = self.comparison_browse_dialog
 		
 		if selected_project is None:
 			return
@@ -255,13 +274,8 @@ Please choose a different project.""",
 		
 		self.comparison_check_enable()
 	
-	def on_right_comparison_browse(self, event):  # wxGlade: compare_tab.<event_handler>
-		selected_project = file_dialog(
-			self, "info", "Choose a Project to Open", "info files",
-			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
-			# defaultDir=self.Config.get("main", "resultspath"))
-			defaultDir=self._parent.Config.RESULTS_DIRECTORY
-		)
+	def on_right_comparison_browse(self, _):  # wxGlade: compare_tab.<event_handler>
+		selected_project = self.comparison_browse_dialog
 		
 		if selected_project is None:
 			return
@@ -291,7 +305,7 @@ Please choose a different project.""",
 			self.comparison_mean_pa_button.Enable()
 			self.comparison_radar_button.Enable()
 	
-	def comparison_run(self, event):  # wxGlade: compare_tab.<event_handler>
+	def comparison_run(self, _):  # wxGlade: compare_tab.<event_handler>
 		self.comparison_log_text_control.ClearAll()
 		
 		a_value = self.significance_level_value.GetValue()
@@ -323,9 +337,12 @@ Please choose a different project.""",
 		
 		event.Skip()
 	
-	def do_comparison_reset(self, *args):  # wxGlade: Launcher.<event_handler>
-		# Reset to default Settings
-		Config = ConfigParser.ConfigParser()
+	def do_comparison_reset(self, *_):  # wxGlade: Launcher.<event_handler>
+		"""
+		Reset the comparison settings to default
+		"""
+		
+		Config = configparser.ConfigParser()
 		Config.read("lib/default.ini")
 		
 		self.significance_level_value.SetValue(Config.get("comparison", "a"))
@@ -333,55 +350,57 @@ Please choose a different project.""",
 		self.comparison_alignment_Gw_value.SetValue(Config.get("comparison", "gap_penalty"))
 		self.comparison_alignment_min_peaks_value.SetValue(Config.get("comparison", "min_peaks"))
 	
-	def comparison_show_box_whisker(self, event):
+	def comparison_show_chart(self, chart_type):
+		"""
+		Show a chart of the given type for the samples being compared
+		"""
+		
 		self.ChartViewer = ChartViewer.ChartViewer(
 			self,
-			chart_type="box_whisker",
+			chart_type=chart_type,
 			initial_samples=[
 				self.comparison_left_project,
 				self.comparison_right_project],
 		)
 		self.ChartViewer.Show()
 		self.ChartViewer.Raise()
+	
+	def comparison_show_box_whisker(self, event):
+		"""
+		Show a box-whisker chart for the samples being compared
+		"""
+		
+		self.comparison_show_chart(chart_type="box_whisker")
 		event.Skip()
 	
 	def comparison_show_pca(self, event):
-		self.ChartViewer = ChartViewer.ChartViewer(
-			self,
-			chart_type="pca",
-			initial_samples=[
-				self.comparison_left_project,
-				self.comparison_right_project],
-			)
-		self.ChartViewer.Show()
-		self.ChartViewer.Raise()
+		"""
+		Show a pca plot for the samples being compared
+		"""
+
+		self.comparison_show_chart(chart_type="pca")
 		event.Skip()
 	
 	def comparison_show_radar(self, event):  # wxGlade: Launcher.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(
-			self,
-			chart_type="radar",
-			initial_samples=[
-				self.comparison_left_project,
-				self.comparison_right_project],
-		)
-		self.ChartViewer.Show()
-		self.ChartViewer.Raise()
+		"""
+		Show a radar chart for the samples being compared
+		"""
+
+		self.comparison_show_chart(chart_type="radar")
 		event.Skip()
 	
 	def comparison_show_mean_peak_area(self, event):  # wxGlade: Launcher.<event_handler>
-		self.ChartViewer = ChartViewer.ChartViewer(
-			self,
-			chart_type="mean_peak_area",
-			initial_samples=[
-				self.comparison_left_project,
-				self.comparison_right_project],
-		)
-		self.ChartViewer.Show()
-		self.ChartViewer.Raise()
+		"""
+		Show a mean peak area chart for the samples being compared
+		"""
+
+		self.comparison_show_chart(chart_type="mean_peak_area")
 		event.Skip()
 	
-	def OnComparisonLog(self, evt):
-		self.comparison_log_text_control.AppendText(evt.log_text)
+	def on_comparison_log(self, event):
+		"""
+		Handler for comparison log events
+		"""
+		self.comparison_log_text_control.AppendText(event.log_text)
 
 # end of class compare_tab

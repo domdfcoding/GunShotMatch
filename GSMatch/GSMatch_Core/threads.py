@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ import wx.html2
 import wx.richtext
 from wx.adv import NotificationMessage
 
-from domdf_wxpython_tools.events import SimpleEvent
+from domdf_wxpython_tools import SimpleEvent
 
 # this package
 from GSMatch.GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ProjectLogEvent
@@ -50,10 +50,10 @@ from GSMatch.GSMatch_Core.thread_boilerplates import LogEventBoilerplate as Comp
 
 
 myEVT_PROJECT = SimpleEvent()
-myEVT_CONVERSION2 = SimpleEvent()
-myEVT_COMPARISON2 = SimpleEvent()
-myEVT_DATA_VIEWER2 = SimpleEvent()
-myEVT_STATUS2 = SimpleEvent()
+myEVT_CONVERSION = SimpleEvent()
+myEVT_COMPARISON = SimpleEvent()
+myEVT_DATA_VIEWER = SimpleEvent()
+myEVT_STATUS = SimpleEvent()
 
 # Based on https://wiki.wxpython.org/Non-Blocking%20Gui
 kill_status_thread = False
@@ -80,7 +80,7 @@ class StatusThread(threading.Thread):
 			time.sleep(0.1)  # our simulated calculation time
 			wait_time -= 0.1
 			if wait_time < 0.0:
-				myEVT_STATUS2.trigger()
+				myEVT_STATUS.trigger()
 				wait_time = 1.0
 	
 	def join(self, timeout=None):
@@ -91,9 +91,7 @@ class StatusThread(threading.Thread):
 
 ##########################
 
-myEVT_CONVERSION = wx.NewEventType()
 myEVT_CONVERSION_LOG = wx.NewEventType()
-EVT_CONVERSION = wx.PyEventBinder(myEVT_CONVERSION, 1)
 EVT_CONVERSION_LOG = wx.PyEventBinder(myEVT_CONVERSION_LOG, 1)
 conversion_thread_running = False
 
@@ -120,7 +118,7 @@ class ConversionThread(threading.Thread):
 					"wine",
 					"./lib/WatersRaw.exe",
 					"-i",
-					os.path.join(self._parent.Config.RAW_DIRECTORY, raw_file)
+					os.path.join(self._parent.Config.raw_dir, raw_file)
 				], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				
 				for line in iter(process.stdout.readline, b''):
@@ -146,9 +144,7 @@ class ConversionThread(threading.Thread):
 			).Show()
 			
 			conversion_thread_running = False
-			# evt = ConversionEvent(myEVT_CONVERSION, -1)
-			# wx.PostEvent(self._parent, evt)
-			myEVT_CONVERSION2.trigger()
+			myEVT_CONVERSION.trigger()
 			
 		except:
 			# a runtime error was being raised when the main window closed
@@ -173,8 +169,8 @@ class FlaskThread(threading.Thread):
 		when you call Thread.start().
 		"""
 		requests.get(self.url)
-		myEVT_DATA_VIEWER2.set_receiver(self._parent)
-		myEVT_DATA_VIEWER2.trigger()
+		myEVT_DATA_VIEWER.set_receiver(self._parent)
+		myEVT_DATA_VIEWER.trigger()
 		
 		
 ###########################
@@ -185,7 +181,7 @@ comparison_thread_running = False
 
 
 class ComparisonThread(threading.Thread):
-	def __init__(self, parent, left_sample, right_sample, Config, a_value):
+	def __init__(self, parent, left_sample, right_sample, config, a_value):
 		"""
 		:param parent: The gui object that should receive events
 		"""
@@ -194,7 +190,7 @@ class ComparisonThread(threading.Thread):
 		self._parent = parent
 		self.left_sample = left_sample
 		self.right_sample = right_sample
-		self.Config = Config
+		self.Config = config
 		self.a_value = a_value
 	
 	def run(self):
@@ -245,10 +241,12 @@ class ComparisonThread(threading.Thread):
 				
 				NotificationMessage(
 					"GunShotMatch",
-					message=f'Comparison finished\n{os.path.splitext(os.path.split(self.left_sample)[-1])[0]}, {os.path.splitext(os.path.split(self.right_sample)[-1])[0]}',
+					message=f"""Comparison finished
+{os.path.splitext(os.path.split(self.left_sample)[-1])[0]},\
+{os.path.splitext(os.path.split(self.right_sample)[-1])[0]}""",
 					parent=None, flags=wx.ICON_INFORMATION).Show()
 				
-				myEVT_COMPARISON2.trigger()
+				myEVT_COMPARISON.trigger()
 				
 			else:
 				# Comparison failed
@@ -257,7 +255,7 @@ class ComparisonThread(threading.Thread):
 				
 				NotificationMessage(
 					"GunShotMatch",
-					message='An Error Occurred\nCheck the Comparison Log for Details',
+					message="An Error Occurred\nCheck the Comparison Log for Details",
 					parent=None,
 					flags=wx.ICON_INFORMATION
 				).Show()
@@ -382,9 +380,10 @@ class ProjectThread(threading.Thread):
 			myEVT_PROJECT.trigger()
 			
 		except:
+			# a runtime error was being raised when the main window closed
 			traceback.print_exc()
 			conversion_thread_running = False
-	# a runtime error was being raised when the main window closed
+	
 	
 
 def project_wrapper(prefix_list, pretty_name, config):

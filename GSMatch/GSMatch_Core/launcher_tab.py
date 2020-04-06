@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,8 +27,8 @@
 import wx
 import wx.richtext
 
-from domdf_wxpython_tools.utils import coming_soon
-from domdf_wxpython_tools.dialogs import file_dialog
+from domdf_wxpython_tools import coming_soon
+from domdf_wxpython_tools import file_dialog
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -39,6 +39,23 @@ from domdf_wxpython_tools.dialogs import file_dialog
 
 class launcher_tab(wx.Panel):
 	def __init__(self, parent, *args, **kwds):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
+		
 		self._parent = parent
 		# begin wxGlade: launcher_tab.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.TAB_TRAVERSAL
@@ -120,9 +137,9 @@ class launcher_tab(wx.Panel):
 		comparison_description_label.Wrap(256)
 		launcher_grid.Add(comparison_description_label, 0, wx.ALIGN_CENTER_VERTICAL, 64)
 		launcher_grid.Add(self.comparison_info_button, 0, wx.ALIGN_CENTER, 1)
-		launcher_sizer.Add(launcher_grid, 0, wx.ALIGN_CENTER | wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
+		launcher_sizer.Add(launcher_grid, 0, wx.BOTTOM | wx.EXPAND | wx.TOP, 10)
 		self.launcher_parent_panel.SetSizer(launcher_sizer)
-		launcher_parent_sizer.Add(self.launcher_parent_panel, 3, wx.ALIGN_CENTER | wx.ALL | wx.EXPAND, 10)
+		launcher_parent_sizer.Add(self.launcher_parent_panel, 3, wx.ALL | wx.EXPAND, 10)
 		messages_label = wx.StaticText(self.messages_panel, wx.ID_ANY, "Messages")
 		messages_label.SetFont(wx.Font(16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
 		messages_sizer.Add(messages_label, 0, wx.ALL, 5)
@@ -136,22 +153,22 @@ class launcher_tab(wx.Panel):
 		self.Layout()
 		# end wxGlade
 	
-	def on_import(self, event):  # wxGlade: launcher_tab.<event_handler>
+	def on_import(self, _):  # wxGlade: launcher_tab.<event_handler>
 		self._parent.notebook_1.SetSelection(1)
 	
-	def on_new_project(self, event):  # wxGlade: launcher_tab.<event_handler>
+	def on_new_project(self, _):  # wxGlade: launcher_tab.<event_handler>
 		self._parent.notebook_1.SetSelection(2)
 	
 	def on_open_project(self, *args):  # wxGlade: launcher_tab.<event_handler>
 		selected_project = file_dialog(self, "info", "Choose a Project to Open", "info files",
 									   style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
 									   # defaultDir=self.Config.get("main", "resultspath"))
-									   defaultDir=self._parent.Config.RESULTS_DIRECTORY)
+									   defaultDir=self._parent.Config.results_dir)
 		if selected_project != None:
 			self._parent.browse_tab.setup_browser(selected_project)
 			self._parent.notebook_1.SetSelection(3)
 	
-	def on_open_comparison(self, event):  # wxGlade: launcher_tab.<event_handler>
+	def on_open_comparison(self, _):  # wxGlade: launcher_tab.<event_handler>
 		self._parent.notebook_1.SetSelection(4)
 	
 	def do_import_info(self, event):  # wxGlade: launcher_tab.<event_handler>
@@ -170,7 +187,7 @@ class launcher_tab(wx.Panel):
 		coming_soon()
 		event.Skip()
 	
-	def refresh_launcher(self, event):
+	def refresh_launcher(self, _):
 		self.launcher_parent_panel.Layout()
 		self.launcher_parent_panel.Update()
 		self.launcher_parent_panel.Refresh()

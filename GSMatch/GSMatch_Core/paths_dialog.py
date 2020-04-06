@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -24,13 +24,15 @@
 #  MA 02110-1301, USA.
 #
 
+# stdlib
 import sys
 import webbrowser
-import configparser as ConfigParser
+import configparser
 
+# 3rd party
+import wx
 from domdf_python_tools.paths import relpath
 
-import wx
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -41,6 +43,28 @@ import wx
 
 class paths_dialog(wx.Dialog):
 	def __init__(self, *args, **kwds):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param size: The dialog size. The value DefaultSize indicates a default
+		size, chosen by either the windowing system or wxWidgets, depending on
+		platform.
+		:type size: wx.Size
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
+		
 		# begin wxGlade: paths_dialog.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
 		wx.Dialog.__init__(self, *args, **kwds)
@@ -205,96 +229,197 @@ class paths_dialog(wx.Dialog):
 		self.SetMinSize((755, 400))
 		self.SetSize((755, 400))
 	
+	@staticmethod
+	def browse_dialog():
+		"""
+		Opens a dialog to browse for a directory
+		:return:
+		:rtype:
+		"""
+		dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+		if dlg.ShowModal() == wx.ID_OK:
+			selected_value = dlg.GetPath()
+		else:
+			selected_value = None
+		
+		dlg.Destroy()
+		
+		return selected_value
+	
 	def on_nistpath_clear(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for clearing the value of the nistpath field
+		
+		:param event:
+		:type event:
+		"""
+		
 		self.nistpath.Clear()
 		self.nistpath.SetFocus()
 		event.Skip()
-	
+		
 	def on_nistpath_browse(self, event):  # wxGlade: paths_dialog.<event_handler>
-		nistpath_dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-		if nistpath_dlg.ShowModal() == wx.ID_OK:
-			self.nistpath.SetValue((nistpath_dlg.GetPath()))
-		nistpath_dlg.Destroy()
+		"""
+		Handler for browsing for the directory containing the NIST MS Search program
+		
+		:param event:
+		:type event:
+		"""
+		
+		selected_value = self.browse_dialog()
+		if selected_value:
+			self.nistpath.SetValue(selected_value)
 		self.nistpath.SetFocus()
 		event.Skip()
 	
 	def on_nistpath_help(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for opening the URL from which NIST MS Search can be downloaded
+		
+		:param event:
+		:type event:
+		"""
+		
 		webbrowser.open("https://chemdata.nist.gov/mass-spc/ms-search/", 2)
 		self.nistpath.SetFocus()
 		event.Skip()
 	
 	def on_resultspath_clear(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for clearing the value of the resultspath field
+
+		:param event:
+		:type event:
+		"""
+		
 		self.resultspath.Clear()
 		self.resultspath.SetFocus()
 		event.Skip()
 	
 	def on_resultspath_browse(self, event):  # wxGlade: paths_dialog.<event_handler>
-		resultspath_dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-		if resultspath_dlg.ShowModal() == wx.ID_OK:
-			self.resultspath.SetValue((resultspath_dlg.GetPath()))
-		resultspath_dlg.Destroy()
+		"""
+		Handler for browsing for the directory in which to store the results
+
+		:param event:
+		:type event:
+		"""
+		
+		selected_value = self.browse_dialog()
+		if selected_value:
+			self.resultspath.SetValue(selected_value)
 		self.resultspath.SetFocus()
 		event.Skip()
 	
 	def on_rawpath_clear(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for clearing the value of the rawpath field
+
+		:param event:
+		:type event:
+		"""
+
 		self.rawpath.Clear()
 		self.rawpath.SetFocus()
 		event.Skip()
 	
 	def on_rawpath_browse(self, event):  # wxGlade: paths_dialog.<event_handler>
-		rawpath_dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON,
-								   defaultPath=self.resultspath.GetValue())
-		if rawpath_dlg.ShowModal() == wx.ID_OK:
-			self.rawpath.SetValue((rawpath_dlg.GetPath()))
-		rawpath_dlg.Destroy()
+		"""
+		Handler for browsing for the directory in which .RAW files are stored
+
+		:param event:
+		:type event:
+		"""
+		
+		selected_value = self.browse_dialog()
+		if selected_value:
+			self.rawpath.SetValue(selected_value)
 		self.rawpath.SetFocus()
 		event.Skip()
 	
 	def on_csvpath_clear(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for clearing the value of the csvpath field
+
+		:param event:
+		:type event:
+		"""
+
 		self.csvpath.Clear()
 		self.csvpath.SetFocus()
 		event.Skip()
 	
 	def on_csvpath_browse(self, event):  # wxGlade: paths_dialog.<event_handler>
-		csvpath_dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON,
-								   defaultPath=self.resultspath.GetValue())
-		if csvpath_dlg.ShowModal() == wx.ID_OK:
-			self.csvpath.SetValue((csvpath_dlg.GetPath()))
-		csvpath_dlg.Destroy()
+		"""
+		Handler for browsing for the directory in which to store the CSV files
+
+		:param event:
+		:type event:
+		"""
+		
+		selected_value = self.browse_dialog()
+		if selected_value:
+			self.csvpath.SetValue(selected_value)
 		self.csvpath.SetFocus()
 		event.Skip()
 	
 	def on_spectrapath_clear(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for clearing the value of the spectrapath field
+
+		:param event:
+		:type event:
+		"""
+
 		self.spectrapath.Clear()
 		self.spectrapath.SetFocus()
 		event.Skip()
 	
 	def on_spectrapath_browse(self, event):  # wxGlade: paths_dialog.<event_handler>
-		spectrapath_dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON,
-									   defaultPath=self.resultspath.GetValue())
-		if spectrapath_dlg.ShowModal() == wx.ID_OK:
-			self.spectrapath.SetValue((spectrapath_dlg.GetPath()))
-		spectrapath_dlg.Destroy()
+		"""
+		Handler for browsing for the directory in which to store the spectra images
+
+		:param event:
+		:type event:
+		"""
+		
+		selected_value = self.browse_dialog()
+		if selected_value:
+			self.spectrapath.SetValue(selected_value)
 		self.spectrapath.SetFocus()
 		event.Skip()
 	
 	def on_msppath_clear(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for clearing the value of the msppath field
+
+		:param event:
+		:type event:
+		"""
+
 		self.msppath.Clear()
 		self.msppath.SetFocus()
 		event.Skip()
 	
 	def on_msppath_browse(self, event):  # wxGlade: paths_dialog.<event_handler>
-		msppath_dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON,
-								   defaultPath=self.resultspath.GetValue())
-		if msppath_dlg.ShowModal() == wx.ID_OK:
-			self.msppath.SetValue((msppath_dlg.GetPath()))
-		msppath_dlg.Destroy()
+		"""
+		Handler for browsing for the directory in which to store the MSP files for NIST MS Search
+
+		:param event:
+		:type event:
+		"""
+
+		selected_value = self.browse_dialog()
+		if selected_value:
+			self.msppath.SetValue(selected_value)
 		self.msppath.SetFocus()
 		event.Skip()
 	
-	def do_path_reset(self, event):  # wxGlade: paths_dialog.<event_handler>
-		# Read the configuration from the file
-		Config = ConfigParser.ConfigParser()
+	def do_path_reset(self, _):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Reverts to the last values saved to the configuration file
+		"""
+
+		Config = configparser.ConfigParser()
 		Config.read("config.ini")
 		if sys.platform == "win32":
 			self.nistpath.SetValue(relpath(Config.get("main", "nistpath")))
@@ -309,30 +434,54 @@ class paths_dialog(wx.Dialog):
 		self.expr_path.SetValue(relpath(Config.get("main", "exprdir")))
 	
 	def on_expr_path_clear(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for clearing the value of the expr_path field
+
+		:param event:
+		:type event:
+		"""
+		
 		self.expr_path.Clear()
 		self.expr_path.SetFocus()
 		event.Skip()
 	
 	def on_expr_path_browse(self, event):  # wxGlade: paths_dialog.<event_handler>
-		expr_path_dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON,
-									 defaultPath=self.resultspath.GetValue())
-		if expr_path_dlg.ShowModal() == wx.ID_OK:
-			self.expr_path.SetValue((expr_path_dlg.GetPath()))
-		expr_path_dlg.Destroy()
+		"""
+		Handler for browsing for the directory in which to store the experiment files
+
+		:param event:
+		:type event:
+		"""
+		
+		selected_value = self.browse_dialog()
+		if selected_value:
+			self.expr_path.SetValue(selected_value)
 		self.expr_path.SetFocus()
 		event.Skip()
 	
 	def on_charts_path_clear(self, event):  # wxGlade: paths_dialog.<event_handler>
+		"""
+		Handler for clearing the value of the charts_path field
+
+		:param event:
+		:type event:
+		"""
+		
 		self.charts_path.Clear()
 		self.charts_path.SetFocus()
 		event.Skip()
 	
 	def on_charts_path_browse(self, event):  # wxGlade: paths_dialog.<event_handler>
-		chartspath_dlg = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON,
-									  defaultPath=self.resultspath.GetValue())
-		if chartspath_dlg.ShowModal() == wx.ID_OK:
-			self.charts_path.SetValue((chartspath_dlg.GetPath()))
-		chartspath_dlg.Destroy()
+		"""
+		Handler for browsing for the directory in which to store the chart images
+
+		:param event:
+		:type event:
+		"""
+		
+		selected_value = self.browse_dialog()
+		if selected_value:
+			self.charts_path.SetValue(selected_value)
 		self.charts_path.SetFocus()
 		event.Skip()
 

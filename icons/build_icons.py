@@ -9,7 +9,7 @@ Script to generate png icons in various sizes from SVG artwork
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,11 +26,15 @@ Script to generate png icons in various sizes from SVG artwork
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #
-import sys
-#sys.path.append("/mnt/c/Users/dom13/GunShotMatch/GunShotMatch/")
-import cairosvg
+
+
+# stdlib
 import pathlib
 import shutil
+import sys
+
+# 3rd party
+import cairosvg
 
 icons_list = [
 		#"add-to-archive",
@@ -67,6 +71,11 @@ icons_list = [
 		"LibreOffice_Calc",
 		"export_images",
 		"export_jdx",
+		"Merge-arrows-3",
+		"rescale_y",
+		"rescale_x",
+		"show-open-eye",
+		"hide-closed-eye",
 		]
 
 sizes_list = [16, 22, 24, 32, 48, 64, 110, 128, 192, 256]
@@ -76,11 +85,24 @@ print("Generating Icons\n====================")
 cwd = pathlib.Path(".").absolute()
 output_dir = (cwd.parent / "GuiV2" / "icons").absolute()
 
+if output_dir.exists():
+	print("The 'icons' directory already exists!\nDo you want to overwrite it?", end='')
+	while True:
+		resp = input("   ").lower()
+		if resp == "yes":
+			shutil.rmtree(output_dir)
+			break
+		elif resp.startswith("y"):
+			print("You must type `YES` to overwrite the existing files.")
+		else:
+			print("Icon generation cancelled by user.")
+			exit()
+
 # Copy fixed-size PNG icons
-try:
-	shutil.copytree(str(cwd/"png"), output_dir)
-except FileExistsError:
-	raise FileExistsError("The 'icons' directory already exists")
+shutil.copytree(str(cwd/"png"), output_dir)
+
+if not output_dir.exists():
+	output_dir.mkdir()
 
 # Create folders
 for size in sizes_list:
@@ -120,7 +142,7 @@ with (output_dir / "__init__.py").open("w") as init_file:
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by

@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2018-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2018-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -24,28 +24,41 @@
 #  MA 02110-1301, USA.
 #
 
+# stdlib
 import os
-
+import re
 import platform
-import sys
-from domdf_python_tools import str2tuple
+import configparser
 
-import configparser as ConfigParser
-
+# 3rd party
+from domdf_python_tools.utils import list2str, str2tuple
 from domdf_python_tools.paths import maybe_make, relpath2
-
 
 # TODO: pathlib support
 
 
-class GSMConfig(object):
+class GSMConfig:
+	"""
+	GunShotMatch configuration Class
+
+	:param configfile: .ini configuration file to load
+	:type configfile: str
+	"""
+	
 	def __init__(self, configfile):
-		self.configfile = configfile
+		"""
+		Initialise GunShotMatch configuration
+		
+		:param configfile: .ini configuration file to load
+		:type configfile: str
+		"""
+		
+		self._configfile = configfile
 		print("\nUsing configuration file {}".format(self.configfile))
 		
-		"""Configuration -----"""
-		Config = ConfigParser.ConfigParser()
-		Config.read(configfile)
+		# Configuration
+		Config = configparser.ConfigParser()
+		Config.read(self.configfile)
 		
 		if platform.system() == "Linux":
 			self._nist_path = Config.get("main", "LinuxNistPath")
@@ -58,137 +71,291 @@ class GSMConfig(object):
 				print("Error: NIST MS Search path not found in configuration file.")
 				sys.exit(1)
 		
-		# PerkinElmer or Waters .RAW Files
-		self._RAW_DIRECTORY = os.path.abspath(Config.get("main", "rawpath"))
+		# Directories
+		self.raw_dir = os.path.abspath(Config.get("main", "rawpath"))
+		self.csv_dir = os.path.abspath(Config.get("main", "CSVPath"))
+		self.spectra_dir = os.path.abspath(Config.get("main", "SpectraPath"))
+		self.charts_dir = os.path.abspath(Config.get("main", "ChartsPath"))
+		self.msp_dir = os.path.abspath(Config.get("main", "MSPPath"))
+		self.results_dir = os.path.abspath(Config.get("main", "ResultsPath"))
+		self.expr_dir = os.path.abspath(Config.get("main", "exprdir"))
+		self.log_dir = os.path.abspath(Config.get("main", "logdir"))
 		
-		# CSV Reports
-		self._CSV_DIRECTORY = os.path.abspath(Config.get("main", "CSVPath"))  # Gets created if not present
-		maybe_make(self._CSV_DIRECTORY)
-		
-		# Mass Spectra Images
-		self._SPECTRA_DIRECTORY = os.path.abspath(Config.get("main", "SpectraPath"))  # Gets created if not present
-		maybe_make(self._SPECTRA_DIRECTORY)
-		
-		# Charts
-		self._CHARTS_DIRECTORY = os.path.abspath(Config.get("main", "ChartsPath"))  # Gets created if not present
-		maybe_make(self._CHARTS_DIRECTORY)
-		
-		# MSP Files for NIST MS Search
-		self._MSP_DIRECTORY = os.path.abspath(Config.get("main", "MSPPath"))  # Gets created if not present
-		maybe_make(self._MSP_DIRECTORY)
-		
-		# Final Results
-		self._RESULTS_DIRECTORY = os.path.abspath(Config.get("main", "ResultsPath"))  # Gets created if not present
-		maybe_make(self._RESULTS_DIRECTORY)
-		
-		# Experiments
-		self._EXPERIMENTS_DIRECTORY = os.path.abspath(Config.get("main", "exprdir"))  # Gets created if not present
-		maybe_make(self._EXPERIMENTS_DIRECTORY)
-		
-		"""Sample Lists"""
+		# Sample Lists
 		self.prefixList = Config.get("samples", "samples")
 		
-		"""Import Settings"""
+		# Import Settings
 		self.bb_points = Config.get("import", "bb_points")
 		self.bb_scans = Config.get("import", "bb_scans")
 		self.noise_thresh = Config.get("import", "noise_thresh")
-		min_range, max_range = tuple(Config.get("import", "target_range").split(","))
-		self._target_range = (float(min_range), float(max_range))
-		self._base_peak_filter = [int(x) for x in Config.get("import", "exclude_ions").split(",")]
-		self._tophat = Config.get("import", "tophat")
-		self._tophat_unit = Config.get("import", "tophat_unit")
-		#self._tophat_struct = "{}{}".format(self.tophat, self.tophat_unit)
-		self._mass_range = str2tuple(Config.get("import", "mass_range"))
+		self.target_range = Config.get("import", "target_range")
+		self.base_peak_filter = Config.get("import", "exclude_ions")
+		self.tophat = Config.get("import", "tophat")
+		self.tophat_unit = Config.get("import", "tophat_unit")
+		# self._tophat_struct = "{}{}".format(self.tophat, self.tophat_unit)
+		self.mass_range = Config.get("import", "mass_range")
 		
-		"""Peak Alignment Settings"""
+		# Peak Alignment Settings
 		self.rt_modulation = Config.get("alignment", "rt_modulation")
 		self.gap_penalty = Config.get("alignment", "gap_penalty")
 		self.min_peaks = Config.get("alignment", "min_peaks")
 		
-		"""Analysis Settings"""
-		self._do_quantitative = Config.getboolean("analysis", "do_quantitative")
-		self._do_qualitative = Config.getboolean("analysis", "do_qualitative")
-		self._do_merge = Config.getboolean("analysis", "do_merge")
-		self._do_counter = Config.getboolean("analysis", "do_counter")
-		self._do_spectra = Config.getboolean("analysis", "do_spectra")
-		self._do_charts = Config.getboolean("analysis", "do_charts")
+		# Analysis Settings
+		self.do_quantitative = Config.getboolean("analysis", "do_quantitative")
+		self.do_qualitative = Config.getboolean("analysis", "do_qualitative")
+		self.do_merge = Config.getboolean("analysis", "do_merge")
+		self.do_counter = Config.getboolean("analysis", "do_counter")
+		self.do_spectra = Config.getboolean("analysis", "do_spectra")
+		self.do_charts = Config.getboolean("analysis", "do_charts")
 		
-		"""Comparison"""
+		# Comparison
 		self.comparison_a = Config.get("comparison", "a")
 		self.comparison_rt_modulation = Config.get("comparison", "rt_modulation")
 		self.comparison_gap_penalty = Config.get("comparison", "gap_penalty")
 		self.comparison_min_peaks = Config.get("comparison", "min_peaks")
 	
 	@property
+	def configfile(self):
+		"""
+		Returns the path of the .ini file from which the configuration was loaded
+		
+		:return: Configuration file path
+		:rtype: str
+		"""
+		
+		return self._configfile
+	
+	@property
 	def nist_path(self):
+		"""
+		Returns the path of the NIST MS Search program
+		
+		:return:
+		:rtype: str
+		"""
 		return self._nist_path
 	
 	@nist_path.setter
 	def nist_path(self, value):
+		"""
+		Sets the path to the NIST MS Search program
+		
+		:param value:
+		:type value: str
+		
+		"""
 		self._nist_path = value
 	
 	@property
-	def RAW_DIRECTORY(self):
-		return self._RAW_DIRECTORY
+	def raw_dir(self):
+		"""
+		Returns the directory where PerkinElmer or Waters .RAW Files are stored
+		
+		:return:
+		:rtype: str
+		"""
+		
+		return self._raw_dir
 	
-	@RAW_DIRECTORY.setter
-	def RAW_DIRECTORY(self, value):
-		self._RAW_DIRECTORY = str(relpath2(value))
-	
-	@property
-	def CSV_DIRECTORY(self):
-		return self._CSV_DIRECTORY
-	
-	@CSV_DIRECTORY.setter
-	def CSV_DIRECTORY(self, value):
-		self._CSV_DIRECTORY = str(relpath2(value))
-	
-	@property
-	def SPECTRA_DIRECTORY(self):
-		return self._SPECTRA_DIRECTORY
-	
-	@SPECTRA_DIRECTORY.setter
-	def SPECTRA_DIRECTORY(self, value):
-		self._SPECTRA_DIRECTORY = str(relpath2(value))
+	@raw_dir.setter
+	def raw_dir(self, value):
+		"""
+		Sets the directory where PerkinElmer or Waters .RAW Files are stored
+
+		:param value:
+		:type value: str or :class:`pathlib.Path`
+		"""
+		
+		self._raw_dir = str(relpath2(value))
 	
 	@property
-	def CHARTS_DIRECTORY(self):
-		return self._CHARTS_DIRECTORY
+	def csv_dir(self):
+		"""
+		Returns the directory where CSV reports will be stored
+
+		:return:
+		:rtype: str
+		"""
+		
+		return self._csv_dir
 	
-	@CHARTS_DIRECTORY.setter
-	def CHARTS_DIRECTORY(self, value):
-		self._CHARTS_DIRECTORY = str(relpath2(value))
+	@csv_dir.setter
+	def csv_dir(self, value):
+		"""
+		Sets the directory where CSV reports will be stored.
+		The directory will be created if it does not already exist.
+
+		:param value:
+		:type value: str or :class:`pathlib.Path`
+		"""
+		
+		self._csv_dir = str(relpath2(value))
+		maybe_make(self._csv_dir)
+
+	@property
+	def spectra_dir(self):
+		"""
+		Returns the directory where Mass Spectra images will be stored
+
+		:return:
+		:rtype: str
+		"""
+		
+		return self._spectra_dir
+	
+	@spectra_dir.setter
+	def spectra_dir(self, value):
+		"""
+		Sets the directory where Mass Spectra images will be stored.
+		The directory will be created if it does not already exist.
+
+		:param value:
+		:type value: str or :class:`pathlib.Path`
+		"""
+		
+		self._spectra_dir = str(relpath2(value))
+		maybe_make(self._spectra_dir)
 	
 	@property
-	def MSP_DIRECTORY(self):
-		return self._MSP_DIRECTORY
+	def charts_dir(self):
+		"""
+		Returns the directory where Charts will be stored
+
+		:return:
+		:rtype: str
+		"""
+		
+		return self._charts_dir
 	
-	@MSP_DIRECTORY.setter
-	def MSP_DIRECTORY(self, value):
-		self._MSP_DIRECTORY = str(relpath2(value))
+	@charts_dir.setter
+	def charts_dir(self, value):
+		"""
+		Sets the directory where Charts will be stored.
+		The directory will be created if it does not already exist.
+
+		:param value:
+		:type value: str or :class:`pathlib.Path`
+		"""
+		
+		self._charts_dir = str(relpath2(value))
+		maybe_make(self._charts_dir)
 	
 	@property
-	def RESULTS_DIRECTORY(self):
-		return self._RESULTS_DIRECTORY
+	def msp_dir(self):
+		"""
+		Returns the directory where MSP files for NIST MS Search will be stored
+
+		:return:
+		:rtype: str
+		"""
+		
+		return self._msp_dir
 	
-	@RESULTS_DIRECTORY.setter
-	def RESULTS_DIRECTORY(self, value):
-		self._RESULTS_DIRECTORY = str(relpath2(value))
+	@msp_dir.setter
+	def msp_dir(self, value):
+		"""
+		Sets the directory where MSP files for NIST MS Search will be stored.
+		The directory will be created if it does not already exist.
+
+		:param value:
+		:type value: str or :class:`pathlib.Path`
+		"""
+		
+		self._msp_dir = str(relpath2(value))
+		maybe_make(self._msp_dir)
 	
 	@property
-	def EXPERIMENTS_DIRECTORY(self):
-		return self._EXPERIMENTS_DIRECTORY
+	def results_dir(self):
+		"""
+		Returns the directory where Results will be stored
+
+		:return:
+		:rtype: str
+		"""
+		
+		return self._results_dir
 	
-	@EXPERIMENTS_DIRECTORY.setter
-	def EXPERIMENTS_DIRECTORY(self, value):
-		self._EXPERIMENTS_DIRECTORY = str(relpath2(value))
+	@results_dir.setter
+	def results_dir(self, value):
+		"""
+		Sets the directory where Results will be stored.
+		The directory will be created if it does not already exist.
+
+		:param value:
+		:type value: str or :class:`pathlib.Path`
+		"""
+		
+		self._results_dir = str(relpath2(value))
+		maybe_make(self._results_dir)
+	
+	@property
+	def expr_dir(self):
+		"""
+		Returns the directory where Experiment files will be stored
+
+		:return:
+		:rtype: str
+		"""
+		
+		return self._expr_dir
+	
+	@expr_dir.setter
+	def expr_dir(self, value):
+		"""
+		Sets the directory where Experiment files will be stored.
+		The directory will be created if it does not already exist.
+
+		:param value:
+		:type value: str or :class:`pathlib.Path`
+		"""
+		
+		self._expr_dir = str(relpath2(value))
+		maybe_make(self._expr_dir)
+		
+	@property
+	def log_dir(self):
+		"""
+		Returns the directory where log files will be stored
+
+		:return:
+		:rtype: str
+		"""
+		
+		return self._log_dir
+	
+	@log_dir.setter
+	def log_dir(self, value):
+		"""
+		Sets the directory where log files will be stored.
+		The directory will be created if it does not already exist.
+
+		:param value:
+		:type value: str or :class:`pathlib.Path`
+		"""
+		
+		self._log_dir = str(relpath2(value))
+		maybe_make(self._log_dir)
 	
 	@property
 	def prefixList(self):
+		"""
+		Returns the list of samples to process
+		
+		:return: Samples to process
+		:rtype: list
+		"""
+		
 		return self._prefixList
 	
 	@prefixList.setter
 	def prefixList(self, value):
+		"""
+		Sets the list of samples to process
+		
+		:param value: Samples to process
+		:type value: list, tuple or comma-separated str
+		"""
+		
 		if isinstance(value, str):
 			value = value.replace(";", ",").replace("\t", ",").replace(" ", "").split(",")
 			self._prefixList = value
@@ -196,40 +363,101 @@ class GSMConfig(object):
 			self._prefixList = value
 		elif isinstance(value, tuple):
 			self._prefixList = list(value)
-		
 		else:
-			raise TypeError("'prefixList' must be a list, tuple or comma-seperated string")
+			raise TypeError("'prefixList' must be a list, tuple or comma-separated string")
 
 	@property
 	def bb_points(self):
+		"""
+		Returns the value for the window width, in data points, for detecting
+			local maxima during Biller and Biemann Peak Detection
+		
+		:return: Number of Points
+		:rtype: int
+		"""
+		
 		return self._bb_points
 	
 	@bb_points.setter
 	def bb_points(self, value):
+		"""
+		Sets the value for the window width, in data points, for detecting
+			local maxima during Biller and Biemann Peak Detection
+		
+		:param value: Number of Points
+		:type value: int or other value that can be converted into an int
+		"""
+		
 		self._bb_points = int(value)
 	
 	@property
 	def bb_scans(self):
+		"""
+		Returns the value for the number of scans across which neighbouring,
+			apexing ions and combined and considered as belonging
+			to the same peak
+		
+		:return: Number of Scans
+		:rtype: int
+		"""
+		
 		return self._bb_scans
 	
 	@bb_scans.setter
 	def bb_scans(self, value):
+		"""
+		Sets the value for the number of scans across which neighbouring,
+			apexing ions and combined and considered as belonging
+			to the same peak
+		
+		:param value: Number of Scans
+		:type value: int or other value that can be converted into an int
+		"""
+		
 		self._bb_scans = int(value)
 	
 	@property
 	def noise_thresh(self):
+		"""
+		Returns the value for
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._noise_thresh
 	
 	@noise_thresh.setter
 	def noise_thresh(self, value):
+		"""
+		Sets the value for
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._noise_thresh = int(value)
 	
 	@property
 	def target_range(self):
+		"""
+		Returns the value for the range of retention times in which to search for peaks
+		
+		:return: Retention time range
+		:rtype: tuple of floats
+		"""
+		
 		return self._target_range
 	
 	@target_range.setter
 	def target_range(self, value):
+		"""
+		Sets the value for the range of retention times in which to search for peaks
+		
+		:param value: Retention time range
+		:type value: list, tuple or comma-separated string
+		"""
+		
 		if isinstance(value, str):
 			min_range, max_range, *_ = tuple(value.split(","))
 			self._target_range = (float(min_range), float(max_range))
@@ -238,14 +466,37 @@ class GSMConfig(object):
 		elif isinstance(value, list):
 			self._target_range = tuple(value)
 		else:
-			raise TypeError("'target_range' must be a list, tuple or comma-seperated string")
+			raise TypeError("'target_range' must be a list, tuple or comma-separated string")
 	
 	@property
 	def base_peak_filter(self):
+		"""
+		Peaks with these base ions (i.e. the most intense peak in the mass
+			spectrum) will be excluded from the results.
+		
+		This can be useful for excluding compounds related to septum bleed,
+			which usually have a base ion at m/z 73
+		
+		:return: Base peak filter
+		:rtype: tuple of ints
+		"""
+		
 		return self._base_peak_filter
 	
 	@base_peak_filter.setter
 	def base_peak_filter(self, value):
+		"""
+		Peaks with these base ions (i.e. the most intense peak in the mass
+			spectrum) will be excluded from the results.
+		
+		This can be useful for excluding compounds related to septum bleed,
+			which usually have a base ion at m/z 73
+		
+		
+		:param value: Base peak filter
+		:type value: list, tuple or comma-separated string
+		"""
+		
 		if isinstance(value, str):
 			self._base_peak_filter = [int(x) for x in value.split(",")]
 		elif isinstance(value, list):
@@ -253,69 +504,189 @@ class GSMConfig(object):
 		elif isinstance(value, tuple):
 			self._base_peak_filter = list(value)
 		else:
-			raise TypeError("'base_peak_filter' must be a list, tuple or comma-seperated string")
+			raise TypeError("'base_peak_filter' must be a list, tuple or comma-separated string")
 	
 	@property
 	def tophat(self):
+		"""
+		Returns the value for the Tophat baseline correction structural element
+		
+		The structural element needs to be larger than the features one wants
+			to retain in the spectrum after the top-hat transform
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._tophat
 	
 	@tophat.setter
 	def tophat(self, value):
+		"""
+		Sets the value for the Tophat baseline correction structural element
+		
+		The structural element needs to be larger than the features one wants
+			to retain in the spectrum after the top-hat transform
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._tophat = value
 	
 	@property
 	def tophat_unit(self):
+		"""
+		Returns the unit for the Tophat baseline correction structural element
+		
+		The structural element needs to be larger than the features one wants
+			to retain in the spectrum after the top-hat transform
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._tophat_unit
 	
 	@tophat_unit.setter
 	def tophat_unit(self, value):
+		"""
+		Sets the unit for the Tophat baseline correction structural element
+		
+		The structural element needs to be larger than the features one wants
+			to retain in the spectrum after the top-hat transform
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._tophat_unit = value
 	
 	@property
 	def tophat_struct(self):
+		"""
+		Returns the Tophat baseline correction structural element
+		
+		The structural element needs to be larger than the features one wants
+			to retain in the spectrum after the top-hat transform
+		
+		:return:
+		:rtype:
+		"""
+		
 		return "{}{}".format(self.tophat, self.tophat_unit)
 	
 	@tophat_struct.setter
 	def tophat_struct(self, value):
-		self._tophat_struct = value
+		"""
+		Sets the the Tophat baseline correction structural element
+		
+		The structural element needs to be larger than the features one wants
+			to retain in the spectrum after the top-hat transform
+		
+		:param value:
+		:type value:
+		"""
+		
+		_, self._tophat, self._tophat_unit = re.split('([^a-z]+)', value)
 	
 	@property
 	def mass_range(self):
+		"""
+		Returns the value for the mass range
+		
+		This must be small enough to encompass all samples
+		
+		:return: Mass Range (min, max)
+		:rtype: tuple of ints
+		"""
+		
 		return self._mass_range
 	
 	@mass_range.setter
 	def mass_range(self, value):
+		"""
+		Sets the value for the mass range
+		
+		This must be small enough to encompass all samples
+		
+		:param value: Mass Range
+		:type value: list, tuple or comma-separated string
+		"""
+		
 		if isinstance(value, str):
-			self._base_peak_filter = str2tuple(value)
+			self._mass_range = str2tuple(value)
 		elif isinstance(value, list):
-			self._base_peak_filter = tuple(value)
+			self._mass_range = tuple(value)
 		elif isinstance(value, tuple):
-			self._base_peak_filter = value
+			self._mass_range = value
 		else:
-			raise TypeError("'mass_range' must be a list, tuple or comma-seperated string")
+			raise TypeError("'mass_range' must be a list, tuple or comma-separated string")
 	
 	@property
 	def rt_modulation(self):
+		"""
+		Returns the value for the Peak Alignment RT Modulation
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._rt_modulation
 	
 	@rt_modulation.setter
 	def rt_modulation(self, value):
+		"""
+		Sets the value for the Peak Alignment RT Modulation
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._rt_modulation = float(value)
 	
 	@property
 	def gap_penalty(self):
+		"""
+		Returns the value for the Peak Alignment Gap Penalty
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._gap_penalty
 	
 	@gap_penalty.setter
 	def gap_penalty(self, value):
+		"""
+		Sets the value for the Peak Alignment Gap Penalty
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._gap_penalty = float(value)
 	
 	@property
 	def min_peaks(self):
+		"""
+		Returns the value for the Peak Alignment Min Peaks
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._min_peaks
 	
 	@min_peaks.setter
 	def min_peaks(self, value):
+		"""
+		Sets the value for the Peak Alignment Min Peaks
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._min_peaks = int(value)
 	
 	@property
@@ -404,49 +775,105 @@ class GSMConfig(object):
 	
 	@property
 	def comparison_a(self):
+		"""
+		Returns the value for
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._comparison_a
 	
 	@comparison_a.setter
 	def comparison_a(self, value):
+		"""
+		Sets the value for
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._comparison_a = float(value)
 		
 	@property
 	def comparison_rt_modulation(self):
+		"""
+		Returns the value for
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._comparison_rt_modulation
 	
 	@comparison_rt_modulation.setter
 	def comparison_rt_modulation(self, value):
+		"""
+		Sets the value for
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._comparison_rt_modulation = float(value)
 		
 	@property
 	def comparison_gap_penalty(self):
+		"""
+		Returns the value for
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._comparison_gap_penalty
 	
 	@comparison_gap_penalty.setter
 	def comparison_gap_penalty(self, value):
+		"""
+		Sets the value for
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._comparison_gap_penalty = float(value)
 		
 	@property
 	def comparison_min_peaks(self):
+		"""
+		Returns the value for
+		
+		:return:
+		:rtype:
+		"""
+		
 		return self._comparison_min_peaks
 	
 	@comparison_min_peaks.setter
 	def comparison_min_peaks(self, value):
+		"""
+		Sets the value for
+		
+		:param value:
+		:type value:
+		"""
+		
 		self._comparison_min_peaks = int(value)
 	
-
-	def save_config(self, configfile=None,):
-		# Gets configuration from self if set, if not from self
+	def save_config(self, configfile=None):
+		"""
+		Saves the configuration to the given filename, or to self.configfile if no filename is given
+		
+		:param configfile: Filename to save the configuration to
+		:type configfile: str, optional
+		"""
 		
 		if configfile is None:
 			configfile = self.configfile
 		
-		import platform
-		import configparser as ConfigParser
-		from domdf_python_tools import list2str
-		
-		"""Configuration -----"""
-		Config = ConfigParser.ConfigParser()
+		# Configuration
+		Config = configparser.ConfigParser()
 		Config.read(configfile)
 		
 		if platform.system() == "Linux":
@@ -454,14 +881,14 @@ class GSMConfig(object):
 		else:
 			Config.set("main", "NistPath", self.nist_path.replace("\\", "/"))
 		
-		Config.set("main", "rawpath", str(relpath2(self.RAW_DIRECTORY)).replace("\\", "/"))
-		Config.set("main", "CSVpath", str(relpath2(self.CSV_DIRECTORY)).replace("\\", "/"))
-		Config.set("main", "SPECTRApath", str(relpath2(self.SPECTRA_DIRECTORY)).replace("\\", "/"))
-		Config.set("main", "CHARTSpath", str(relpath2(self.CHARTS_DIRECTORY)).replace("\\", "/"))
-		Config.set("main", "MSPpath", str(relpath2(self.MSP_DIRECTORY)).replace("\\", "/"))
-		Config.set("main", "RESULTSpath", str(relpath2(self.RESULTS_DIRECTORY)).replace("\\", "/"))
-		Config.set("main", "MSPpath", str(relpath2(self.MSP_DIRECTORY)).replace("\\", "/"))
-		Config.set("main", "exprdir", str(relpath2(self.EXPERIMENTS_DIRECTORY)).replace("\\", "/"))
+		Config.set("main", "rawpath", str(relpath2(self.raw_dir)).replace("\\", "/"))
+		Config.set("main", "CSVpath", str(relpath2(self.csv_dir)).replace("\\", "/"))
+		Config.set("main", "SPECTRApath", str(relpath2(self.spectra_dir)).replace("\\", "/"))
+		Config.set("main", "CHARTSpath", str(relpath2(self.charts_dir)).replace("\\", "/"))
+		Config.set("main", "MSPpath", str(relpath2(self.msp_dir)).replace("\\", "/"))
+		Config.set("main", "RESULTSpath", str(relpath2(self.results_dir)).replace("\\", "/"))
+		Config.set("main", "MSPpath", str(relpath2(self.msp_dir)).replace("\\", "/"))
+		Config.set("main", "exprdir", str(relpath2(self.expr_dir)).replace("\\", "/"))
 		
 		Config.set("samples", "samples", ",".join(self.prefixList))
 		

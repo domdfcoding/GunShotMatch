@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 #
-#  Copyright (c) 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2017-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 3 of the License, or
@@ -31,24 +31,9 @@ __email__ = "dominic@davis-foster.co.uk"
 import sys
 sys.path.append("..")
 
-import re
-import os
 import wx
-import time
-import traceback
-import threading
-import subprocess
-
-from GSMatch.GSMatch_Core.thread_boilerplates import EventBoilerplate as ProjectEvent
-from GSMatch.GSMatch_Core.thread_boilerplates import EventBoilerplate as ConversionEvent
-from GSMatch.GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ProjectLogEvent
-from GSMatch.GSMatch_Core.thread_boilerplates import LogEventBoilerplate as ConversionLogEvent
-
 import wx.html2
 import wx.richtext
-from wx.adv import NotificationMessage
-
-import matplotlib
 
 from GSMatch.GSMatch_Core import Launcher
 
@@ -60,6 +45,9 @@ from GSMatch.GSMatch_Core import Launcher
 # end wxGlade
 
 
+#if platform.system() == "Windows":
+#	wx.html2.WebView.MSWSetEmulationLevel(level=wx.html2.WEBVIEW_EMU_IE11)
+
 class GSM_App(wx.App):
 	def OnInit(self):
 		self.frame = Launcher.Launcher(None, wx.ID_ANY, "")
@@ -69,7 +57,9 @@ class GSM_App(wx.App):
 
 # end of class GSM_App
 
+
 if __name__ == "__main__":
+	print("Starting GunShotMatch_GUI")
 	print("###")
 	print(wx.Colour(wx.SYS_COLOUR_BACKGROUND))
 	print(wx.Colour(240, 240, 240))
@@ -84,5 +74,7 @@ if __name__ == "__main__":
 	GunShotMatch.MainLoop()
 
 	print("Goodbye :)")
+#	if platform.system() == "Windows":
+#		wx.html2.WebView.MSWSetEmulationLevel(level=wx.html2.WEBVIEW_EMU_DEFAULT)
 	
 	sys.exit(0)

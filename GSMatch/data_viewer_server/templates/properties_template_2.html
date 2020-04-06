@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	{% if comp %}
+		<title>Compound Properties - {{comp.IUPAC["String"]}}</title>
+	{% else %}
+		<title>Compound Properties - {{hit.name}}</title>
+	{% endif %}
+<!--	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">-->
+	<link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+	<style>
+		body {
+			padding-top: 10px;
+			padding-left: 20px;
+			padding-right: 20px;
+			padding-bottom: 20px;
+		}
+		
+		div.leftpad {
+		  padding-top: 2px;
+		  padding-bottom: 2px;
+		  padding-left: 20px;
+		}
+		
+	</style>
+</head>
+<body>
+
+{% if comp is none %}
+	<div class="alert alert-warning" role="alert">
+	  <b>Warning!</b> Compound not found in PubChem database. Some information may be incomplete.
+	</div>
+{% endif %}
+
+<!--Basic Properties-->
+<div class="row">
+  	<div class="col">
+		<h2>{{ hit.name|safe }}</h2>
+		<div class="leftpad">
+			<div class="row">
+				<div class="col-sm">
+					{% if comp %}
+						<p>
+							IUPAC Name: {{comp.format_string(comp.IUPAC)|safe}}
+						</p>
+						
+						{% if comp.CAS %}
+							<p data-toggle="tooltip" data-placement="top" title="A proprietary registry number assigned by the Chemical Abstracts Service (CAS) division of the American Chemical Society (ACS) often used to help describe chemical ingredients.">
+								CAS: {{comp.CAS}}
+							</p>
+						{% endif %}
+					
+						<p>
+							PubChem ID: <a href="https://pubchem.ncbi.nlm.nih.gov/compound/{{comp.cid}}" target="_blank">{{comp.cid}}</a>
+						</p>
+					
+					{% else %}
+						<p>
+							Name: {{hit.name}}
+						</p>
+
+						{% if hit.cas %}
+							<p data-toggle="tooltip" data-placement="top" title="A proprietary registry number assigned by the Chemical Abstracts Service (CAS) division of the American Chemical Society (ACS) often used to help describe chemical ingredients.">
+								CAS: {{hit.cas}}
+							</p>
+
+						{% elif hit.reference_data.cas %}
+							<p data-toggle="tooltip" data-placement="top" title="A proprietary registry number assigned by the Chemical Abstracts Service (CAS) division of the American Chemical Society (ACS) often used to help describe chemical ingredients.">
+								CAS: {{hit.reference_data.cas}}
+							</p>
+
+						{%endif%}
+
+					{% endif %}
+				</div>
+				<div class="col-sm">
+					{% if comp %}
+						<p>
+							Formula: {{comp.hill_formula|safe}}
+						</p>
+						<p data-toggle="tooltip" data-placement="top" title="{{comp.get_property_description('Molecular Weight')}}">
+							Molecular Mass: {{comp.molecular_weight}}
+						</p>
+						<p data-toggle="tooltip" data-placement="top" title="{{comp.get_property_description('Exact Mass')}}">
+							Exact Mass: {{comp.exact_mass}}
+						</p>
+					
+					{% else %}
+						<p>
+							Formula: {{hit.reference_data.formula|safe}}
+						</p>
+						<p>
+							Molecular Mass: {{hit.reference_data.mw}}
+						</p>
+					
+					{% endif %}
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!--Statistics Table-->
+<div class="row">
+	<div class="col">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h4 class="panel-title">
+					<a data-toggle="collapse" href="#statistics_collapse">
+						Statistics
+					</a>
+				</h4>
+			</div>
+			<div id="statistics_collapse" class="panel-collapse collapse show">
+				<div class="panel-body">
+					<div class="leftpad">
+						<div class="row">
+							<div class="col-sm">
+								<p>
+									Count: {{len(hit)}}/{{len(samples)}}
+									<div class="table-responsive">
+										<table class="table">
+											<tr>
+												<th></th>
+												<th><div><span>Mean</span></div></th>
+												<th><div><span>Stdev</span></div></th>
+												<th><div><span>%RSD</span></div></th>
+											</tr>
+											<tr>
+												<td>Match Factor</td>
+												<td>{{rounders(hit.match_factor,"0.0")}}</td>
+												<td>{{rounders(np.nanstd(hit.mf_list),"0.0000")}}</td>
+												<td>{{rounders(np.nanstd(hit.mf_list)*100/hit.match_factor,"0.00")}}%</td>
+											</tr>
+											<tr>
+												<td>Reverse Match Factor</td>
+												<td>{{rounders(hit.reverse_match_factor,"0.0")}}</td>
+												<td>{{rounders(np.nanstd(hit.rmf_list),"0.0000")}}</td>
+												<td>{{rounders(np.nanstd(hit.rmf_list)*100/hit.reverse_match_factor,"0.00")}}%</td>
+											</tr>
+											<tr>
+												<td>Hit Number</td>
+												<td>{{rounders(hit.average_hit_number,"0.0")}}</td>
+												<td>{{rounders(np.nanstd(hit.hit_numbers),"0.0000")}}</td>
+												<td>{{rounders(np.nanstd(hit.hit_numbers)*100/hit.average_hit_number,"0.00")}}%</td>
+											</tr>
+										</table>
+									</div>
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% if comp %}
+		<div class="col">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" href="#collapseFour">Structure</a>
+					</h4>
+				</div>
+				<div id="collapseFour" class="panel-collapse collapse show">
+					<div class="panel-body">
+	<!--					<img src="http://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid={{comp.cid}}&t=l" alt="Structure for {{ comp.iupac_name }}">-->
+						<img src="/smiles/{{comp.smiles}}" alt="Structure for {{ comp.iupac_name }}">
+					</div>
+				</div>
+			</div>
+		</div>
+	{% endif %}
+</div>
+
+<!---Raw Data Table--->
+<!---<div class="leftpad">--->
+<div class="row">
+	<div class="col">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h4 class="panel-title">
+					<a data-toggle="collapse" href="#data_collapse">
+						Raw Data
+					</a>
+				</h4>
+			</div>
+			<div id="data_collapse" class="panel-collapse collapse show">
+				<div class="panel-body">
+					<div class="leftpad">
+						<div class="row">
+							<div class="col">
+								<div class="table-responsive">
+									<table class="table">
+										<tr>
+											<th>Sample</th>
+											<th>Match Factor</th>
+											<th>Reverse Match Factor</th>
+											<th>Hit Number</th>
+										</tr>
+										{%for index in range(samples|length)%}
+											<tr>
+												<td>{{samples[index]}}</td>
+												<td>{{rounders(hit.mf_list[index],"0.0")}}</td>
+												<td>{{rounders(hit.rmf_list[index],"0.0")}}</td>
+												<td>{{rounders(hit.hit_numbers[index],"0.0")}}</td>
+											</tr>
+										{%endfor%}
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+	
+{#	<div class="row">#}
+{#		<div class="panel panel-default">#}
+{#			<div class="panel-heading">#}
+{#				<h4 class="panel-title">#}
+{#					<a data-toggle="collapse" href="#collapseOne">#}
+{#						Properties#}
+{#					</a>#}
+{#				</h4>#}
+{#			</div>#}
+{#			<div id="collapseOne" class="panel-collapse collapse show">#}
+{#				<div class="panel-body">#}
+{#					<div class="leftpad">#}
+{#						<div class="row">#}
+{#							<div class="col-sm">#}
+{#								{%if comp.melting_point != "NotFound"%}#}
+{#									<p data-toggle="tooltip" data-placement="top" title="{{comp.get_property_description('Melting Point')}}">#}
+{#										Melting Point: {{comp.melting_point}} {{comp.get_property_unit('Melting Point')}}#}
+{#									</p>#}
+{#								{%endif%}#}
+{#								{%if comp.boiling_point != "NotFound"%}#}
+{#									<p data-toggle="tooltip" data-placement="top" title="{{comp.get_property_description('Boiling Point')}}">#}
+{#										Boiling Point: {{comp.boiling_point}} {{comp.get_property_unit('Boiling Point')}}#}
+{#									</p>#}
+{#								{%endif%}#}
+{#								{%if comp.density != "NotFound"%}#}
+{#									<p data-toggle="tooltip" data-placement="top" title="{{comp.get_property_description('Density/Specific Gravity')}}">#}
+{#										Density/Specific Gravity: {{comp.density}}#}
+{#									</p>#}
+{#								{%endif%}#}
+{#								{%if comp.color != "NotFound"%}#}
+{#									<p data-toggle="tooltip" data-placement="top" title="{{comp.get_property_description('Color/Form')}}">#}
+{#										Colour/Form: {{comp.color}}#}
+{#									</p>#}
+{#								{%endif%}#}
+{#								{%if comp.odor != "NotFound"%}#}
+{#									<p data-toggle="tooltip" data-placement="top" title="{{comp.get_property_description('Odor')}}">#}
+{#										Odour: {{comp.odor}}#}
+{#									</p>#}
+{#								{%endif%}#}
+{#	#}
+{#							</div>#}
+{#						</div>#}
+{#					</div>#}
+{#				</div>#}
+{#			</div>#}
+{#		</div>#}
+{#	</div>#}
+	
+	{% if comp %}
+		<div class="row">
+			<div class="col">
+				<div class="panel panel-default">
+					<div class="panel-heading">
+						<h4 class="panel-title">
+							<a data-toggle="collapse" href="#collapseTwo">Identifiers</a>
+						</h4>
+					</div>
+					<div id="collapseTwo" class="panel-collapse collapse">
+						<div class="panel-body">
+							<div class="leftpad">
+								<div class="row">
+									<div class="col">
+										<p>{{comp.inchi}}</p>
+										<p>InChIKey: {{comp.inchikey}}</p>
+										<p>SMILES: {{comp.smiles}}</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	{% endif %}
+	
+	<div class="row">
+		<div class="col">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" href="#collapseThree">Synonyms</a>
+					</h4>
+				</div>
+				<div id="collapseThree" class="panel-collapse collapse">
+					<div class="panel-body">
+						<ol>
+							{% if comp %}
+								{% for synonym in comp.synonyms %}
+									<li>{{synonym}}</li>
+								{% endfor %}
+							{% else %}
+								{% for synonym in hit.reference_data.synonyms %}
+									<li>{{synonym}}</li>
+								{% endfor %}
+							{% endif %}
+						</ol>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+<!--</div>-->
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<!--<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>-->
+<script src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
+</body>
+</html>

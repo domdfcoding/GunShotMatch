@@ -6,7 +6,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -35,6 +35,30 @@ import wx
 
 class border_config(wx.Dialog):
 	def __init__(self, parent, chromatogram_figure, *args, **kwds):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param chromatogram_figure:
+		:type chromatogram_figure:
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param size: The dialog size. The value DefaultSize indicates a default
+		size, chosen by either the windowing system or wxWidgets, depending on
+		platform.
+		:type size: wx.Size
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
+		
 		self.chromatogram_figure = chromatogram_figure
 		args = (parent,) + args
 		# begin wxGlade: border_config.__init__

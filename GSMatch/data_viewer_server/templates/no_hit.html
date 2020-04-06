@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>GunShotMatch DataViewer Server</title>
+
+	<link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+	<style>
+		.center {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			-ms-transform: translate(-50%, -50%); /* for IE 9 */
+			-webkit-transform: translate(-50%, -50%); /* for Safari */
+			
+		}
+		
+		.arrow {
+			font-size: 72pt;
+		}
+	</style>
+</head>
+<body>
+
+<!--Basic Properties-->
+<div class="center">
+	<div>
+		<h2>Select a hit on the left to view more information about it.</h2>
+	</div>
+	<div>
+		<h1 class="arrow">←</h1>
+	</div>
+</div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+
+<script src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
+</body>
+</html>

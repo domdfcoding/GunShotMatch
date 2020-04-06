@@ -1,7 +1,4 @@
-from utils import pubchempy as pcp
-from decimal import Decimal
-
-["‎206-44-0", ]
+from chemistry_tools.lookup import get_compounds
 
 for cas in ["100-15-2", "100-41-4", "100-42-5", "100-47-0", "100-48-1", "100-52-7", "100-54-9",
 				 "100-70-9", "100-83-4", "102-07-8", "102-76-1", "103-71-9", "104-55-2", "104-76-7", "104-85-8",
@@ -31,7 +28,7 @@ for cas in ["100-15-2", "100-41-4", "100-42-5", "100-47-0", "100-48-1", "100-52-
 				 ]:
 
 	try:
-		comp = pcp.get_compounds(cas, 'name')[0]
+		comp = get_compounds(cas, 'name')[0]
 	except:
 		input(">")
 		continue

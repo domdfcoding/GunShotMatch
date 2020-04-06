@@ -2,11 +2,13 @@
 #   -*- coding: utf-8 -*-
 #
 #  AboutDialog.py
-"""Dialog providing information about GunShotMatch, including the license"""
+"""
+Dialog providing information about GunShotMatch, including the license
+"""
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -24,10 +26,18 @@
 #  MA 02110-1301, USA.
 #
 
-import os
+# stdlib
+import webbrowser
+
+# 3rd party
 import wx
 import wx.html2
-import webbrowser
+from importlib_resources import path
+
+# this package
+import GSMatch.lib
+import GSMatch.lib.licenses
+
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -38,6 +48,28 @@ import webbrowser
 
 class AboutDialog(wx.Dialog):
 	def __init__(self, *args, **kwds):
+		"""
+		:param parent: Can be None, a frame or another dialog box.
+		:type parent: wx.Window
+		:param id: An identifier for the dialog. A value of -1 is taken to mean a default.
+		:type id: wx.WindowID
+		:param title: The title of the dialog.
+		:type title: str
+		:param pos: The dialog position. The value DefaultPosition indicates a
+		default position, chosen by either the windowing system or wxWidgets,
+		depending on platform.
+		:type pos: wx.Point
+		:param size: The dialog size. The value DefaultSize indicates a default
+		size, chosen by either the windowing system or wxWidgets, depending on
+		platform.
+		:type size: wx.Size
+		:param style: The window style.
+		:type style: int
+		:param name: Used to associate a name with the window, allowing the
+		application user to set Motif resource values for individual dialog boxes.
+		:type name: str
+		"""
+		
 		# begin wxGlade: AboutDialog.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
 		wx.Dialog.__init__(self, *args, **kwds)
@@ -53,21 +85,30 @@ class AboutDialog(wx.Dialog):
 		self.website_button = wx.Button(self.info_panel, wx.ID_ANY, "http://dominic.davis-foster.co.uk/GSR", style=wx.BORDER_NONE)
 		self.Credits = wx.Panel(self.about_tabs, wx.ID_ANY)
 		self.credits_browser = wx.html2.WebView.New(self.Credits, wx.ID_ANY)
-		self.credits_browser.LoadURL("file://{}".format(os.path.join(os.getcwd(),"AUTHORS")))
+		with path(GSMatch.lib, "CREDITS.html") as credits_file:
+			self.credits_browser.LoadURL(f"file://{credits_file}")
 		self.License = wx.Panel(self.about_tabs, wx.ID_ANY)
 		self.license_notebook = wx.Notebook(self.License, wx.ID_ANY)
 		self.GPL_V3 = wx.Panel(self.license_notebook, wx.ID_ANY)
 		self.gpl_v3_browser = wx.html2.WebView.New(self.GPL_V3, wx.ID_ANY)
-		self.gpl_v3_browser.LoadURL("file://{}".format(os.path.join(os.getcwd(),"LICENSE")))
+		with path(GSMatch.lib.licenses, "LICENSE_GPL3.html") as license_file:
+			self.gpl_v3_browser.LoadURL(f"file://{license_file}")
 		self.GPL_V2 = wx.Panel(self.license_notebook, wx.ID_ANY)
 		self.gpl_v2_browser = wx.html2.WebView.New(self.GPL_V2, wx.ID_ANY)
-		self.gpl_v2_browser.LoadURL("file://{}".format(os.path.join(os.getcwd(),"LICENSE_GPL2")))
-		self.CC_BY_SA = wx.Panel(self.license_notebook, wx.ID_ANY)
-		self.cc_by_sa_browser = wx.html2.WebView.New(self.CC_BY_SA, wx.ID_ANY)
-		self.cc_by_sa_browser.LoadURL("file://{}".format(os.path.join(os.getcwd(),"LICENSE_CC_BY_SA")))
+		with path(GSMatch.lib.licenses, "LICENSE_GPL2.html") as license_file:
+			self.gpl_v3_browser.LoadURL(f"file://{license_file}")
+		self.CC_BY_SA_4 = wx.Panel(self.license_notebook, wx.ID_ANY)
+		self.cc_by_sa_4_browser = wx.html2.WebView.New(self.CC_BY_SA_4, wx.ID_ANY)
+		with path(GSMatch.lib.licenses, "LICENSE_CC_BY_SA_4.0.html") as license_file:
+			self.cc_by_sa_4_browser.LoadURL(f"file://{license_file}")
+		self.CC_BY_SA_3 = wx.Panel(self.license_notebook, wx.ID_ANY)
+		self.cc_by_sa_3_browser = wx.html2.WebView.New(self.CC_BY_SA_3, wx.ID_ANY)
+		with path(GSMatch.lib.licenses, "LICENSE_CC_BY_SA_3.0.html") as license_file:
+			self.cc_by_sa_3_browser.LoadURL(f"file://{license_file}")
 		self.MIT = wx.Panel(self.license_notebook, wx.ID_ANY)
 		self.mit_browser = wx.html2.WebView.New(self.MIT, wx.ID_ANY)
-		self.mit_browser.LoadURL("file://{}".format(os.path.join(os.getcwd(),"LICENSE_MIT")))
+		with path(GSMatch.lib.licenses, "LICENSE_MIT.html") as license_file:
+			self.mit_browser.LoadURL(f"file://{license_file}")
 
 		self.__set_properties()
 		self.__do_layout()
@@ -106,7 +147,8 @@ class AboutDialog(wx.Dialog):
 		about_parent_sizer = wx.BoxSizer(wx.VERTICAL)
 		license_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		mit_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		cc_by_sa_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		cc_by_sa_3_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		cc_by_sa_4_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		gpl_v2_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		gpl_v3_sizer = wx.BoxSizer(wx.HORIZONTAL)
 		credits_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -128,7 +170,7 @@ class AboutDialog(wx.Dialog):
 		info_sizer.Add(version_label, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
 		info_sizer.Add(self.githib_button, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT | wx.RIGHT | wx.TOP, 10)
 		info_sizer.Add(self.website_button, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM | wx.LEFT | wx.RIGHT, 10)
-		copyright_label = wx.StaticText(self.info_panel, wx.ID_ANY, "Copyright (c) 2017-2019\nDominic Davis-Foster\nAll rights reserved.", style=wx.ALIGN_CENTER)
+		copyright_label = wx.StaticText(self.info_panel, wx.ID_ANY, u"Copyright © 2017-2020\nDominic Davis-Foster\nAll rights reserved.", style=wx.ALIGN_CENTER)
 		info_sizer.Add(copyright_label, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 20)
 		self.info_panel.SetSizer(info_sizer)
 		info_parent_sizer.Add(self.info_panel, 1, wx.ALL | wx.EXPAND | wx.FIXED_MINSIZE, 5)
@@ -139,13 +181,16 @@ class AboutDialog(wx.Dialog):
 		self.GPL_V3.SetSizer(gpl_v3_sizer)
 		gpl_v2_sizer.Add(self.gpl_v2_browser, 1, wx.EXPAND, 0)
 		self.GPL_V2.SetSizer(gpl_v2_sizer)
-		cc_by_sa_sizer.Add(self.cc_by_sa_browser, 1, wx.EXPAND, 0)
-		self.CC_BY_SA.SetSizer(cc_by_sa_sizer)
+		cc_by_sa_4_sizer.Add(self.cc_by_sa_4_browser, 1, wx.EXPAND, 0)
+		self.CC_BY_SA_4.SetSizer(cc_by_sa_4_sizer)
+		cc_by_sa_3_sizer.Add(self.cc_by_sa_3_browser, 1, wx.EXPAND, 0)
+		self.CC_BY_SA_3.SetSizer(cc_by_sa_3_sizer)
 		mit_sizer.Add(self.mit_browser, 1, wx.EXPAND, 0)
 		self.MIT.SetSizer(mit_sizer)
 		self.license_notebook.AddPage(self.GPL_V3, "GPL v3")
 		self.license_notebook.AddPage(self.GPL_V2, "GPL v2")
-		self.license_notebook.AddPage(self.CC_BY_SA, "CC-BY-SA")
+		self.license_notebook.AddPage(self.CC_BY_SA_4, "CC-BY-SA 4.0")
+		self.license_notebook.AddPage(self.CC_BY_SA_3, "CC-BY-SA 3.0")
 		self.license_notebook.AddPage(self.MIT, "MIT")
 		license_sizer.Add(self.license_notebook, 1, wx.EXPAND, 0)
 		self.License.SetSizer(license_sizer)
