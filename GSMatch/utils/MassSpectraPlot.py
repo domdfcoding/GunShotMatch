@@ -4,7 +4,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015 Martin N
+Copyright © 2015 Martin N
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -344,7 +344,7 @@ def generate_massspectra_plot_automatic_labels(input_filename, output_filename):
 	if min_xaxis is not None and max_xaxis is not None:
 		ax.set_xlim([int(min_xaxis), int(max_xaxis)])
 
-#	length_x_axis_pixel, length_y_axis_pixel = __get_ax_size(ax, fig)
+	length_x_axis_pixel, length_y_axis_pixel = __get_ax_size(ax, fig)
 	x_axis_min, x_axis_max = ax.get_xlim()
 	y_axis_min, y_axis_max = ax.get_ylim()
 

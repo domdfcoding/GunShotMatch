@@ -7,16 +7,19 @@
 #  Licensed under CC-BY-SA
 #
 #  Adapted 2018 by Dominic Davis-Foster <dominic@davis-foster.co.uk>
-#	Changes include:
-#		 Removing all print functions except the elapsed time at the end
-#		 Using time() in place of clock() to take into account time when python is paused
+#  Changes include:
+#     Removing all print functions except the elapsed time at the end
+#     Using time() in place of clock() to take into account time when python is paused
 #
 # source: http://stackoverflow.com/a/1557906/6009280
 
+# stdlib
 import atexit
-#from time import clock
 import time
 from functools import reduce
+
+
+line = "=" * 40
 
 
 def seconds_to_str(t):
@@ -25,32 +28,14 @@ def seconds_to_str(t):
                   [(t * 1000,), 1000, 60, 60])
 
 
-line = "=" * 40
-
-
-def log(s, elapsed=None):
+def on_exit():
+    end = time.time()
+    elapsed = end - start
     print(line)
-#    print(seconds_to_str(time.time()), '-', s)
-    #print(seconds_to_str(clock()), '-', s)
-    if elapsed:
-        print("Elapsed time:", elapsed)
+    print("Elapsed time:", seconds_to_str(elapsed))
     print(line)
     print('')
 
 
-def endlog():
-    #end = clock()
-    end = time.time()
-    elapsed = end - start
-    log("End Program", seconds_to_str(elapsed))
-
-
-def now():
-    return seconds_to_str(time.time())
-    #return seconds_to_str(clock())
-
-
-#start = clock()
 start = time.time()
-atexit.register(endlog)
-#log("Start Program")
+atexit.register(on_exit)

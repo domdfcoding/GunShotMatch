@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 
 # http://akiscode.com/articles/sha-1directoryhash.shtml
-# Copyright (c) 2009 Stephen Akiki
-# Copyright (c) 2019 Dominic Davis-Foster
+# Copyright © 2009 Stephen Akiki
+# Copyright © 2019 Dominic Davis-Foster
 # MIT License (Means you can do whatever you want with this)
 #  See http://www.opensource.org/licenses/mit-license.php
 # Error Codes:
 #   -1 -> Directory does not exist
 #   -2 -> General error (see stack traceback)
+
 
 def GetHashofDirs(directory, verbose=0):
 	import hashlib, os
@@ -23,19 +24,16 @@ def GetHashofDirs(directory, verbose=0):
 					print('Hashing', names)
 				filepath = os.path.join(root, names)
 				try:
-					f1 = open(filepath, 'rb')
+					with open(filepath, 'rb') as f1:
+						while 1:
+							# Read file in as little chunks
+							buf = f1.read(4096)
+							if not buf:
+								break
+							SHAhash.update(hashlib.sha1(buf).hexdigest().encode("utf-8"))
 				except:
 					# You can't open the file for some reason
-					f1.close()
 					continue
-				
-				while 1:
-					# Read file in as little chunks
-					buf = f1.read(4096)
-					if not buf:
-						break
-					SHAhash.update(hashlib.sha1(buf).hexdigest().encode("utf-8"))
-				f1.close()
 	
 	except:
 		import traceback

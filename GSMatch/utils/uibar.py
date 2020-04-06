@@ -24,8 +24,12 @@
 
 import time
 
-class ProgressBar():
-	def __init__(self, start_message, max_value, main_window, end_message = "Analysis complete"):
+
+UnknownLength = 1000
+
+
+class ProgressBar:
+	def __init__(self, start_message, max_value, main_window, end_message="Analysis complete"):
 		self.step = 1000 / max_value
 		self.main_window = main_window
 
@@ -54,14 +58,3 @@ class ProgressBar():
 		self.main_window.status(self.end_message)
 		time.sleep(5)
 		self.main_window.progbar.SetValue(0)
-
-class widgets():
-	def __init__(self):
-		return 0
-	def AnimatedMarker(self):
-		return 0
-
-def Timer():
-	return 0
-
-UnknownLength = 1000

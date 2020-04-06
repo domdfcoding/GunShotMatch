@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2018-2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2018-2019 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -40,11 +40,6 @@ utils.DirectoryHash:
 	Available under the MIT License
 -----
 
-utils.jcamp:
-	Copyright (c) 2013 Nathan Hagen <and.the.light.shattered@gmail.com>
-	Available under the MIT License
------
-
 utils.MassSpectraPlot
 	Copyright 2015 Martin N.
 	https://github.com/matrixx567/MassSpectraPlot
@@ -69,13 +64,6 @@ utils.pynist:
 		Copyright NIST
 -----
 
-utils.SpectrumSimilarity:
-	Originally from SpectrumSimilarity.R
-	Part of OrgMassSpecR
-	Copyright 2011-2017 Nathan Dodder <nathand@sccwrp.org>
-	Adapted in 2019 by Dominic Davis-Foster
------
-
 utils.timing:
 	Copyright 2009 PaulMcG
 	From http://stackoverflow.com/a/1557906/6009280
@@ -87,13 +75,11 @@ utils.timing:
 
 __all__ = [
 	"DirectoryHash",
-	"jcamp",
 	"MassSpectraPlot",
 	"progbar",
 	"pynist",
-	"SpectrumSimilarity",
-	"utils",
 	"timing",
 	"uibar",
-]
+	]
+
 

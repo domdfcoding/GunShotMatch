@@ -2,15 +2,14 @@
 # -*- coding: utf-8 -*-
 #
 #  pynist.py
-from __future__ import print_function
-_version = 0.25
-#  
-"""Python Interface to NIST MS Search"""
+"""
+Python Interface to NIST MS Search
+"""
 #
-#  Copyright 2018 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright 2018, 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
-#	generate_ini contains the .ini file from NIST MS Search
-#		Copyright NIST
+#  generate_ini contains the .ini file from NIST MS Search
+#      Copyright NIST
 #  
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -30,33 +29,48 @@ _version = 0.25
 #  
 #  Requires NIST MS Search to be installed on your computer. 
 #  A fully functional demo version is available from:
-#		http://chemdata.nist.gov/mass-spc/ms-search/
+#       http://chemdata.nist.gov/mass-spc/ms-search/
 #
 #  Makes calls to the NIST MS Search API as described here:
-#		http://chemdata.nist.gov/mass-spc/ms-search/docs/Ver20Man_11.pdf
+#       http://chemdata.nist.gov/mass-spc/ms-search/docs/Ver20Man_11.pdf
 
 
 __author__ = "Dominic Davis-Foster"
-__copyright__ = "Copyright 2018 Dominic Davis-Foster"
+__copyright__ = "Copyright 2018, 2020 Dominic Davis-Foster"
 
 __license__ = "GPLv3"
-__version__ = "0.1.0"
+__version__ = 0.25
 __email__ = "dominic@davis-foster.co.uk"
 
+# stdlib
+import io
 import os
-import traceback
 import platform
 import shutil
+import sys
 import time
-import io
+import traceback
+from subprocess import PIPE, Popen
 
-from subprocess import Popen, PIPE
+# 3rd party
 from domdf_python_tools.paths import parent_path
 
-"""Generates the INI file for NIST MS Search and copies it in place of 
-the current config."""
+
 def generate_ini(nist_path, lib_name, num_hits):
-	"""Generate Configuration"""
+	"""
+	Generates the INI file for NIST MS Search and copies it in place of the current config.
+	
+	:param nist_path:
+	:type nist_path:
+	:param lib_name:
+	:type lib_name:
+	:param num_hits:
+	:type num_hits:
+	
+	:return:
+	:rtype:
+	"""
+	
 	config = """[MAIN]
 Version=2.0
 Library Directory={0}
@@ -1154,201 +1168,244 @@ MRUFloatStyle=8196
 MRUFloatXPos=-2147483648
 MRUFloatYPos=0
 """.format(nist_path, lib_name, num_hits)
-
+	
 	try:
-		#Repace nistms.INI configuration
-		ini_file = os.path.join(nist_path,"nistms.INI")
-		ini_bak = os.path.join(nist_path,"nistms.INI.bak")
+		# Repace nistms.INI configuration
+		ini_file = os.path.join(nist_path, "nistms.INI")
+		ini_bak = os.path.join(nist_path, "nistms.INI.bak")
 		if os.path.isfile(ini_file):
 			if os.path.isfile(ini_bak):
 				os.unlink(ini_bak)
-			os.rename(ini_file,ini_bak)	
-
+			os.rename(ini_file, ini_bak)
+		
 		"""Write Configuration to file"""
-		with open(ini_file,"w") as f:
+		with open(ini_file, "w") as f:
 			f.write(config)
-			
+	
 	except:
-		traceback.print_exc()	#print the error
-		#nist_cleanup()
+		traceback.print_exc()  # print the error
+		# nist_cleanup()
 		sys.exit(1)
 
-"""Reloads Original Configuration File"""
+
 def reload_ini(nist_path):
+	"""
+	Reloads Original Configuration File
+	
+	:param nist_path:
+	:type nist_path:
+	
+	:return:
+	:rtype:
+	"""
 	
 	close_nist()
 	
-	ini_file = os.path.join(nist_path,"nistms.INI")
-	ini_bak = os.path.join(nist_path,"nistms.INI.bak")
+	ini_file = os.path.join(nist_path, "nistms.INI")
+	ini_bak = os.path.join(nist_path, "nistms.INI.bak")
 	
 	if os.path.isfile(ini_bak):
 		if os.path.isfile(ini_file):
 			os.unlink(ini_file)
-		os.rename(ini_bak,ini_file)
+		os.rename(ini_bak, ini_file)
 
-"""Closes NIST MS Search (the hard way)"""
+
 def close_nist():
+	"""
+	Closes NIST MS Search (the hard way)
+	"""
+	
 	if platform.system() == "Linux":
-		Popen(["wine","Taskkill", "/IM", "nistms.exe", "/F"],stdout=PIPE, stderr=PIPE)
+		Popen(["wine", "Taskkill", "/IM", "nistms.exe", "/F"], stdout=PIPE, stderr=PIPE)
 	else:
-		Popen(["Taskkill", "/IM", "nistms.exe", "/F"],stdout=PIPE, stderr=PIPE)
+		Popen(["Taskkill", "/IM", "nistms.exe", "/F"], stdout=PIPE, stderr=PIPE)
+
 
 class nistError(Exception):
 	def __init__(self, value):
 		self.parameter = value
+	
 	def __str__(self):
 		return repr(self.parameter)
 
-def nist_db_connector(nist_dir, spectrum, search_len = 1):
+
+def nist_db_connector(nist_dir, spectrum, search_len=1):
+	"""
+	
+	:param nist_dir:
+	:type nist_dir:
+	:param spectrum:
+	:type spectrum:
+	:param search_len:
+	:type search_len:
+	
+	:return:
+	:rtype:
+	"""
+	
 	attempts = 101
-	while True:#attempts > 100:
+	while True:  # attempts > 100:
 		attempts = 0
-		#if type(spectrum) == dict
+		# if type(spectrum) == dict
 		# still needs to be coded to convert from dictionary or list to MSP
 		spectrum_file = os.path.basename(spectrum)
 		file_extension = os.path.splitext(spectrum)[-1]
-		#still needs coding to convert from xy to msp.
-		#if file_extension.lower() == ".msp":
+		# still needs coding to convert from xy to msp.
+		# if file_extension.lower() == ".msp":
 		
 		spectrum_name = os.path.splitext(spectrum_file)[0]
-
-		if not os.path.exists(os.path.join(nist_dir,"AUTOIMP.MSD")):
+		
+		if not os.path.exists(os.path.join(nist_dir, "AUTOIMP.MSD")):
 			if not os.path.isdir("C:/SEARCH/"):
 				os.makedirs("C:/SEARCH/")
-			with open(os.path.join(nist_dir,"AUTOIMP.MSD"),"w") as f:
+			with open(os.path.join(nist_dir, "AUTOIMP.MSD"), "w") as f:
 				f.write("C:/SEARCH/SEARCH.MSD")
-			
-		locator_path = open(os.path.join(nist_dir,"AUTOIMP.MSD"),"r").read()
+		
+		# locator_path = open(os.path.join(nist_dir,"AUTOIMP.MSD"),"r").read()
+		with open(os.path.join(nist_dir, "AUTOIMP.MSD"), "r") as fp:
+			locator_path = fp.read()
 		
 		if platform.system() == "Linux":
 			import getpass
-			with open(os.path.join(nist_dir,"AUTOIMP.MSD"),"w") as f:
+			with open(os.path.join(nist_dir, "AUTOIMP.MSD"), "w") as f:
 				f.write("C:/SEARCH/SEARCH.MSD")
 			locator_path = "/home/{}/.wine/drive_c/SEARCH/SEARCH.MSD".format(getpass.getuser())
 		
-		while locator_path[0]==' ':
+		while locator_path[0] == ' ':
 			locator_path = locator_path[1:]
-
+		
 		if not os.path.exists(parent_path(locator_path)):
 			os.makedirs(parent_path(locator_path))
 		
-		shutil.copyfile(spectrum,os.path.join(parent_path(locator_path),spectrum_file))
+		shutil.copyfile(spectrum, os.path.join(parent_path(locator_path), spectrum_file))
 		
-		with open(locator_path,"w") as f:
-			f.write(os.path.join(parent_path(locator_path),spectrum_file))
+		with open(locator_path, "w") as f:
+			f.write(os.path.join(parent_path(locator_path), spectrum_file))
 		
-		if os.path.exists(os.path.join(nist_dir,"SRCREADY.TXT")):
-			os.unlink(os.path.join(nist_dir,"SRCREADY.TXT"))
-		if os.path.exists(os.path.join(nist_dir,"SRCRESLT.TXT")):
-			os.unlink(os.path.join(nist_dir,"SRCRESLT.TXT"))
+		if os.path.exists(os.path.join(nist_dir, "SRCREADY.TXT")):
+			os.unlink(os.path.join(nist_dir, "SRCREADY.TXT"))
+		if os.path.exists(os.path.join(nist_dir, "SRCRESLT.TXT")):
+			os.unlink(os.path.join(nist_dir, "SRCRESLT.TXT"))
 		
+		if not os.path.exists(os.path.join(nist_dir, "nistms$.exe")):
+			raise FileNotFoundError(f"NIST MS Search executable not found. Looking in {nist_dir}")
 		if platform.system() == "Linux":
-			Popen(["wine",os.path.join(nist_dir,"nistms$.exe"), "/par=2"],stdout=PIPE, stderr=PIPE)
+			Popen(["wine", os.path.join(nist_dir, "nistms$.exe"), "/par=2"], stdout=PIPE, stderr=PIPE)
 		else:
-			Popen([os.path.join(nist_dir,"nistms$.exe"), "/par=2"],stdout=PIPE, stderr=PIPE)
+			Popen([os.path.join(nist_dir, "nistms$.exe"), "/par=2"], stdout=PIPE, stderr=PIPE)
 		
-#		while not os.path.exists(os.path.join(nist_dir,"SRCRESLT.TXT")):
-#			time.sleep(0.1)
-#			attempts += 1
-#			if attempts > 100:
-#				close_nist()
-#				#if platform.system() == "Linux":
-#				#	Popen(["wine","Taskkill", "/IM", "nistms.exe", "/F"],stdout=PIPE, stderr=STDOUT)
-#				#else:
-#				#	Popen(["Taskkill", "/IM", "nistms.exe", "/F"],stdout=PIPE, stderr=STDOUT)
-#				
-#				#raise nistError
-
-		time.sleep(2 + (0.2*search_len))
+		# while not os.path.exists(os.path.join(nist_dir,"SRCRESLT.TXT")):
+		# 	time.sleep(0.1)
+		# 	attempts += 1
+		# 	if attempts > 100:
+		# 		close_nist()
+		# 		#if platform.system() == "Linux":
+		# 		#	Popen(["wine","Taskkill", "/IM", "nistms.exe", "/F"],stdout=PIPE, stderr=STDOUT)
+		# 		#else:
+		# 		#	Popen(["Taskkill", "/IM", "nistms.exe", "/F"],stdout=PIPE, stderr=STDOUT)
+		#
+		# 		#raise nistError
 		
-		#sys.stdout.write("\033[F") #back to previous line
-		#sys.stdout.write("\r\033[K") #clear line	from https://www.quora.com/How-can-I-delete-the-last-printed-line-in-Python-language
-		print("\r\033[K", end=''), #clear line	from https://www.quora.com/How-can-I-delete-the-last-printed-line-in-Python-language
-		while not os.path.isfile(os.path.join(nist_dir,"SRCREADY.TXT")):
-			#print(attempts)
+		time.sleep(2 + (0.2 * search_len))
+		
+		# sys.stdout.write("\033[F") #back to previous line
+		# From https://www.quora.com/How-can-I-delete-the-last-printed-line-in-Python-language
+		# sys.stdout.write("\r\033[K")  # clear line
+		print("\r\033[K", end='')  # clear line
+		while not os.path.isfile(os.path.join(nist_dir, "SRCREADY.TXT")):
+			# print(attempts)
 			time.sleep(0.2)
-			#sys.stdout.write("\rWaiting for SRCREADY.TXT. Attempt {}".format(attempts))
-			print("\rWaiting for SRCREADY.TXT. Attempt {}\r".format(attempts),end='')
-			attempts +=1
+			# sys.stdout.write("\rWaiting for SRCREADY.TXT. Attempt {}".format(attempts))
+			print("\rWaiting for SRCREADY.TXT. Attempt {}\r".format(attempts), end='')
+			attempts += 1
 			if attempts > 300:
-				print("\rclosing nist line {}\r".format(sys._getframe().f_lineno),end='')
+				print("\rclosing nist line {}\r".format(sys._getframe().f_lineno), end='')
 				close_nist()
 				search_results = ''
 				continue
 		
 		searches_done = 0
 		while searches_done != str(search_len):
-			ready_file = open(os.path.join(nist_dir,"SRCREADY.TXT"))
-			searches_done = ready_file.readlines()[0].rstrip("\r\n").replace("\n","").replace("\r","")
-			#print(searches_done)
+			ready_file = open(os.path.join(nist_dir, "SRCREADY.TXT"))
+			searches_done = ready_file.readlines()[0].rstrip("\r\n").replace("\n", "").replace("\r", "")
+			# print(searches_done)
 			ready_file.close()
-			#sys.stdout.write("\rWaiting for searches to finish. Currently {}/{} done. Attempt {}".format(int(searches_done),int(search_len),int(attempts)))
-			print("\r\rWaiting for searches to finish. Currently {}/{} done. Attempt {}\r".format(int(searches_done),int(search_len),int(attempts)), end=''),
+			# sys.stdout.write(
+			# 		"\rWaiting for searches to finish. Currently {}/{} done. Attempt {}".format(
+			# 				int(searches_done), int(search_len), int(attempts)
+			# 				)
+			# 		)
+			print(
+					f"\r\rWaiting for searches to finish. Currently {int(searches_done)}/{int(search_len)} done. "
+					f"Attempt {int(attempts)}\r", end=''),
 			time.sleep(0.5)
-			attempts +=1
+			attempts += 1
 			if attempts > 300:
-				print("\rclosing nist line {}\r".format(sys._getframe().f_lineno),end='')
-				close_nist()
-				continue
-			
-		while not os.path.exists(os.path.join(nist_dir,"SRCRESLT.TXT")):
-			time.sleep(0.2)
-			print("\rWaiting for SRCRESLT.TXT, Attempt {}\r".format(attempts),end='')
-			attempts +=1
-			if attempts > 300:
-				print("\rclosing nist line {}\r".format(sys._getframe().f_lineno),end='')
+				print("\rclosing nist line {}\r".format(sys._getframe().f_lineno), end='')
 				close_nist()
 				continue
 		
-		#search_results = open(os.path.join(nist_dir,"SRCRESLT.TXT"),"rt",encoding="latin-1").read() #
-		search_results = io.open(os.path.join(nist_dir,"SRCRESLT.TXT"),"rt",encoding="latin-1").read() #
+		while not os.path.exists(os.path.join(nist_dir, "SRCRESLT.TXT")):
+			time.sleep(0.2)
+			print("\rWaiting for SRCRESLT.TXT, Attempt {}\r".format(attempts), end='')
+			attempts += 1
+			if attempts > 300:
+				print(f"\rclosing nist line {sys._getframe().f_lineno}\r", end='')
+				close_nist()
+				continue
+		
+		# search_results = open(os.path.join(nist_dir,"SRCRESLT.TXT"),"rt",encoding="latin-1").read() #
+		# search_results = io.open(os.path.join(nist_dir,"SRCRESLT.TXT"),"rt",encoding="latin-1").read() #
+		with io.open(os.path.join(nist_dir, "SRCRESLT.TXT"), "rt", encoding="latin-1") as fp:
+			search_results = fp.read()
 		
 		try:
-			os.unlink(os.path.join(nist_dir,"SRCRESLT.TXT"))
-			os.unlink(os.path.join(nist_dir,"SRCREADY.TXT"))
+			os.unlink(os.path.join(nist_dir, "SRCRESLT.TXT"))
+			os.unlink(os.path.join(nist_dir, "SRCREADY.TXT"))
 		except:
 			pass
-			
+		
 		if len(search_results) == 0:
-			print("\rclosing nist line {}\r".format(sys._getframe().f_lineno),end='')
+			print(f"\rclosing nist line {sys._getframe().f_lineno}\r", end='')
 			close_nist()
 			time.sleep(0.5)
 		else:
 			time.sleep(0.5)
 			break
-			
+	
 	time.sleep(0.5)
 	
-	#try:
-	#	os.unlink(os.path.join(nist_dir,"SRCRESLT.TXT"))
-	#except:
-	#	time.sleep(2)
-	#	os.unlink(os.path.join(nist_dir,"SRCRESLT.TXT"))
-		
-	return search_results 
+	# try:
+	# 	os.unlink(os.path.join(nist_dir,"SRCRESLT.TXT"))
+	# except:
+	# 	time.sleep(2)
+	# 	os.unlink(os.path.join(nist_dir,"SRCRESLT.TXT"))
+	
+	return search_results
 
-def nist_cleanup(nist_path):
-	import platform
-	
-	for filename in os.listdir(nist_path):
-		if os.path.splitext(filename)[-1].upper() == ".HLM":
-			os.unlink(os.path.join(nist_path,filename))
-		
-	locator_path = open(os.path.join(nist_path,"AUTOIMP.MSD"),"r").read()
-	
-	if platform.system() == "Linux":
-		import getpass
-		locator_path = "/home/{}/.wine/drive_c/SEARCH/SEARCH.MSD".format(getpass.getuser())
-	
-	while locator_path[0]==' ':
-		locator_path = locator_path[1:]
-	locator_path = parent_path(locator_path)
-	
-	for filename in os.listdir(locator_path):
-		for prefix in prefixList:
-			if prefix in filename:
-				os.unlink(os.path.join(os.path.abspath(locator_path),filename))
+#
+# def nist_cleanup(nist_path):
+# 	import platform
+#
+# 	for filename in os.listdir(nist_path):
+# 		if os.path.splitext(filename)[-1].upper() == ".HLM":
+# 			os.unlink(os.path.join(nist_path, filename))
+#
+# 	locator_path = open(os.path.join(nist_path, "AUTOIMP.MSD"), "r").read()
+#
+# 	if platform.system() == "Linux":
+# 		import getpass
+# 		locator_path = "/home/{}/.wine/drive_c/SEARCH/SEARCH.MSD".format(getpass.getuser())
+#
+# 	while locator_path[0] == ' ':
+# 		locator_path = locator_path[1:]
+# 	locator_path = parent_path(locator_path)
+#
+# 	for filename in os.listdir(locator_path):
+# 		for prefix in prefixList:
+# 			if prefix in filename:
+# 				os.unlink(os.path.join(os.path.abspath(locator_path), filename))
+
 
 if __name__ == '__main__':
-	import sys
 	sys.exit(1)
