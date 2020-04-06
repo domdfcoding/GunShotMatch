@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,9 +26,12 @@
 # stdlib
 import json
 
-# this package
+# 3rd party
 from domdf_python_tools.doctools import append_docstring_from
+
+# this package
 from GuiV2.GSMatch2_Core.InfoProperties import longstr, Measurement, Property
+
 
 shape_dropdown_choices = [
 	"Disc",
@@ -127,8 +130,7 @@ class Granule:
 		:param granule_data:
 		:type granule_data:
 
-		:return:
-		:rtype:
+		:rtype: Granule
 
 		The properties must appear in the following order and have the following types:"""
 		

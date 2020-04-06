@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -34,18 +34,18 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Image, Paragraph, Spacer, Table, TableStyle
 
 # This package
-from GuiV2.GSMatch2_Core.exporters import inner_width, PDFExporterBase, styles
+from GuiV2.GSMatch2_Core.exporters import PDFExporterBase, styles, font_size
 from GuiV2.GSMatch2_Core.InfoProperties import Measurement
+from GuiV2.GSMatch2_Core.utils import divide_chunks
 
-font_size = 9
 
 
-class PDFExporter(PDFExporterBase):
+class AmmoPDFExporter(PDFExporterBase):
 	no_input_filename_str = "&lt;Unsaved Ammunition Details File&gt;"
 	no_input_full_filename_str = "an unsaved ammunition details file"
 
-	def __init__(self, ammo_details, input_filename, output_filename, title):
-		PDFExporterBase.__init__(self, ammo_details, input_filename, output_filename, title)
+	def __init__(self, ammo_details, input_filename, output_filename, title="Ammunition Details Report"):
+		PDFExporterBase.__init__(self, input_filename, output_filename, title)
 		
 		self.ammo_details = ammo_details
 		
@@ -54,7 +54,7 @@ class PDFExporter(PDFExporterBase):
 		self.build()
 	
 	def make_ammo_details_table(self, properties, title, starter=None):
-		col_widths = [inner_width * (2.5 / 7), inner_width * (4.5 / 7)]
+		col_widths = [self.inner_width * (2.5 / 7), self.inner_width * (4.5 / 7)]
 		
 		if starter:
 			table = starter
@@ -63,7 +63,7 @@ class PDFExporter(PDFExporterBase):
 			
 		for prop in properties:
 			if isinstance(prop.type, Measurement):
-				val = get_measurement_statistics(prop.value)
+				val = self.get_measurement_statistics(prop.value)
 			elif prop.type == datetime:
 				val = prop.format_time()
 			else:
@@ -98,6 +98,7 @@ class PDFExporter(PDFExporterBase):
 	def make_ammo_images_table(self):
 		
 		category_style = TableStyle([
+				# (x, y)
 				('ALIGN', (0, 0), (0, 0), 'LEFT'),
 				('ALIGN', (0, 1), (-1, -1), 'CENTER'),
 				('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -114,11 +115,11 @@ class PDFExporter(PDFExporterBase):
 		
 		for image in [self.ammo_details.propellant_image, self.ammo_details.headstamp_image]:
 			if image:
-				images_row.append(Image(*convert_image(image, inner_width / 2.1)))
+				images_row.append(Image(*convert_image(image, self.inner_width / 2.1)))
 			else:
 				images_row.append(Paragraph('', styles["Normal"]))
 
-		col_widths = [inner_width / 2, inner_width / 2]
+		col_widths = [self.inner_width / 2, self.inner_width / 2]
 		
 		return Table(
 				[top_row, header_row, images_row],
@@ -129,17 +130,40 @@ class PDFExporter(PDFExporterBase):
 				repeatRows=2
 				)
 	
-	@staticmethod
-	def make_other_images_table(image_list, row_length=5):
+	def get_measurement_statistics(self, values):
+		"""
+		Calculate Mean, Stdev, Range and n
+		"""
+		if not isinstance(values, (list, tuple, set)):
+			values = [values]
+		
+		n = len(values)
+		
+		if n == 0:
+			mean = 0
+			stdev = 0
+		elif n == 1:
+			mean = values[0]
+			stdev = values[0]
+		else:
+			mean = statistics.mean(values)
+			stdev = statistics.stdev(values)
+		
+		# TODO: range
+		
+		return f"{self.xbar} = {rounders(mean, '0.000')}, σ = {rounders(stdev, '0.00000')}, n = {n}"
+	
+	def make_other_images_table(self, image_list, row_length=5):
 		
 		category_style = TableStyle([
+				# (x, y)
 				('ALIGN', (0, 0), (-1, -1), 'CENTER'),
 				('VALIGN', (0, 0), (-1, -1), 'TOP'),
 				("LINEBELOW", (0, 0), (3, 0), 1, colors.black),
 				("LINEABOVE", (0, 0), (3, 0), 1, colors.black),
 				])
 		
-		col_widths = [inner_width / row_length]*row_length
+		col_widths = [self.inner_width / row_length]*row_length
 	
 		captions_row = []
 		images_row = []
@@ -184,41 +208,3 @@ def convert_image(original_image, max_width, max_height=None):
 
 	return img_bytes, img_width, img_height
 
-
-def get_measurement_statistics(values):
-	"""
-	Calculate Mean, Stdev, Range and n
-	"""
-	if not isinstance(values, (list, tuple, set)):
-		values = [values]
-	
-	n = len(values)
-	
-	if n == 0:
-		mean = 0
-		stdev = 0
-	elif n == 1:
-		mean = values[0]
-		stdev = values[0]
-	else:
-		mean = statistics.mean(values)
-		stdev = statistics.stdev(values)
-
-	# TODO: range
-	
-	from reportlab.pdfbase import pdfmetrics
-	from reportlab.pdfbase.ttfonts import TTFont
-	
-	custom_font = "/home/domdf/GunShotMatch/GunShotMatch/GuiV2/GSMatch2_Core/Arvo_modified.ttf"
-	pdfmetrics.registerFont(TTFont("Arvo_modified", custom_font))
-	# TODO: modify glyph to taste using BirdFont
-	
-	return f"<font name='Arvo_modified'>𝝬</font> = {rounders(mean, '0.000')}, σ = {rounders(stdev, '0.00000')}, n = {n}"
-
-
-# Yield successive n-sized chunks from l.
-# https://www.geeksforgeeks.org/break-list-chunks-size-n-python/
-def divide_chunks(l, n):
-	# looping till length l
-	for i in range(0, len(l), n):
-		yield l[i:i + n]

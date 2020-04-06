@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,10 +26,11 @@
 # stdlib
 import json
 
-# this package
-from GuiV2.GSMatch2_Core.InfoProperties import Property, longstr, Measurement
+# 3rd party
 from domdf_python_tools.doctools import append_docstring_from
 
+# this package
+from GuiV2.GSMatch2_Core.InfoProperties import longstr, Measurement, Property
 
 colour_dropdown_choices = [
 		"Golden, like Brass",
@@ -128,8 +129,7 @@ class Projectile:
 		:param projectile_data:
 		:type projectile_data:
 		
-		:return:
-		:rtype:
+		:rtype: Projectile
 		
 		The properties must appear in the following order and have the following types:"""
 		
@@ -172,11 +172,6 @@ class Projectile:
 		if self.type:
 			projectile_dict["type"] = self.type.value
 		if self.mass:
-			# print(self.mass)
-			# print(type(self.mass))
-			# print(type(self.mass[0]))
-			print(self.mass.value)
-			print(type(self.mass.value))
 			projectile_dict["mass"] = self.mass.value
 		if self.tip_type:
 			projectile_dict["tip_type"] = self.tip_type.value

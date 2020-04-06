@@ -5,11 +5,11 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #  Based on wx.lib.agw.thumbnailctrl from wxPython
 #  Copyright Andrea Gavana and Peter Damoc, 2005-2012
 #  Licensed under the wxWindows Licence
-
+#
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -77,10 +77,10 @@ import os
 from functools import lru_cache
 
 # 3rd party
-from PIL import Image, ImageEnhance
 import wx
-from wx.lib.agw import thumbnailctrl
 from domdf_wxpython_tools import file_dialog_wildcard
+from PIL import Image, ImageEnhance
+from wx.lib.agw import thumbnailctrl
 
 # this package
 from GuiV2.GSMatch2_Core.Ammunition import ammo_images
@@ -147,8 +147,8 @@ class Thumb:
 		:type parent:
 		:param image:
 		:type image:
-		:param caption: the thumbnail caption string;
-		:type caption:
+		:param caption: the thumbnail caption string
+		:type caption: str
 		"""
 		
 		self._original_image = image
@@ -207,7 +207,7 @@ class Thumb:
 		
 		return self._id
 	
-	def SetId(self, id=-1):
+	def SetId(self, id=wx.ID_ANY):
 		"""
 		Sets the thumbnail identifier.
 
@@ -552,7 +552,7 @@ class OtherImagesCtrl(thumbnailctrl.ScrolledThumbnail):
 		hh = img.GetHeight()
 		
 		if index == self.GetPointed() and self.GetHighlightPointed():
-			factor = 1.5
+			# factor = 1.5
 			
 			img = img.ConvertToImage()
 			pil = Image.new('RGB', (img.GetWidth(), img.GetHeight()))
@@ -574,15 +574,15 @@ class OtherImagesCtrl(thumbnailctrl.ScrolledThumbnail):
 					self.shadow, 500 - ww, 500 - hh)
 		dc.DrawBitmap(img, imgRect.x, imgRect.y, True)
 		
-		colour = self.GetSelectionColour()
+		# colour = self.GetSelectionColour()
 		selected = self.IsSelected(index)
 		
 		colour = self.GetSelectionColour()
 		
 		# draw caption
-		sw, sh = 0, 0
+		# sw, sh = 0, 0
 		if self._showcaptions:
-			textWidth = 0
+			# textWidth = 0
 			dc.SetFont(self.GetCaptionFont())
 			mycaption = thumb.GetCaption(0)
 			sw, sh = dc.GetTextExtent(mycaption)
@@ -592,8 +592,8 @@ class OtherImagesCtrl(thumbnailctrl.ScrolledThumbnail):
 				sw = self._tWidth
 			
 			textWidth = sw + 8
-			tx = x + (self._tWidth - textWidth) / 2
-			ty = y + self._tHeight
+			# tx = x + (self._tWidth - textWidth) / 2
+			# ty = y + self._tHeight
 			
 			txtcolour = "#7D7D7D"
 			dc.SetTextForeground(txtcolour)
@@ -940,10 +940,10 @@ Thumb: {self.GetThumbSize()[0:2]}"""
 		
 		event.Skip()
 	
-	def OnPopupExchangeHeadstamp(self, event):
+	def OnPopupExchangeHeadstamp(self, _):
 		print("OnPopupMenu: Popup Seven\n")
 	
-	def OnPopupExchangePropellant(self, event):
+	def OnPopupExchangePropellant(self, _):
 		print("OnPopupMenu: Popup Six\n")
 	
 	def OnPopupPaste(self, event):
@@ -1149,8 +1149,8 @@ Thumb: {self.GetThumbSize()[0:2]}"""
 		"""
 		Updates :class:`OtherImagesCtrl` and its visible thumbnails.
 
-		:param `checkSize`: ``True`` to update the items visibility if the window
-		 size has changed.
+		:param checkSize: True to update the items visibility if the window size has changed.
+		:type checkSize: bool
 		"""
 		
 		width = self.GetClientSize().GetWidth()

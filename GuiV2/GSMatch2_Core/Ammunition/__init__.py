@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,9 +27,9 @@ from GuiV2.GSMatch2_Core.Ammunition import ammo_images
 from GuiV2.GSMatch2_Core.Ammunition.AmmunitionDetails import AmmunitionDetails, load, new, new_empty
 from GuiV2.GSMatch2_Core.Ammunition.AmmunitionDetailsEditor import AmmunitionDetailsEditor as DetailsEditor
 from GuiV2.GSMatch2_Core.Ammunition.AmmunitionDetailsPanel import AmmunitionDetailsPanel as DetailsPanel
-from GuiV2.GSMatch2_Core.Ammunition.exporters import PDFExporter
-from GuiV2.GSMatch2_Core.Ammunition.projectile_properties import Projectile
+from GuiV2.GSMatch2_Core.Ammunition.exporters import AmmoPDFExporter
 from GuiV2.GSMatch2_Core.Ammunition.granule_properties import Granule
+from GuiV2.GSMatch2_Core.Ammunition.projectile_properties import Projectile
 
 __all__ = [
 		"DetailsPanel",
@@ -38,5 +38,5 @@ __all__ = [
 		"AmmunitionDetails",
 		"Granule",
 		"Projectile",
-		"PDFExporter",
+		"AmmoPDFExporter",
 		]

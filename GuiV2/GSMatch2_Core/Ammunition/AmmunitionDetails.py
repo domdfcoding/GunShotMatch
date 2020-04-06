@@ -8,7 +8,7 @@ A class to store information about a type of Ammunition
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019  Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ from domdf_python_tools.doctools import append_docstring_from, is_documented_by
 from GuiV2.GSMatch2_Core import Ammunition
 from GuiV2.GSMatch2_Core.Ammunition import ammo_images
 from GuiV2.GSMatch2_Core.InfoProperties import calibre_type, fixed_list, longstr, Property
-from GuiV2.GSMatch2_Core.watchdog import user_info, time_now
+from GuiV2.GSMatch2_Core.watchdog import time_now, user_info
 
 PRIMER_TYPE_BOXER = "Boxer"
 PRIMER_TYPE_BERDAN = "Berdan"
@@ -327,8 +327,6 @@ class AmmunitionDetails:
 				self.year_of_manufacture,
 				self.primer_type,
 				self.notes,
-				# self.projectile_type,
-				# self.projectile_mass,
 				self.user,
 				self.device,
 				self.date_created,
@@ -370,16 +368,6 @@ class AmmunitionDetails:
 				self.date_modified,
 				self.version,
 				]
-		
-	# @property
-	# def propellant_properties(self):
-	#
-	# 	return self.propellant_granules.propgrid
-	#
-	# @property
-	# def projectile_properties(self):
-	#
-	# 	return self.projectile.propgrid
 	
 	def __repr__(self):
 		return f"AmmunitionDetails({self.name})"

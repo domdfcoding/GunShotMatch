@@ -8,7 +8,7 @@ Panel for viewing and editing an ``AmmunitionDetails`` record
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,7 +32,6 @@ Panel for viewing and editing an ``AmmunitionDetails`` record
 # stdlib
 import pathlib
 import sys
-
 
 # 3rd party
 import wx.propgrid
@@ -64,9 +63,22 @@ class AmmunitionDetailsPanel(wx.Panel):
 		"""
 		:param record:
 		:type record:
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
 		"""
 		
-		# TODO: Docstring from wxPython
 		# begin wxGlade: AmmunitionDetailsPanel.__init__
 		kwds["style"] = kwds.get("style", 0) | wx.TAB_TRAVERSAL
 		wx.Panel.__init__(self, *args, **kwds)
@@ -120,12 +132,12 @@ class AmmunitionDetailsPanel(wx.Panel):
 		
 		self.open_record(self.record)
 		
-		self.propellant_image.Bind(ammo_images.EVT_IMAGE_PANEL_CHANGED, self.OnPropellantImageChanged)
-		self.headstamp_image.Bind(ammo_images.EVT_IMAGE_PANEL_CHANGED, self.OnHeadstampImageChanged)
+		self.propellant_image.Bind(ammo_images.EVT_IMAGE_PANEL_CHANGED, self.on_propellant_image_changed)
+		self.headstamp_image.Bind(ammo_images.EVT_IMAGE_PANEL_CHANGED, self.on_headstamp_image_changed)
 		
-		self.other_images.Bind(ammo_images.EVT_IMAGE_ADDED, self.OnOtherImagesChanged)
-		self.other_images.Bind(ammo_images.EVT_IMAGE_DELETED, self.OnOtherImagesChanged)
-		self.other_images.Bind(ammo_images.EVT_IMAGE_RENAMED, self.OnOtherImagesChanged)
+		self.other_images.Bind(ammo_images.EVT_IMAGE_ADDED, self.on_other_images_changed)
+		self.other_images.Bind(ammo_images.EVT_IMAGE_DELETED, self.on_other_images_changed)
+		self.other_images.Bind(ammo_images.EVT_IMAGE_RENAMED, self.on_other_images_changed)
 		
 		self.other_images.ShowCaptions()
 		
@@ -300,6 +312,7 @@ class AmmunitionDetailsPanel(wx.Panel):
 		for prop in self.record.ammunition_properties:
 			# Add property
 			property_item = prop.propgrid
+			# print(property_item)
 			self.ammo_details_grid.Append(property_item)
 			if not prop.editable:
 				self.ammo_details_grid.SetPropertyReadOnly(property_item)
@@ -357,7 +370,6 @@ class AmmunitionDetailsPanel(wx.Panel):
 	# TODO: Hook into events triggered when images changed, and get
 	#  list of images to assign to self.record.other_images
 	
-	
 	def save_record(self, filename):
 		"""
 		Save the AmmunitionDetails record to a file
@@ -378,7 +390,7 @@ class AmmunitionDetailsPanel(wx.Panel):
 		self.fileNotSaved = False
 		return True
 	
-	def OnPropellantImageChanged(self, event):
+	def on_propellant_image_changed(self, event):
 		"""
 		Event handler for the Propellant image being changed
 		"""
@@ -387,7 +399,7 @@ class AmmunitionDetailsPanel(wx.Panel):
 		self.fileNotSaved = True
 		event.Skip()
 	
-	def OnHeadstampImageChanged(self, event):
+	def on_headstamp_image_changed(self, event):
 		"""
 		Event handler for the Propellant image being changed
 		"""
@@ -396,7 +408,7 @@ class AmmunitionDetailsPanel(wx.Panel):
 		self.fileNotSaved = True
 		event.Skip()
 	
-	def OnOtherImagesChanged(self, event):
+	def on_other_images_changed(self, event):
 		"""
 		Event handler for the other images being changed
 		"""
@@ -416,11 +428,10 @@ class AmmunitionDetailsPanel(wx.Panel):
 		event.Skip()
 	
 	def export_pdf(self, input_filename, output_filename):
-		Ammunition.PDFExporter(
+		Ammunition.AmmoPDFExporter(
 				self.record,
 				input_filename=input_filename,
 				output_filename=output_filename,
-				title="Ammunition Details Report"
 				)
 		
 # end of class AmmunitionDetailsPanel

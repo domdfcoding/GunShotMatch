@@ -5,7 +5,7 @@
 #
 #  This file is part of GunShotMatch
 #
-#  Copyright (c) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  GunShotMatch is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -34,7 +34,25 @@ from GuiV2.GSMatch2_Core.Ammunition import ammo_images
 class AmmoImagePanel(imagepanel.ImagePanel):
 	def __init__(
 			self, parent, image=None, id=wx.ID_ANY, pos=wx.DefaultPosition,
-			size=wx.DefaultSize, style=0, name=wx.PanelNameStr):
+			size=wx.DefaultSize, style=0, name="AmmoImagePanel"):
+		"""
+		:param parent: The parent window.
+		:type parent: wx.Window
+		:param image:
+		:type image:
+		:param id: An identifier for the panel. wx.ID_ANY is taken to mean a default.
+		:type id: wx.WindowID, optional
+		:param pos: The panel position. The value wx.DefaultPosition indicates a default position,
+		chosen by either the windowing system or wxWidgets, depending on platform.
+		:type pos: wx.Point, optional
+		:param size: The panel size. The value wx.DefaultSize indicates a default size, chosen by
+		either the windowing system or wxWidgets, depending on platform.
+		:type size: wx.Size, optional
+		:param style: The window style. See wx.Panel.
+		:type style: int, optional
+		:param name: Window name.
+		:type name: str, optional
+		"""
 		
 		imagepanel.ImagePanel.__init__(self, parent, image, id, pos, size, style, name)
 		
@@ -61,7 +79,3 @@ class AmmoImagePanel(imagepanel.ImagePanel):
 		
 	def remove_propellant_option(self):
 		self.context_menu.Delete(ammo_images.ID_Exchange_Propellant)
-
-
-
-
