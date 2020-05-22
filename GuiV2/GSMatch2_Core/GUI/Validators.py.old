@@ -1,0 +1,154 @@
+#  !/usr/bin/env python
+#   -*- coding: utf-8 -*-
+#
+#  validators.py
+#
+#  This file is part of GunShotMatch
+#
+#  Copyright (c) 2019-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#
+#  Based on the Validator demo from wxPython
+#
+#  GunShotMatch is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  GunShotMatch is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#
+
+# stdlib
+import pathlib
+import string
+
+# 3rd party
+import wx
+
+# this package
+from domdf_wxpython_tools import ValidatorBase
+
+
+# class CharValidator(_CharValidator):
+# 	def OnChar(self, event):
+# 		keycode = int(event.GetKeyCode())
+# 		if keycode < 256:
+# 			print(keycode)
+# 			key = chr(keycode)
+# 			print(key)
+# 			if keycode in {8, 127, 22, 3, 24, 13}:
+# 				# Special allowed keys, including Enter, backspace, del, Ctrl+C, Ctrl+X and Ctrl+V
+# 				event.Skip()
+# 			elif self.flag == "int-only":
+# 				if key not in "0123456789":
+# 					return
+# 			elif self.flag == "float-only":
+# 				if key == "." and "." in event.GetEventObject().GetValue():
+# 					return
+# 				if key not in "0123456789.":
+# 					return
+# 			elif self.flag == 'no-alpha' and key in string.ascii_letters:
+# 				return
+# 			elif self.flag == 'no-digit' and key in string.digits:
+# 				return
+#
+# 		event.Skip()
+	
+
+class TextValidatorBase(ValidatorBase):
+	""" This validator is used to ensure that the user has entered something
+		into the text object editor dialog's text field.
+	"""
+	error_message = "Please enter a value."
+	
+	# def __init__(self):
+	# 	"""
+	# 	Standard constructor.
+	# 	"""
+	#
+	# 	wx.Validator.__init__(self)
+
+	def Validate(self, win):
+		"""
+		Validate the contents of the given text control.
+		"""
+		
+		text = self.GetWindow().GetValue()
+		if len(text) == 0:
+			wx.MessageBox(self.error_message, "Error", style=wx.ICON_ERROR)
+			return self.set_warning()
+		else:
+			return self.reset_ctrl()
+
+
+class PathValidatorBase(ValidatorBase):
+	""" This validator is used to ensure that the user has entered something
+		into the text object editor dialog's text field, and that it points
+		to an extant file or directory.
+	"""
+	
+	error_message = "Please enter a value."
+	mode = "file"
+	non_existant_message = f"The selected {mode} does not exist"
+	
+	# def __init__(self):
+	# 	""" Standard constructor.
+	# 	"""
+	# 	wx.Validator.__init__(self)
+	# 	self.error_message = "Please enter a value."
+	# 	self.mode = "file"
+	# 	self.non_existant_message = f"The selected {self.mode} does not exist"
+
+	def Validate(self, win):
+		""" Validate the contents of the given text control.
+		"""
+		panel = self.GetWindow()
+		value = panel.GetValue()
+		
+		if len(value) == 0:
+			wx.MessageBox(self.error_message, "Error", style=wx.ICON_ERROR)
+			return self.set_warning()
+		elif not pathlib.Path(value).absolute().is_file():
+			wx.MessageBox(self.non_existant_message, "Error", style=wx.ICON_ERROR)
+			return self.set_warning()
+		else:
+			return self.reset_panel()
+	
+	def reset_panel(self):
+		self.GetWindow().SetBackgroundColour((242, 241, 240, 255))
+		self.GetWindow().Refresh()
+		return True
+
+
+class ProjectNameValidator(TextValidatorBase):
+	error_message = "Please enter a name for the Project."
+
+
+class ExperimentNameValidator(TextValidatorBase):
+	error_message = "Please enter a name for the Experiment."
+
+
+class ExperimentFilenameValidator(TextValidatorBase):
+	error_message = "Please enter a filename for the Experiment."
+
+
+class ProjectMethodValidator(PathValidatorBase):
+	error_message = "Please choose a Method for the Project."
+	non_existant_message = "The selected Method file does not exist."
+
+
+class ProjectAmmoValidator(PathValidatorBase):
+	error_message = "Please choose an Ammunition Details file for the Project."
+	non_existant_message = "The selected Ammunition Details file does not exist."
+
+
+class ExperimentMethodValidator(PathValidatorBase):
+	error_message = "Please choose a Method for the Experiment."
+	non_existant_message = "The selected Method file does not exist."

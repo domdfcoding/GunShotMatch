@@ -251,8 +251,7 @@ class BoxWhisker(Chart):
 		self.fig, self.ax = plt.subplots(figsize=figsize)
 	
 	def setup_datapoints(self, column_width=4, styles=None, colours=None):
-		import numpy as np
-		
+
 		if styles is None:
 			styles = bw_default_styles[:]
 		
@@ -262,7 +261,7 @@ class BoxWhisker(Chart):
 		# print(f"######{column_width}#####")
 		self.datapoint_spacing = column_width / (len(self.peak_areas) + 1)
 		
-		self.datapoint_offset = list(np.arange(
+		self.datapoint_offset = list(numpy.arange(
 				(0 - (column_width / 2)) + self.datapoint_spacing,
 				(0 + (column_width / 2)),
 				self.datapoint_spacing
@@ -538,7 +537,7 @@ class MeanPeakArea(Chart):
 		self.fig, self.ax = plt.subplots(figsize=figsize)
 	
 	def create_chart(self, bar_width=2, percentage=False, colours=None, err_bar="stdev"):
-		import numpy as np
+		import numpy as numpy
 		import pandas as pd
 		from itertools import cycle
 		
@@ -554,7 +553,7 @@ class MeanPeakArea(Chart):
 		x_tick_positions = []
 		
 		bar_position = 0
-		error_bar_offset = list(np.arange(
+		error_bar_offset = list(numpy.arange(
 				(bar_position - (bar_width / 2)) + err_bar_spacing,
 				(bar_position + (bar_width / 2)),
 				err_bar_spacing

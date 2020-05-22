@@ -1,0 +1,7 @@
+{
+    "schedule": "weekly",
+    "ignoredFiles": [
+        "GuiV2/icons*",
+        "GSMatch/lib/icons*"
+    ]
+}

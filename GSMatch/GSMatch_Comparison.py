@@ -6,6 +6,8 @@
 GunShotMatch Project Comparison
 """
 #
+#  This file is part of GunShotMatch
+#
 #  Copyright 2017-2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  This program is free software; you can redistribute it and/or modify
